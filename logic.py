@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import messagebox
 from datetime import datetime
 import random
 from ui_helpers import (add_field, 
@@ -47,6 +48,11 @@ def generate_message(ctx: UIContext):
         time_part = ""
 
     name = field_values.get("name", "")
+
+    if "datetime" not in ctx.fields:
+        messagebox.showerror("Ошибка", "Сначала выберите тип встречи")
+        return
+
     raw_date = ctx.fields["datetime"].get_date()
     formatted = format_date_ru(raw_date)
     link = field_values.get("link", "")
