@@ -280,11 +280,18 @@ def on_link_change(*args, ctx: UIContext):
 
 
 def toggle_custom_asya(ctx: UIContext):
-    """Create and show the assistant popup."""
+    """Toggle visibility of the assistant popup."""
     if ctx.custom_asya_saved:
         return
 
-    if ctx.asya_popup is None:
+    # Close the popup if it is currently visible
+    if ctx.asya_popup and ctx.asya_popup.winfo_exists() and ctx.asya_popup.state() == "normal":
+        ctx.asya_popup.destroy()
+        ctx.asya_popup = None
+        return
+
+    # Create the popup window if it doesn't exist
+    if ctx.asya_popup is None or not ctx.asya_popup.winfo_exists():
         ctx.asya_popup = tk.Toplevel(ctx.root)
         ctx.asya_popup.transient(ctx.root)
         ctx.asya_popup.resizable(False, False)
