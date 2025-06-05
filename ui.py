@@ -1,7 +1,7 @@
 from tkinter import ttk, messagebox
 import tkinter as tk
 from themes import themes, apply_theme_from_dropdown
-from logic import generate_message, update_fields, on_link_change, toggle_custom_asya
+from logic import generate_message, update_fields, on_link_change, toggle_custom_asya, save_custom_asya
 from ocr import import_from_clipboard_image
 from utils import toggle_music, copy_generated_text, translate_to_english
 from ui_helpers import clear_frame, focus_next, enable_ctrl_v, enable_ctrl_c
@@ -84,30 +84,18 @@ def build_ui(ctx: UIContext):
 
     # === Ася блок ===
     ctx.asya_mode = tk.BooleanVar(value=False)
-    ctx.is_custom_asya = tk.BooleanVar(value=False)
     ctx.asya_name_var = tk.StringVar()
     ctx.asya_gender_var = tk.StringVar()
+    ctx.asya_popup = None
+    ctx.asya_extra_frame = None
 
-    ctx.asya_extra_frame = ttk.Frame(ctx.root, style="Custom.TFrame")
-    ttk.Label(ctx.asya_extra_frame, text="Твоё имя (ассистент):", style="TLabel").pack(anchor="w")
-    ttk.Entry(ctx.asya_extra_frame, textvariable=ctx.asya_name_var, style="TEntry").pack(fill="x", pady=2)
-
-    ttk.Label(ctx.asya_extra_frame, text="Пол:", style="TLabel").pack(anchor="w")
-    ttk.Combobox(
-        ctx.asya_extra_frame,
-        values=["женский", "мужской"],
-        state="readonly",
-        textvariable=ctx.asya_gender_var,
-        style="Custom.TCombobox"
-    ).pack(fill="x", pady=2)
-
-    ttk.Checkbutton(
+    ctx.asya_button = ttk.Button(
         ctx.root,
         text="ЛС",
-        variable=ctx.is_custom_asya,
         command=lambda: toggle_custom_asya(ctx),
-        style="TCheckbutton"
-    ).pack(anchor="e", padx=10)
+        style="Custom.TButton"
+    )
+    ctx.asya_button.pack(anchor="e", padx=10)
 
     # === Поля ===
     ctx.fields_frame = ttk.Frame(ctx.root, style="Custom.TFrame")

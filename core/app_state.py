@@ -15,7 +15,6 @@ class UIContext:
         self.type_var = tk.StringVar()
         self.link_var = tk.StringVar()
         self.asya_mode = tk.BooleanVar(value=False)
-        self.is_custom_asya = tk.BooleanVar(value=False)
         self.asya_name_var = tk.StringVar()
         self.asya_gender_var = tk.StringVar()
         self.current_theme_name = "Светлая"
@@ -28,7 +27,10 @@ class UIContext:
         # Отдельные блоки UI
         self.fields_frame: ttk.Frame | None = None
         self.output_text: tk.Text | None = None
-        self.asya_extra_frame: ttk.Frame | None = None
+        self.asya_extra_frame: ttk.Frame | None = None  # legacy, no longer packed
+        self.asya_popup: tk.Toplevel | None = None
+        self.asya_button: ttk.Button | None = None
+        self.custom_asya_saved: bool = False
 
         # Музыка
         self.music_path = "James.mp3"
