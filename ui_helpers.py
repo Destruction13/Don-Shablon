@@ -5,8 +5,8 @@ from constants import rooms_by_bz
 from core.app_state import UIContext
 
 def add_time_range_dropdown(label_text_start: str, label_text_end: str, var_start: str, var_end: str, ctx: UIContext):
-    start_combo = _create_time_selector(label_text_start)
-    end_combo = _create_time_selector(label_text_end)
+    start_combo = _create_time_selector(label_text_start, ctx)
+    end_combo = _create_time_selector(label_text_end, ctx)
 
     time_slots = _generate_time_slots()
     start_combo["values"] = time_slots
@@ -26,7 +26,7 @@ def add_time_range_dropdown(label_text_start: str, label_text_end: str, var_star
     start_combo.bind("<<ComboboxSelected>>", update_end_times)
 
     for widget in (start_combo, end_combo):
-        _configure_combobox_behavior(widget)
+        _configure_combobox_behavior(widget, ctx)
         ctx.input_fields.append(widget)
 
     ctx.fields[var_start] = start_combo
@@ -54,9 +54,9 @@ def _generate_time_slots(start_hour: int = 8, end_hour: int = 22) -> list[str]:
     return [f"{h:02d}:{m:02d}" for h in range(start_hour, end_hour) for m in (0, 30)]
 
 
-def _configure_combobox_behavior(widget: ttk.Combobox):
+def _configure_combobox_behavior(widget: ttk.Combobox, ctx: UIContext):
     widget.bind("<Button-1>", lambda e, w=widget: w.event_generate('<Down>'))
-    widget.bind("<Return>", lambda e, w=widget: focus_next(e, w))
+    widget.bind("<Return>", lambda e, w=widget: focus_next(e, w, ctx))
 
 
 def focus_next(event, current, ctx: UIContext):
