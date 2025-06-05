@@ -283,6 +283,7 @@ def toggle_custom_asya(ctx: UIContext):
     """Toggle assistant usage or show settings popup."""
     if ctx.custom_asya_saved:
         ctx.custom_asya_on = not ctx.custom_asya_on
+        update_asya_button(ctx)
         return
 
     # Close the popup if it is currently visible
@@ -343,4 +344,16 @@ def save_custom_asya(ctx: UIContext):
     if ctx.asya_popup:
         ctx.asya_popup.destroy()
         ctx.asya_popup = None
+    update_asya_button(ctx)
     # button remains enabled for toggling
+
+
+def update_asya_button(ctx: UIContext):
+    """Update the label of the ЛС button based on current state."""
+    if not ctx.asya_button:
+        return
+    if ctx.custom_asya_saved:
+        text = "ЛС: вкл" if ctx.custom_asya_on else "ЛС: выкл"
+    else:
+        text = "ЛС"
+    ctx.asya_button.config(text=text)

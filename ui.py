@@ -1,7 +1,7 @@
 from tkinter import ttk, messagebox
 import tkinter as tk
 from themes import themes, apply_theme_from_dropdown
-from logic import generate_message, update_fields, on_link_change, toggle_custom_asya, save_custom_asya
+from logic import generate_message, update_fields, on_link_change, toggle_custom_asya, save_custom_asya, update_asya_button
 from ocr import import_from_clipboard_image
 from utils import toggle_music, copy_generated_text, translate_to_english
 from ui_helpers import clear_frame, focus_next, enable_ctrl_v, enable_ctrl_c
@@ -96,6 +96,7 @@ def build_ui(ctx: UIContext):
         style="Custom.TButton"
     )
     ctx.asya_button.pack(anchor="e", padx=10)
+    update_asya_button(ctx)
 
     # === Поля ===
     ctx.fields_frame = ttk.Frame(ctx.root, style="Custom.TFrame")
