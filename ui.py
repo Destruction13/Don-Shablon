@@ -36,6 +36,13 @@ def init_music(filename: str) -> str | None:
 
 
 def build_ui(ctx: UIContext):
+    pygame.init()
+    try:
+        pygame.mixer.init()
+    except Exception as e:
+        print(f"[ERROR] Failed to init mixer: {e}")
+
+    ctx.music_path = init_music(ctx.music_path)
 
     style = ttk.Style()
     style.theme_use("clam")
@@ -53,11 +60,11 @@ def build_ui(ctx: UIContext):
         style="Custom.TCombobox"
     )
     theme_selector.pack(pady=(0, 5))
-    theme_selector.bind("<<ComboboxSelected>>", apply_theme_from_dropdown)
+    theme_selector.bind("<<ComboboxSelected>>", lambda *_: apply_theme_from_dropdown(ctx=ctx))
 
     # === Тип встречи ===
     ctx.type_var = tk.StringVar()
-    ctx.type_var.trace_add("write", lambda *_: update_fields(ctx))
+    ctx.type_var.trace_add("write", lambda *_: update_fields(ctx=ctx))
 
     ttk.Label(ctx.root, text="Тип встречи:", style="TLabel").pack(anchor="w", padx=10, pady=(10, 0))
 
@@ -73,7 +80,7 @@ def build_ui(ctx: UIContext):
 
     # === Ссылка ===
     ctx.link_var = tk.StringVar()
-    ctx.link_var.trace_add("write", lambda *_: on_link_change(ctx))
+    ctx.link_var.trace_add("write", lambda *_: on_link_change(ctx=ctx))
 
     # === Ася блок ===
     ctx.asya_mode = tk.BooleanVar(value=False)

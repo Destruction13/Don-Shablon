@@ -36,7 +36,7 @@ def generate_message(ctx: UIContext):
     else:
         required_keys = []
 
-    if not validate_fields(required_keys):
+    if not validate_fields(required_keys, ctx):
         return
 
     if start and end:
