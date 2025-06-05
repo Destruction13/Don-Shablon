@@ -8,7 +8,16 @@ from constants import rooms_by_bz
 from core.app_state import UIContext
 
 import easyocr
-reader = easyocr.Reader(['ru', 'en'])
+
+_reader = None
+
+
+def get_reader():
+    """Lazily initialize and return the OCR reader."""
+    global _reader
+    if _reader is None:
+        _reader = easyocr.Reader(['ru', 'en'])
+    return _reader
 
 
 def extract_fields_from_text(texts, rooms_by_bz):
@@ -110,6 +119,7 @@ def detect_repeat_checkbox(image_path, ocr_results):
     return False
 
 def import_from_clipboard_image(ctx: UIContext):
+    """Fill form fields with data extracted from an image in the clipboard."""
     meeting_type = ctx.type_var.get()
     print(f"[DEBUG] Тип встречи: {meeting_type}")
     image = ImageGrab.grabclipboard()
@@ -117,7 +127,7 @@ def import_from_clipboard_image(ctx: UIContext):
         image_path = "clipboard_temp.png"
         image.save(image_path)
 
-        results = reader.readtext(image_path)
+        results = get_reader().readtext(image_path)
         texts = [x[1] for x in results]
 
         name, bz, room, date, start_time, end_time = extract_fields_from_text(texts, rooms_by_bz)

@@ -23,6 +23,7 @@ from themes import apply_theme
 
 
 def generate_message(ctx: UIContext):
+    """Generate a message from the input fields and display it."""
     typ = ctx.type_var.get()
     field_values = {k: v.get().strip() for k, v in ctx.fields.items()}
     start = field_values.get("start_time", "").strip()
@@ -170,6 +171,7 @@ def generate_message(ctx: UIContext):
 
 
 def update_fields(*args, ctx: UIContext):
+    """Rebuild the input form according to the selected meeting type."""
     clear_frame(ctx)
     typ = ctx.type_var.get()
     
@@ -226,6 +228,7 @@ def update_fields(*args, ctx: UIContext):
     apply_theme(ctx)
 
 def on_link_change(*args, ctx: UIContext):
+    """Parse date and time from a Yandex Calendar link and populate fields."""
 
     # === ⛔️ Новое условие: если дата и время уже заданы — ничего не меняем
     if ctx.fields.get("datetime") and ctx.fields["datetime"].get() and ctx.fields["start_time"].get() and ctx.fields["end_time"].get():
@@ -277,6 +280,7 @@ def on_link_change(*args, ctx: UIContext):
 
 
 def toggle_custom_asya(ctx: UIContext):
+    """Show or hide additional assistant settings."""
     if ctx.is_custom_asya.get():
         ctx.asya_extra_frame.pack(fill="x", padx=10, pady=(0, 5))
     else:
