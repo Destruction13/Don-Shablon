@@ -55,6 +55,8 @@ def apply_theme(ctx: UIContext):
     style = ttk.Style()
     theme = themes[ctx.current_theme_name]
     ctx.root.configure(bg=theme["bg"])
+    if ctx.asya_popup:
+        ctx.asya_popup.configure(bg=theme["bg"])
     style.configure("Custom.TFrame", background=theme["bg"])
     frame = ttk.Frame(ctx.fields_frame, style="Custom.TFrame")
     

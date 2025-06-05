@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import ttk, messagebox
 from datetime import datetime
 import random
 from ui_helpers import (add_field, 
@@ -60,7 +60,7 @@ def generate_message(ctx: UIContext):
     link_part = f" ({link})" if link else ""
 
     asya_on = ctx.asya_mode.get()
-    custom_asya_on = ctx.is_custom_asya.get()
+    custom_asya_on = ctx.custom_asya_on and ctx.custom_asya_saved
 
     if custom_asya_on:
         asya_name = ctx.asya_name_var.get().strip() or "Ася"
@@ -280,8 +280,80 @@ def on_link_change(*args, ctx: UIContext):
 
 
 def toggle_custom_asya(ctx: UIContext):
-    """Show or hide additional assistant settings."""
-    if ctx.is_custom_asya.get():
-        ctx.asya_extra_frame.pack(fill="x", padx=10, pady=(0, 5))
+    """Toggle assistant usage or show settings popup."""
+    if ctx.custom_asya_saved:
+        ctx.custom_asya_on = not ctx.custom_asya_on
+        update_asya_button(ctx)
+        return
+
+    # Close the popup if it is currently visible
+    if ctx.asya_popup and ctx.asya_popup.winfo_exists() and ctx.asya_popup.state() == "normal":
+        ctx.asya_popup.destroy()
+        ctx.asya_popup = None
+        return
+
+    # Create the popup window if it doesn't exist
+    if ctx.asya_popup is None or not ctx.asya_popup.winfo_exists():
+        ctx.asya_popup = tk.Toplevel(ctx.root)
+        ctx.asya_popup.transient(ctx.root)
+        ctx.asya_popup.resizable(False, False)
+        ctx.asya_popup.attributes("-topmost", True)
+
+        ctx.asya_extra_frame = ttk.Frame(ctx.asya_popup, style="Custom.TFrame")
+        ctx.asya_extra_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        ttk.Label(ctx.asya_extra_frame, text="Твоё имя (ассистент):", style="TLabel").pack(anchor="w")
+        ttk.Entry(ctx.asya_extra_frame, textvariable=ctx.asya_name_var, style="TEntry").pack(fill="x", pady=2)
+
+        ttk.Label(ctx.asya_extra_frame, text="Пол:", style="TLabel").pack(anchor="w")
+        ttk.Combobox(
+            ctx.asya_extra_frame,
+            values=["женский", "мужской"],
+            state="readonly",
+            textvariable=ctx.asya_gender_var,
+            style="Custom.TCombobox"
+        ).pack(fill="x", pady=2)
+
+        ttk.Button(
+            ctx.asya_extra_frame,
+            text="Сохранить",
+            command=lambda: save_custom_asya(ctx),
+            style="Custom.TButton"
+        ).pack(pady=(5, 0))
+
+        apply_theme(ctx)
     else:
-        ctx.asya_extra_frame.pack_forget()
+        ctx.asya_popup.deiconify()
+
+    if ctx.asya_button:
+        ctx.asya_popup.update_idletasks()
+        x = ctx.asya_button.winfo_rootx()
+        y = ctx.asya_button.winfo_rooty() + ctx.asya_button.winfo_height()
+        ctx.asya_popup.geometry(f"+{x}+{y}")
+
+
+def save_custom_asya(ctx: UIContext):
+    """Store assistant info and hide popup."""
+    name = ctx.asya_name_var.get().strip()
+    gender = ctx.asya_gender_var.get().strip()
+    if not name or not gender:
+        messagebox.showerror("Ошибка", "Введите имя и выберите пол")
+        return
+    ctx.custom_asya_saved = True
+    ctx.custom_asya_on = True
+    if ctx.asya_popup:
+        ctx.asya_popup.destroy()
+        ctx.asya_popup = None
+    update_asya_button(ctx)
+    # button remains enabled for toggling
+
+
+def update_asya_button(ctx: UIContext):
+    """Update the label of the ЛС button based on current state."""
+    if not ctx.asya_button:
+        return
+    if ctx.custom_asya_saved:
+        text = "ЛС: вкл" if ctx.custom_asya_on else "ЛС: выкл"
+    else:
+        text = "ЛС"
+    ctx.asya_button.config(text=text)
