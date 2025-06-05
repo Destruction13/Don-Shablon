@@ -98,11 +98,11 @@ def enable_ctrl_c(widget, root):
 
     widget.bind("<Button-3>", show_menu)
 
-def enable_ctrl_v(widget, root):
+def enable_ctrl_v(widget):
     def paste_clipboard(event=None):
         try:
-            widget.insert(tk.INSERT, root.clipboard_get())
-        except:
+            widget.insert(tk.INSERT, widget.clipboard_get())
+        except tk.TclError:
             pass
         return "break"
 
