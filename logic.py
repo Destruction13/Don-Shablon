@@ -281,7 +281,7 @@ def on_link_change(*args, ctx: UIContext):
 
 def toggle_custom_asya(ctx: UIContext):
     """Show or hide additional assistant settings in a popup window."""
-    if not ctx.asya_popup:
+    if not ctx.asya_popup or ctx.custom_asya_saved:
         return
 
     if ctx.is_custom_asya.get():
@@ -292,3 +292,17 @@ def toggle_custom_asya(ctx: UIContext):
         ctx.asya_popup.deiconify()
     else:
         ctx.asya_popup.withdraw()
+
+
+def save_custom_asya(ctx: UIContext):
+    """Store assistant info and hide popup."""
+    name = ctx.asya_name_var.get().strip()
+    gender = ctx.asya_gender_var.get().strip()
+    if not name or not gender:
+        messagebox.showerror("Ошибка", "Введите имя и выберите пол")
+        return
+    ctx.custom_asya_saved = True
+    ctx.asya_popup.withdraw()
+    ctx.is_custom_asya.set(False)
+    if ctx.asya_button:
+        ctx.asya_button.config(state="disabled")

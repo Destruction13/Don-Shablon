@@ -31,6 +31,7 @@ class UIContext:
         self.asya_extra_frame: ttk.Frame | None = None  # legacy, no longer packed
         self.asya_popup: tk.Toplevel | None = None
         self.asya_button: ttk.Checkbutton | None = None
+        self.custom_asya_saved: bool = False
 
         # Музыка
         self.music_path = "James.mp3"
