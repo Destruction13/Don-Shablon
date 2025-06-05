@@ -11,7 +11,7 @@
 
 1. **Клонируйте репозиторий**
    ```bash
-   git clone https://github.com/your-bro/DonShablon.git
+   git clone https://github.com/Destruction13/Don-Shablon.git
    cd DonShablon
    ```
 2. **Установите зависимости**
