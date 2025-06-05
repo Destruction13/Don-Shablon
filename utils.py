@@ -7,7 +7,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import pygame
 from ui_helpers import focus_next
-from ui_state import UIContext
+from core.app_state import UIContext
 
 
 
@@ -25,19 +25,19 @@ def toggle_music(music_button, ctx: UIContext):
         print("[INFO] Музыка не загружена — ничего не делаем.")
         return
 
-    if not ctx.state["playing"]:
+    if not ctx.music_state["playing"]:
         pygame.mixer.music.play(-1)
         music_button.config(text="⏸")
-        ctx.state["playing"] = True
-        ctx.state["paused"] = False
-    elif not ctx.state["paused"]:
+        ctx.music_state["playing"] = True
+        ctx.music_state["paused"] = False
+    elif not ctx.music_state["paused"]:
         pygame.mixer.music.pause()
         music_button.config(text="▶️")
-        ctx.state["paused"] = True
+        ctx.music_state["paused"] = True
     else:
         pygame.mixer.music.unpause()
         music_button.config(text="⏸")
-        ctx.state["paused"] = False
+        ctx.music_state["paused"] = False
 
 
 def parse_yandex_calendar_url(url):

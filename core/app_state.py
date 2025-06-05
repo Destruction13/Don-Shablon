@@ -17,7 +17,8 @@ class UIContext:
         self.is_custom_asya = tk.BooleanVar(value=False)
         self.asya_name_var = tk.StringVar()
         self.asya_gender_var = tk.StringVar()
-        self.selected_theme = tk.StringVar(value="Светлая")
+        self.current_theme_name = "Светлая"
+        self.selected_theme = tk.StringVar(value=self.current_theme_name)
 
         # Хранилище виджетов
         self.fields: dict[str, tk.Widget] = {}

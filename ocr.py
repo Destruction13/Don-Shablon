@@ -4,9 +4,8 @@ from PIL import ImageGrab
 from tkinter import messagebox
 import tkinter as tk
 from datetime import datetime
-from ui_state import fields, type_var
 from constants import rooms_by_bz
-from ui_state import UIContext
+from core.app_state import UIContext
 
 import easyocr
 reader = easyocr.Reader(['ru', 'en'])
