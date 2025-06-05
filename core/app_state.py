@@ -4,6 +4,7 @@ from tkinter import ttk
 
 
 class UIContext:
+    """Centralized storage for UI state and widgets."""
     def __init__(self):
         # Основной root
         self.root = tk.Tk()
