@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import ttk, messagebox
 from datetime import datetime
 import random
 from ui_helpers import (add_field, 
@@ -60,7 +60,7 @@ def generate_message(ctx: UIContext):
     link_part = f" ({link})" if link else ""
 
     asya_on = ctx.asya_mode.get()
-    custom_asya_on = ctx.is_custom_asya.get()
+    custom_asya_on = ctx.custom_asya_saved
 
     if custom_asya_on:
         asya_name = ctx.asya_name_var.get().strip() or "Ася"
@@ -280,18 +280,47 @@ def on_link_change(*args, ctx: UIContext):
 
 
 def toggle_custom_asya(ctx: UIContext):
-    """Show or hide additional assistant settings in a popup window."""
-    if not ctx.asya_popup or ctx.custom_asya_saved:
+    """Create and show the assistant popup."""
+    if ctx.custom_asya_saved:
         return
 
-    if ctx.is_custom_asya.get():
-        if ctx.asya_button:
-            x = ctx.asya_button.winfo_rootx()
-            y = ctx.asya_button.winfo_rooty() + ctx.asya_button.winfo_height()
-            ctx.asya_popup.geometry(f"+{x}+{y}")
-        ctx.asya_popup.deiconify()
+    if ctx.asya_popup is None:
+        ctx.asya_popup = tk.Toplevel(ctx.root)
+        ctx.asya_popup.transient(ctx.root)
+        ctx.asya_popup.resizable(False, False)
+        ctx.asya_popup.attributes("-topmost", True)
+
+        ctx.asya_extra_frame = ttk.Frame(ctx.asya_popup, style="Custom.TFrame")
+        ctx.asya_extra_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        ttk.Label(ctx.asya_extra_frame, text="Твоё имя (ассистент):", style="TLabel").pack(anchor="w")
+        ttk.Entry(ctx.asya_extra_frame, textvariable=ctx.asya_name_var, style="TEntry").pack(fill="x", pady=2)
+
+        ttk.Label(ctx.asya_extra_frame, text="Пол:", style="TLabel").pack(anchor="w")
+        ttk.Combobox(
+            ctx.asya_extra_frame,
+            values=["женский", "мужской"],
+            state="readonly",
+            textvariable=ctx.asya_gender_var,
+            style="Custom.TCombobox"
+        ).pack(fill="x", pady=2)
+
+        ttk.Button(
+            ctx.asya_extra_frame,
+            text="Сохранить",
+            command=lambda: save_custom_asya(ctx),
+            style="Custom.TButton"
+        ).pack(pady=(5, 0))
+
+        apply_theme(ctx)
     else:
-        ctx.asya_popup.withdraw()
+        ctx.asya_popup.deiconify()
+
+    if ctx.asya_button:
+        ctx.asya_popup.update_idletasks()
+        x = ctx.asya_button.winfo_rootx()
+        y = ctx.asya_button.winfo_rooty() + ctx.asya_button.winfo_height()
+        ctx.asya_popup.geometry(f"+{x}+{y}")
 
 
 def save_custom_asya(ctx: UIContext):
@@ -302,7 +331,8 @@ def save_custom_asya(ctx: UIContext):
         messagebox.showerror("Ошибка", "Введите имя и выберите пол")
         return
     ctx.custom_asya_saved = True
-    ctx.asya_popup.withdraw()
-    ctx.is_custom_asya.set(False)
+    if ctx.asya_popup:
+        ctx.asya_popup.destroy()
+        ctx.asya_popup = None
     if ctx.asya_button:
         ctx.asya_button.config(state="disabled")

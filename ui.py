@@ -84,45 +84,16 @@ def build_ui(ctx: UIContext):
 
     # === Ася блок ===
     ctx.asya_mode = tk.BooleanVar(value=False)
-    ctx.is_custom_asya = tk.BooleanVar(value=False)
     ctx.asya_name_var = tk.StringVar()
     ctx.asya_gender_var = tk.StringVar()
+    ctx.asya_popup = None
+    ctx.asya_extra_frame = None
 
-    ctx.asya_popup = tk.Toplevel(ctx.root)
-    ctx.asya_popup.withdraw()
-    ctx.asya_popup.transient(ctx.root)
-    ctx.asya_popup.resizable(False, False)
-    ctx.asya_popup.overrideredirect(True)
-    ctx.asya_popup.attributes("-topmost", True)
-
-    ctx.asya_extra_frame = ttk.Frame(ctx.asya_popup, style="Custom.TFrame")
-    ctx.asya_extra_frame.pack(fill="both", expand=True, padx=10, pady=10)
-
-    ttk.Label(ctx.asya_extra_frame, text="Твоё имя (ассистент):", style="TLabel").pack(anchor="w")
-    ttk.Entry(ctx.asya_extra_frame, textvariable=ctx.asya_name_var, style="TEntry").pack(fill="x", pady=2)
-
-    ttk.Label(ctx.asya_extra_frame, text="Пол:", style="TLabel").pack(anchor="w")
-    ttk.Combobox(
-        ctx.asya_extra_frame,
-        values=["женский", "мужской"],
-        state="readonly",
-        textvariable=ctx.asya_gender_var,
-        style="Custom.TCombobox"
-    ).pack(fill="x", pady=2)
-
-    ttk.Button(
-        ctx.asya_extra_frame,
-        text="Сохранить",
-        command=lambda: save_custom_asya(ctx),
-        style="Custom.TButton"
-    ).pack(pady=(5, 0))
-
-    ctx.asya_button = ttk.Checkbutton(
+    ctx.asya_button = ttk.Button(
         ctx.root,
         text="ЛС",
-        variable=ctx.is_custom_asya,
         command=lambda: toggle_custom_asya(ctx),
-        style="TCheckbutton"
+        style="Custom.TButton"
     )
     ctx.asya_button.pack(anchor="e", padx=10)
 
