@@ -289,13 +289,8 @@ def add_name_field_with_asya(ctx: UIContext, label_text="Имя:", var_name="nam
     name_entry = ttk.Entry(frame, textvariable=name_var, style="TEntry")
     name_entry.pack(side="left", fill="x", expand=True)
 
-    # Кнопка "Ася +"
-    asya_check = ttk.Checkbutton(frame, text="Ася +", variable=ctx.asya_mode, style="TCheckbutton")
-    asya_check.pack(side="left", padx=(5, 0))
-
     ctx.fields["name"] = name_entry
     ctx.input_fields.append(name_entry)
-    ctx.input_fields.append(asya_check)
 
     def focus_next(event):
         name_entry.tk_focusNext().focus()

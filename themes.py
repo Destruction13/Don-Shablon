@@ -87,6 +87,21 @@ def apply_theme(ctx: UIContext):
     style.map("Custom.TButton",
         background=[("active", theme["highlight"])],
         foreground=[("active", theme["fg"])])
+
+    # Accent style for toggle buttons
+    style.configure(
+        "Accent.TButton",
+        background=theme["highlight"],
+        foreground=theme["fg"],
+        borderwidth=1,
+        focusthickness=1,
+        focuscolor=theme["highlight"],
+    )
+    style.map(
+        "Accent.TButton",
+        background=[("active", theme["highlight"])],
+        foreground=[("active", theme["fg"])]
+    )
   
 
     style.configure("Custom.DateEntry",

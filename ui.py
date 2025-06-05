@@ -1,7 +1,16 @@
 from tkinter import ttk, messagebox
 import tkinter as tk
 from themes import themes, apply_theme_from_dropdown
-from logic import generate_message, update_fields, on_link_change, toggle_custom_asya, save_custom_asya, update_asya_button
+from logic import (
+    generate_message,
+    update_fields,
+    on_link_change,
+    toggle_custom_asya,
+    save_custom_asya,
+    update_asya_button,
+    toggle_asya_mode,
+    update_asya_mode_button,
+)
 from ocr import import_from_clipboard_image
 from utils import toggle_music, copy_generated_text, translate_to_english
 from ui_helpers import clear_frame, focus_next, enable_ctrl_v, enable_ctrl_c
@@ -89,21 +98,27 @@ def build_ui(ctx: UIContext):
     ctx.asya_popup = None
     ctx.asya_extra_frame = None
 
-    ctx.asya_button = ttk.Button(
-        ctx.root,
-        text="ЛС",
-        command=lambda: toggle_custom_asya(ctx),
-        style="Custom.TButton"
-    )
-    ctx.asya_button.pack(anchor="e", padx=10)
-    update_asya_button(ctx)
-
     # === Поля ===
     ctx.fields_frame = ttk.Frame(ctx.root, style="Custom.TFrame")
     ctx.fields_frame.pack(fill="x", expand=True, padx=10, pady=10)
 
     # === Кнопки ===
-    generate_button = ttk.Button(ctx.root, text="Сгенерировать сообщение", command=lambda: generate_message(ctx))
+    ctx.action_frame = ttk.Frame(ctx.root, style="Custom.TFrame")
+    ctx.action_frame.pack(pady=(5, 2))
+
+    generate_button = ttk.Button(ctx.action_frame, text="Сгенерировать сообщение", command=lambda: generate_message(ctx))
+    ctx.asya_button = ttk.Button(
+        ctx.action_frame,
+        text="ЛС",
+        command=lambda: toggle_custom_asya(ctx),
+        style="Custom.TButton",
+    )
+    ctx.asya_mode_button = ttk.Button(
+        ctx.action_frame,
+        text="Ася +",
+        command=lambda: toggle_asya_mode(ctx),
+        style="Custom.TButton",
+    )
     copy_button = ttk.Button(ctx.root, text="Скопировать текст", command=lambda: copy_generated_text(ctx, ctx.root))
 
     music_button = ttk.Button(
@@ -124,7 +139,12 @@ def build_ui(ctx: UIContext):
     clipboard_button.pack(anchor="e", padx=10, pady=(0, 5))
     ctx.input_fields.append(clipboard_button)
 
-    generate_button.pack(pady=(5, 2))
+    generate_button.pack(side="left")
+    ctx.asya_button.pack(side="left", padx=(5, 0))
+    ctx.asya_mode_button.pack(side="left", padx=(5, 0))
+    update_asya_button(ctx)
+    update_asya_mode_button(ctx)
+
     copy_button.pack(pady=(0, 10))
 
     # === Output ===

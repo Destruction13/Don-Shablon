@@ -30,6 +30,8 @@ class UIContext:
         self.asya_extra_frame: ttk.Frame | None = None  # legacy, no longer packed
         self.asya_popup: tk.Toplevel | None = None
         self.asya_button: ttk.Button | None = None
+        self.asya_mode_button: ttk.Button | None = None
+        self.action_frame: ttk.Frame | None = None
         self.custom_asya_saved: bool = False
         self.custom_asya_on: bool = False
 
