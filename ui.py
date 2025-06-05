@@ -88,7 +88,16 @@ def build_ui(ctx: UIContext):
     ctx.asya_name_var = tk.StringVar()
     ctx.asya_gender_var = tk.StringVar()
 
-    ctx.asya_extra_frame = ttk.Frame(ctx.root, style="Custom.TFrame")
+    ctx.asya_popup = tk.Toplevel(ctx.root)
+    ctx.asya_popup.withdraw()
+    ctx.asya_popup.transient(ctx.root)
+    ctx.asya_popup.resizable(False, False)
+    ctx.asya_popup.overrideredirect(True)
+    ctx.asya_popup.attributes("-topmost", True)
+
+    ctx.asya_extra_frame = ttk.Frame(ctx.asya_popup, style="Custom.TFrame")
+    ctx.asya_extra_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
     ttk.Label(ctx.asya_extra_frame, text="Твоё имя (ассистент):", style="TLabel").pack(anchor="w")
     ttk.Entry(ctx.asya_extra_frame, textvariable=ctx.asya_name_var, style="TEntry").pack(fill="x", pady=2)
 
@@ -101,13 +110,14 @@ def build_ui(ctx: UIContext):
         style="Custom.TCombobox"
     ).pack(fill="x", pady=2)
 
-    ttk.Checkbutton(
+    ctx.asya_button = ttk.Checkbutton(
         ctx.root,
         text="ЛС",
         variable=ctx.is_custom_asya,
         command=lambda: toggle_custom_asya(ctx),
         style="TCheckbutton"
-    ).pack(anchor="e", padx=10)
+    )
+    ctx.asya_button.pack(anchor="e", padx=10)
 
     # === Поля ===
     ctx.fields_frame = ttk.Frame(ctx.root, style="Custom.TFrame")

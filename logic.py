@@ -280,8 +280,15 @@ def on_link_change(*args, ctx: UIContext):
 
 
 def toggle_custom_asya(ctx: UIContext):
-    """Show or hide additional assistant settings."""
+    """Show or hide additional assistant settings in a popup window."""
+    if not ctx.asya_popup:
+        return
+
     if ctx.is_custom_asya.get():
-        ctx.asya_extra_frame.pack(fill="x", padx=10, pady=(0, 5))
+        if ctx.asya_button:
+            x = ctx.asya_button.winfo_rootx()
+            y = ctx.asya_button.winfo_rooty() + ctx.asya_button.winfo_height()
+            ctx.asya_popup.geometry(f"+{x}+{y}")
+        ctx.asya_popup.deiconify()
     else:
-        ctx.asya_extra_frame.pack_forget()
+        ctx.asya_popup.withdraw()

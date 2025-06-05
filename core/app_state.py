@@ -28,7 +28,9 @@ class UIContext:
         # Отдельные блоки UI
         self.fields_frame: ttk.Frame | None = None
         self.output_text: tk.Text | None = None
-        self.asya_extra_frame: ttk.Frame | None = None
+        self.asya_extra_frame: ttk.Frame | None = None  # legacy, no longer packed
+        self.asya_popup: tk.Toplevel | None = None
+        self.asya_button: ttk.Checkbutton | None = None
 
         # Музыка
         self.music_path = "James.mp3"
