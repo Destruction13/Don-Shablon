@@ -357,3 +357,19 @@ def update_asya_button(ctx: UIContext):
     else:
         text = "ЛС"
     ctx.asya_button.config(text=text)
+
+
+def toggle_asya_mode(ctx: UIContext):
+    """Toggle the simple Ася mode."""
+    ctx.asya_mode.set(not ctx.asya_mode.get())
+    update_asya_mode_button(ctx)
+
+
+def update_asya_mode_button(ctx: UIContext):
+    """Update the Ася + toggle button."""
+    if not ctx.asya_mode_button:
+        return
+    active = ctx.asya_mode.get()
+    text = "Ася +: вкл" if active else "Ася +: выкл"
+    style = "Accent.TButton" if active else "Custom.TButton"
+    ctx.asya_mode_button.config(text=text, style=style)
