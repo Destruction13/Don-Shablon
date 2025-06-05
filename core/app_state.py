@@ -31,6 +31,7 @@ class UIContext:
         self.asya_popup: tk.Toplevel | None = None
         self.asya_button: ttk.Button | None = None
         self.custom_asya_saved: bool = False
+        self.custom_asya_on: bool = False
 
         # Музыка
         self.music_path = "James.mp3"

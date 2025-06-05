@@ -60,7 +60,7 @@ def generate_message(ctx: UIContext):
     link_part = f" ({link})" if link else ""
 
     asya_on = ctx.asya_mode.get()
-    custom_asya_on = ctx.custom_asya_saved
+    custom_asya_on = ctx.custom_asya_on and ctx.custom_asya_saved
 
     if custom_asya_on:
         asya_name = ctx.asya_name_var.get().strip() or "Ася"
@@ -280,8 +280,9 @@ def on_link_change(*args, ctx: UIContext):
 
 
 def toggle_custom_asya(ctx: UIContext):
-    """Toggle visibility of the assistant popup."""
+    """Toggle assistant usage or show settings popup."""
     if ctx.custom_asya_saved:
+        ctx.custom_asya_on = not ctx.custom_asya_on
         return
 
     # Close the popup if it is currently visible
@@ -338,8 +339,8 @@ def save_custom_asya(ctx: UIContext):
         messagebox.showerror("Ошибка", "Введите имя и выберите пол")
         return
     ctx.custom_asya_saved = True
+    ctx.custom_asya_on = True
     if ctx.asya_popup:
         ctx.asya_popup.destroy()
         ctx.asya_popup = None
-    if ctx.asya_button:
-        ctx.asya_button.config(state="disabled")
+    # button remains enabled for toggling
