@@ -1,9 +1,8 @@
 from tkinter import ttk, messagebox
 import tkinter as tk
 from widgets import AutocompleteCombobox
-from ui_state import input_fields, fields, fields_frame, link_var, asya_mode, type_var
 from constants import rooms_by_bz
-from ui_state import UIContext
+from core.app_state import UIContext
 
 def add_time_range_dropdown(label_text_start: str, label_text_end: str, var_start: str, var_end: str, ctx: UIContext):
     start_combo = _create_time_selector(label_text_start)
@@ -139,7 +138,7 @@ def add_field_with_clear_button(label_text, var_name, ctx: UIContext):
     frame = ttk.Frame(ctx.fields_frame, style="Custom.TFrame")
     frame.pack(fill="x", padx=10, pady=2)
 
-    entry_var = link_var if var_name == "link" else tk.StringVar()
+    entry_var = ctx.link_var if var_name == "link" else tk.StringVar()
     entry = ttk.Entry(frame, textvariable=entry_var, style="TEntry")
     entry.pack(side="left", fill="x", expand=True)
 
@@ -291,7 +290,7 @@ def add_name_field_with_asya(ctx: UIContext, label_text="Имя:", var_name="nam
     name_entry.pack(side="left", fill="x", expand=True)
 
     # Кнопка "Ася +"
-    asya_check = ttk.Checkbutton(frame, text="Ася +", variable=asya_mode, style="TCheckbutton")
+    asya_check = ttk.Checkbutton(frame, text="Ася +", variable=ctx.asya_mode, style="TCheckbutton")
     asya_check.pack(side="left", padx=(5, 0))
 
     ctx.fields["name"] = name_entry

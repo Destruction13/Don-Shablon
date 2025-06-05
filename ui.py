@@ -5,8 +5,8 @@ from logic import generate_message, update_fields, on_link_change, toggle_custom
 from ocr import import_from_clipboard_image
 from utils import toggle_music, copy_generated_text, translate_to_english
 from ui_helpers import clear_frame, focus_next, enable_ctrl_v, enable_ctrl_c
-from ui_state import UIContext
-import ui_state
+from core.app_state import UIContext
+from config import DEEPL_API_KEY, DEEPL_URL
 from widgets import AutocompleteCombobox
 from constants import rooms_by_bz
 import os
@@ -41,13 +41,13 @@ def build_ui(ctx: UIContext):
     style.theme_use("clam")
 
     # === Тема ===
-    ui_state.current_theme_name = "Светлая"
-    ui_state.selected_theme = tk.StringVar(value=ui_state.current_theme_name)
-    theme = themes[ui_state.current_theme_name]
+    ctx.current_theme_name = "Светлая"
+    ctx.selected_theme = tk.StringVar(value=ctx.current_theme_name)
+    theme = themes[ctx.current_theme_name]
 
     theme_selector = ttk.Combobox(
         ctx.root,
-        textvariable=ui_state.selected_theme,
+        textvariable=ctx.selected_theme,
         values=list(themes.keys()),
         state="readonly",
         style="Custom.TCombobox"
@@ -56,14 +56,14 @@ def build_ui(ctx: UIContext):
     theme_selector.bind("<<ComboboxSelected>>", apply_theme_from_dropdown)
 
     # === Тип встречи ===
-    ui_state.type_var = tk.StringVar()
-    ui_state.type_var.trace_add("write", update_fields)
+    ctx.type_var = tk.StringVar()
+    ctx.type_var.trace_add("write", lambda *_: update_fields(ctx))
 
     ttk.Label(ctx.root, text="Тип встречи:", style="TLabel").pack(anchor="w", padx=10, pady=(10, 0))
 
     type_combo = ttk.Combobox(
         ctx.root,
-        textvariable=ui_state.type_var,
+        textvariable=ctx.type_var,
         values=["Актуализация", "Обмен", "Разовая встреча"],
         state="readonly",
         style="Custom.TCombobox"
@@ -72,49 +72,49 @@ def build_ui(ctx: UIContext):
     type_combo.bind("<Button-1>", lambda e: type_combo.event_generate('<Down>'))
 
     # === Ссылка ===
-    ui_state.link_var = tk.StringVar()
-    ui_state.link_var.trace_add("write", on_link_change)
+    ctx.link_var = tk.StringVar()
+    ctx.link_var.trace_add("write", lambda *_: on_link_change(ctx))
 
     # === Ася блок ===
-    ui_state.asya_mode = tk.BooleanVar(value=False)
-    ui_state.is_custom_asya = tk.BooleanVar(value=False)
-    ui_state.asya_name_var = tk.StringVar()
-    ui_state.asya_gender_var = tk.StringVar()
+    ctx.asya_mode = tk.BooleanVar(value=False)
+    ctx.is_custom_asya = tk.BooleanVar(value=False)
+    ctx.asya_name_var = tk.StringVar()
+    ctx.asya_gender_var = tk.StringVar()
 
-    ui_state.asya_extra_frame = ttk.Frame(ctx.root, style="Custom.TFrame")
-    ttk.Label(ui_state.asya_extra_frame, text="Твоё имя (ассистент):", style="TLabel").pack(anchor="w")
-    ttk.Entry(ui_state.asya_extra_frame, textvariable=ui_state.asya_name_var, style="TEntry").pack(fill="x", pady=2)
+    ctx.asya_extra_frame = ttk.Frame(ctx.root, style="Custom.TFrame")
+    ttk.Label(ctx.asya_extra_frame, text="Твоё имя (ассистент):", style="TLabel").pack(anchor="w")
+    ttk.Entry(ctx.asya_extra_frame, textvariable=ctx.asya_name_var, style="TEntry").pack(fill="x", pady=2)
 
-    ttk.Label(ui_state.asya_extra_frame, text="Пол:", style="TLabel").pack(anchor="w")
+    ttk.Label(ctx.asya_extra_frame, text="Пол:", style="TLabel").pack(anchor="w")
     ttk.Combobox(
-        ui_state.asya_extra_frame,
+        ctx.asya_extra_frame,
         values=["женский", "мужской"],
         state="readonly",
-        textvariable=ui_state.asya_gender_var,
+        textvariable=ctx.asya_gender_var,
         style="Custom.TCombobox"
     ).pack(fill="x", pady=2)
 
     ttk.Checkbutton(
         ctx.root,
         text="ЛС",
-        variable=ui_state.is_custom_asya,
-        command=toggle_custom_asya,
+        variable=ctx.is_custom_asya,
+        command=lambda: toggle_custom_asya(ctx),
         style="TCheckbutton"
     ).pack(anchor="e", padx=10)
 
     # === Поля ===
-    ui_state.fields_frame = ttk.Frame(ctx.root, style="Custom.TFrame")
-    ui_state.fields_frame.pack(fill="x", expand=True, padx=10, pady=10)
+    ctx.fields_frame = ttk.Frame(ctx.root, style="Custom.TFrame")
+    ctx.fields_frame.pack(fill="x", expand=True, padx=10, pady=10)
 
     # === Кнопки ===
-    generate_button = ttk.Button(ctx.root, text="Сгенерировать сообщение", command=generate_message)
-    copy_button = ttk.Button(ctx.root, text="Скопировать текст", command=copy_generated_text)
+    generate_button = ttk.Button(ctx.root, text="Сгенерировать сообщение", command=lambda: generate_message(ctx))
+    copy_button = ttk.Button(ctx.root, text="Скопировать текст", command=lambda: copy_generated_text(ctx, ctx.root))
 
     music_button = ttk.Button(
         ctx.root,
         text="🎵",
         width=3,
-        command=lambda: toggle_music(music_button, ui_state.music_path, ui_state),
+        command=lambda: toggle_music(music_button, ctx),
         style="Custom.TButton"
     )
     music_button.pack(anchor="ne", padx=10, pady=(0, 5))
@@ -122,11 +122,11 @@ def build_ui(ctx: UIContext):
     clipboard_button = ttk.Button(
         ctx.root,
         text="📋 Из буфера",
-        command=import_from_clipboard_image,
+        command=lambda: import_from_clipboard_image(ctx),
         style="Custom.TButton"
     )
     clipboard_button.pack(anchor="e", padx=10, pady=(0, 5))
-    ui_state.input_fields.append(clipboard_button)
+    ctx.input_fields.append(clipboard_button)
 
     generate_button.pack(pady=(5, 2))
     copy_button.pack(pady=(0, 10))
@@ -135,7 +135,7 @@ def build_ui(ctx: UIContext):
     output_frame = tk.Frame(ctx.root, bg=theme["bg"])
     output_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
-    ui_state.output_text = tk.Text(
+    ctx.output_text = tk.Text(
         output_frame,
         height=14,
         wrap="word",
@@ -146,21 +146,21 @@ def build_ui(ctx: UIContext):
         bd=0,
         relief="flat"
     )
-    ui_state.output_text.pack(fill="both", expand=True)
+    ctx.output_text.pack(fill="both", expand=True)
 
     translate_button = ttk.Button(
         output_frame,
         text="EN",
         width=3,
-        command=translate_to_english,
+        command=lambda: translate_to_english(ctx, DEEPL_API_KEY, DEEPL_URL),
         style="Custom.TButton"
     )
     translate_button.place(relx=1.0, rely=0.0, anchor="ne", x=-5, y=5)
 
     # === Горячие клавиши ===
-    ctx.root.bind("<Control-Return>", lambda e: generate_message())
-    ctx.root.bind("<Control-Shift-C>", lambda e: copy_generated_text())
-    ctx.root.bind("<Control-e>", lambda e: translate_to_english())
+    ctx.root.bind("<Control-Return>", lambda e: generate_message(ctx))
+    ctx.root.bind("<Control-Shift-C>", lambda e: copy_generated_text(ctx, ctx.root))
+    ctx.root.bind("<Control-e>", lambda e: translate_to_english(ctx, DEEPL_API_KEY, DEEPL_URL))
 
     # === Ctrl+C ===
-    enable_ctrl_c(ui_state.output_text, ctx.root)
+    enable_ctrl_c(ctx.output_text, ctx.root)

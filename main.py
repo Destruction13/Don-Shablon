@@ -1,4 +1,4 @@
-from ui_state import UIContext
+from core.app_state import UIContext
 from ui import build_ui
 
 if __name__ == "__main__":

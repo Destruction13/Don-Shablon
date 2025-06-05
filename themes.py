@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 
-from ui_state import UIContext
+from core.app_state import UIContext
 from widgets import AutocompleteCombobox  # если ты вынес его туда
 
 
@@ -53,7 +53,7 @@ themes = {
 
 def apply_theme(ctx: UIContext):
     style = ttk.Style()
-    theme = themes[current_theme_name]
+    theme = themes[ctx.current_theme_name]
     ctx.root.configure(bg=theme["bg"])
     style.configure("Custom.TFrame", background=theme["bg"])
     frame = ttk.Frame(ctx.fields_frame, style="Custom.TFrame")
@@ -141,6 +141,5 @@ def apply_theme(ctx: UIContext):
                           insertbackground=theme["fg"])
     
 def apply_theme_from_dropdown(*_, ctx: UIContext):
-    global current_theme_name
-    current_theme_name = ctx.selected_theme.get()
-    apply_theme()
+    ctx.current_theme_name = ctx.selected_theme.get()
+    apply_theme(ctx)

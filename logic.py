@@ -12,7 +12,7 @@ from ui_helpers import (add_field,
                         add_time_range_dropdown)
 
 
-from ui_state import UIContext
+from core.app_state import UIContext
 
 from constants import rooms_by_bz
 from utils import parse_yandex_calendar_url, format_date_ru, validate_fields
@@ -164,31 +164,31 @@ def generate_message(ctx: UIContext):
 
 
 def update_fields(*args, ctx: UIContext):
-    clear_frame()
+    clear_frame(ctx)
     typ = ctx.type_var.get()
     
 
     if typ == "Актуализация":
-        add_name_field_with_asya("Имя:", "name")
-        add_field_with_clear_button("Ссылка на встречу:", "link")
-        add_date_field("Дата (выбери в календаре):", "datetime")
-        add_time_range_dropdown("Время начала встречи:       ", "Время окончания встречи:", "start_time", "end_time")
-        add_dropdown_field("БЦ:", "bz", list(rooms_by_bz.keys()))
-        add_smart_filter_field("Переговорка:", "room", "bz")
-        add_dropdown_field("Тип встречи (Обычная/Регулярная):", "regular", ["Обычная", "Регулярная"])
+        add_name_field_with_asya(ctx, "Имя:", "name")
+        add_field_with_clear_button("Ссылка на встречу:", "link", ctx)
+        add_date_field("Дата (выбери в календаре):", "datetime", ctx)
+        add_time_range_dropdown("Время начала встречи:       ", "Время окончания встречи:", "start_time", "end_time", ctx)
+        add_dropdown_field("БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
+        add_smart_filter_field("Переговорка:", "room", "bz", ctx)
+        add_dropdown_field("Тип встречи (Обычная/Регулярная):", "regular", ["Обычная", "Регулярная"], ctx)
 
     elif typ == "Обмен":
-        add_name_field_with_asya("Имя:", "name")
-        add_field_with_clear_button("Ссылка на встречу:", "link")
-        add_date_field("Дата (выбери в календаре):", "datetime")
-        add_time_range_dropdown("Время начала встречи:       ", "Время окончания встречи:", "start_time", "end_time")
+        add_name_field_with_asya(ctx, "Имя:", "name")
+        add_field_with_clear_button("Ссылка на встречу:", "link", ctx)
+        add_date_field("Дата (выбери в календаре):", "datetime", ctx)
+        add_time_range_dropdown("Время начала встречи:       ", "Время окончания встречи:", "start_time", "end_time", ctx)
 
         # Один выпадающий список для БЦ
-        add_dropdown_field("БЦ:", "bz", list(rooms_by_bz.keys()))
+        add_dropdown_field("БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
 
         # Добавляем оба поля переговорок (his_room и my_room)
-        add_smart_filter_field("Его переговорка:", "his_room", "bz")
-        add_smart_filter_field("Твоя переговорка:", "my_room", "bz")
+        add_smart_filter_field("Его переговорка:", "his_room", "bz", ctx)
+        add_smart_filter_field("Твоя переговорка:", "my_room", "bz", ctx)
 
         # Обновлять оба списка при смене БЦ
         def update_all_rooms(*_):
@@ -203,21 +203,21 @@ def update_fields(*args, ctx: UIContext):
         update_all_rooms()
 
 
-        add_dropdown_field("Тип встречи (Обычная/Регулярная):", "regular", ["Обычная", "Регулярная"])
+        add_dropdown_field("Тип встречи (Обычная/Регулярная):", "regular", ["Обычная", "Регулярная"], ctx)
 
     elif typ == "Разовая встреча":
-        add_name_field_with_asya("Имя:", "name")
-        add_field_with_clear_button("Ссылка на встречу:", "link")
-        add_field("Название встречи:", "meeting_name")
-        add_field("Продолжительность встречи (например: 30 минут, 1 час, полтора часа):", "duration")
-        add_date_field("Предварительная дата, на которую поставилена встреча:", "datetime")
-        add_time_range_dropdown("Время начала встречи:       ", "Время окончания встречи:", "start_time", "end_time")
-        add_field_with_clear_button("Ссылка на пересекающуюся встречу 1:", "conflict1")
-        add_field_with_clear_button("Ссылка на пересекающуюся встречу 2 (необязательно):", "conflict2")
-        add_field_with_clear_button("Ссылка на пересекающуюся встречу 3 (необязательно):", "conflict3")
-        add_field("Имя и фамилия заказчика в родительном падеже (например: Андрея Романовского):", "client_name")
+        add_name_field_with_asya(ctx, "Имя:", "name")
+        add_field_with_clear_button("Ссылка на встречу:", "link", ctx)
+        add_field("Название встречи:", "meeting_name", ctx)
+        add_field("Продолжительность встречи (например: 30 минут, 1 час, полтора часа):", "duration", ctx)
+        add_date_field("Предварительная дата, на которую поставилена встреча:", "datetime", ctx)
+        add_time_range_dropdown("Время начала встречи:       ", "Время окончания встречи:", "start_time", "end_time", ctx)
+        add_field_with_clear_button("Ссылка на пересекающуюся встречу 1:", "conflict1", ctx)
+        add_field_with_clear_button("Ссылка на пересекающуюся встречу 2 (необязательно):", "conflict2", ctx)
+        add_field_with_clear_button("Ссылка на пересекающуюся встречу 3 (необязательно):", "conflict3", ctx)
+        add_field("Имя и фамилия заказчика в родительном падеже (например: Андрея Романовского):", "client_name", ctx)
     
-    apply_theme()
+    apply_theme(ctx)
 
 def on_link_change(*args, ctx: UIContext):
 
