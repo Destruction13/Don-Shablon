@@ -6,6 +6,7 @@ import tkinter as tk
 from datetime import datetime
 from ui_state import fields, type_var
 from constants import rooms_by_bz
+from ui_state import UIContext
 
 import easyocr
 reader = easyocr.Reader(['ru', 'en'])
@@ -109,8 +110,8 @@ def detect_repeat_checkbox(image_path, ocr_results):
     print("[DEBUG] Слово 'повторять' не найдено вообще.")
     return False
 
-def import_from_clipboard_image():
-    meeting_type = type_var.get()
+def import_from_clipboard_image(ctx: UIContext):
+    meeting_type = ctx.type_var.get()
     print(f"[DEBUG] Тип встречи: {meeting_type}")
     image = ImageGrab.grabclipboard()
     if isinstance(image, Image.Image):
@@ -124,48 +125,48 @@ def import_from_clipboard_image():
 
         is_regular = "Регулярная" if detect_repeat_checkbox(image_path, results) else "Обычная"
 
-        if "name" in fields and name:
-            fields["name"].delete(0, tk.END)
-            fields["name"].insert(0, name)
+        if "name" in ctx.fields and name:
+            ctx.fields["name"].delete(0, tk.END)
+            ctx.fields["name"].insert(0, name)
 
         # Если BZ не в словаре — добавим временно
         if bz and bz not in rooms_by_bz:
             rooms_by_bz[bz] = []
 
         # Заполним поля (BZ — обязательно первым)
-        if "bz" in fields:
-            fields["bz"].set(bz)
+        if "bz" in ctx.fields:
+            ctx.fields["bz"].set(bz)
 
         # Обновим списки для AutocompleteCombobox ПЕРЕД вставкой переговорок
-        if meeting_type == "Обмен" and "bz" in fields and "his_room" in fields and "my_room" in fields:
-            current_bz = fields["bz"].get()
+        if meeting_type == "Обмен" and "bz" in ctx.fields and "his_room" in ctx.fields and "my_room" in ctx.fields:
+            current_bz = ctx.fields["bz"].get()
             full_list = rooms_by_bz.get(current_bz, [])
-            fields["his_room"].set_completion_list(full_list)
-            fields["my_room"].set_completion_list(full_list)
+            ctx.fields["his_room"].set_completion_list(full_list)
+            ctx.fields["my_room"].set_completion_list(full_list)
 
         # Теперь безопасно вставляем переговорки
         if meeting_type == "Обмен":
-            if "his_room" in fields and room:
-                fields["his_room"].set(room)
+            if "his_room" in ctx.fields and room:
+                ctx.fields["his_room"].set(room)
         else:
-            if "room" in fields and room:
-                fields["room"].set(room)
+            if "room" in ctx.fields and room:
+                ctx.fields["room"].set(room)
 
 
-        if "datetime" in fields and date:
+        if "datetime" in ctx.fields and date:
             try:
-                fields["datetime"].set_date(datetime.strptime(date, "%d.%m.%Y"))
+                ctx.fields["datetime"].set_date(datetime.strptime(date, "%d.%m.%Y"))
             except Exception as e:
                 print("Ошибка даты:", e)
 
-        if "start_time" in fields and start_time:
-            fields["start_time"].set(start_time)
+        if "start_time" in ctx.fields and start_time:
+            ctx.fields["start_time"].set(start_time)
 
-        if "end_time" in fields and end_time:
-            fields["end_time"].set(end_time)
+        if "end_time" in ctx.fields and end_time:
+            ctx.fields["end_time"].set(end_time)
 
-        if "regular" in fields:
-            fields["regular"].set(is_regular)
+        if "regular" in ctx.fields:
+            ctx.fields["regular"].set(is_regular)
 
     else:
         messagebox.showerror("Ошибка", "Буфер обмена не содержит изображения.")

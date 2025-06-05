@@ -1,8 +1,9 @@
 import tkinter as tk
 from tkinter import ttk
 
-from ui_state import root, current_theme_name, input_fields, output_text, selected_theme, fields_frame
+from ui_state import UIContext
 from widgets import AutocompleteCombobox  # если ты вынес его туда
+
 
 
 themes = {
@@ -50,12 +51,12 @@ themes = {
     }
 }
 
-def apply_theme():
+def apply_theme(ctx: UIContext):
     style = ttk.Style()
     theme = themes[current_theme_name]
-    root.configure(bg=theme["bg"])
+    ctx.root.configure(bg=theme["bg"])
     style.configure("Custom.TFrame", background=theme["bg"])
-    frame = ttk.Frame(fields_frame, style="Custom.TFrame")
+    frame = ttk.Frame(ctx.fields_frame, style="Custom.TFrame")
     
 
     # Стили для стандартных элементов
@@ -115,7 +116,7 @@ def apply_theme():
 
 
     # Применяем стили к каждому виджету
-    for widget in input_fields:
+    for widget in ctx.input_fields:
         if not widget.winfo_exists():
             continue  # Пропустить мёртвые виджеты
 
@@ -135,11 +136,11 @@ def apply_theme():
             widget.configure(style="Custom.TFrame")
 
     # Настройка output_text
-    output_text.configure(bg=theme["entry_bg"],
+    ctx.output_text.configure(bg=theme["entry_bg"],
                           fg=theme["entry_fg"],
                           insertbackground=theme["fg"])
     
-def apply_theme_from_dropdown(*_):
+def apply_theme_from_dropdown(*_, ctx: UIContext):
     global current_theme_name
-    current_theme_name = selected_theme.get()
+    current_theme_name = ctx.selected_theme.get()
     apply_theme()

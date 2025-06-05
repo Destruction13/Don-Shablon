@@ -1,11 +1,11 @@
-from ui_state import input_fields, fields_frame, fields
 from tkinter import ttk, messagebox
 import tkinter as tk
 from widgets import AutocompleteCombobox
 from ui_state import input_fields, fields, fields_frame, link_var, asya_mode, type_var
 from constants import rooms_by_bz
+from ui_state import UIContext
 
-def add_time_range_dropdown(label_text_start: str, label_text_end: str, var_start: str, var_end: str):
+def add_time_range_dropdown(label_text_start: str, label_text_end: str, var_start: str, var_end: str, ctx: UIContext):
     start_combo = _create_time_selector(label_text_start)
     end_combo = _create_time_selector(label_text_end)
 
@@ -28,13 +28,13 @@ def add_time_range_dropdown(label_text_start: str, label_text_end: str, var_star
 
     for widget in (start_combo, end_combo):
         _configure_combobox_behavior(widget)
-        input_fields.append(widget)
+        ctx.input_fields.append(widget)
 
-    fields[var_start] = start_combo
-    fields[var_end] = end_combo
+    ctx.fields[var_start] = start_combo
+    ctx.fields[var_end] = end_combo
 
-def _create_time_selector(label_text: str) -> ttk.Combobox:
-    frame = ttk.Frame(fields_frame)
+def _create_time_selector(label_text: str, ctx: UIContext) -> ttk.Combobox:
+    frame = ttk.Frame(ctx.fields_frame)
 
     label = ttk.Label(frame, text=label_text, style="TLabel")
     label.pack(side="left")
@@ -46,7 +46,7 @@ def _create_time_selector(label_text: str) -> ttk.Combobox:
     clear_btn.pack(side="left", padx=(5, 0))
 
     frame.pack(fill="x", padx=10, pady=2)
-    input_fields.append(frame)
+    ctx.input_fields.append(frame)
 
     return combo
 
@@ -60,16 +60,16 @@ def _configure_combobox_behavior(widget: ttk.Combobox):
     widget.bind("<Return>", lambda e, w=widget: focus_next(e, w))
 
 
-def focus_next(event, current):
-    i = input_fields.index(current)
-    if i + 1 < len(input_fields):
-        input_fields[i + 1].focus_set()
+def focus_next(event, current, ctx: UIContext):
+    i = ctx.input_fields.index(current)
+    if i + 1 < len(ctx.input_fields):
+        ctx.input_fields[i + 1].focus_set()
     return "break"
 
-def clear_frame():
-    for widget in fields_frame.winfo_children():
+def clear_frame(ctx: UIContext):
+    for widget in ctx.fields_frame.winfo_children():
         widget.destroy()
-    fields.clear()
+    ctx.fields.clear()
 
 def enable_ctrl_c(widget, root):
     def copy_selection(event=None):
@@ -116,27 +116,27 @@ def enable_ctrl_v(widget, root):
     widget.bind("<Control-KeyPress>", on_ctrl_keypress)
     widget.bind("<Command-v>", paste_clipboard)
 
-def add_field(label_text, var_name):
-    ttk.Label(fields_frame, text=label_text, style="TLabel").pack(anchor="w", padx=10)
-    entry = ttk.Entry(fields_frame)
+def add_field(label_text, var_name, ctx: UIContext):
+    ttk.Label(ctx.fields_frame, text=label_text, style="TLabel").pack(anchor="w", padx=10)
+    entry = ttk.Entry(ctx.fields_frame)
     entry.pack(fill="x", padx=10, pady=2)
 
     enable_ctrl_v(entry)  # поддержка Ctrl+V
-    fields[var_name] = entry
-    input_fields.append(entry)
+    ctx.fields[var_name] = entry
+    ctx.input_fields.append(entry)
 
     def focus_next(event, current=entry):
-        i = input_fields.index(current)
-        if i + 1 < len(input_fields):
-            input_fields[i + 1].focus_set()
+        i = ctx.input_fields.index(current)
+        if i + 1 < len(ctx.input_fields):
+            ctx.input_fields[i + 1].focus_set()
         return "break"
 
     entry.bind("<Return>", focus_next)
 
-def add_field_with_clear_button(label_text, var_name):
-    ttk.Label(fields_frame, text=label_text, style="TLabel").pack(anchor="w", padx=10)
+def add_field_with_clear_button(label_text, var_name, ctx: UIContext):
+    ttk.Label(ctx.fields_frame, text=label_text, style="TLabel").pack(anchor="w", padx=10)
 
-    frame = ttk.Frame(fields_frame, style="Custom.TFrame")
+    frame = ttk.Frame(ctx.fields_frame, style="Custom.TFrame")
     frame.pack(fill="x", padx=10, pady=2)
 
     entry_var = link_var if var_name == "link" else tk.StringVar()
@@ -149,13 +149,13 @@ def add_field_with_clear_button(label_text, var_name):
     clear_btn = ttk.Button(frame, text="✖", width=2, command=clear_entry)
     clear_btn.pack(side="left", padx=(5, 0))
 
-    fields[var_name] = entry
-    input_fields.append(entry)
+    ctx.fields[var_name] = entry
+    ctx.input_fields.append(entry)
 
     def focus_next(event, current=entry):
-        i = input_fields.index(current)
-        if i + 1 < len(input_fields):
-            input_fields[i + 1].focus_set()
+        i = ctx.input_fields.index(current)
+        if i + 1 < len(ctx.input_fields):
+            ctx.input_fields[i + 1].focus_set()
         return "break"
 
     entry.bind("<Return>", focus_next)
@@ -163,27 +163,27 @@ def add_field_with_clear_button(label_text, var_name):
 
 
 
-def add_dropdown_field(label_text, var_name, values):
-    ttk.Label(fields_frame, text=label_text, style="TLabel").pack(anchor="w", padx=10)
-    combo = ttk.Combobox(fields_frame, values=values, state="readonly", style="Custom.TCombobox")
+def add_dropdown_field(label_text, var_name, values, ctx: UIContext):
+    ttk.Label(ctx.fields_frame, text=label_text, style="TLabel").pack(anchor="w", padx=10)
+    combo = ttk.Combobox(ctx.fields_frame, values=values, state="readonly", style="Custom.TCombobox")
     combo.pack(fill="x", padx=10, pady=2)
     combo.bind("<Button-1>", lambda e: combo.event_generate('<Down>'))
-    fields[var_name] = combo
-    input_fields.append(combo)
+    ctx.fields[var_name] = combo
+    ctx.input_fields.append(combo)
 
     def focus_next(event, current=combo):
-        i = input_fields.index(current)
-        if i + 1 < len(input_fields):
-            input_fields[i + 1].focus_set()
+        i = ctx.input_fields.index(current)
+        if i + 1 < len(ctx.input_fields):
+            ctx.input_fields[i + 1].focus_set()
         return "break"
 
     combo.bind("<Return>", focus_next)
 
-def add_date_field(label_text, var_name):
+def add_date_field(label_text, var_name, ctx: UIContext):
     from tkcalendar import DateEntry
 
-    ttk.Label(fields_frame, text=label_text, style="TLabel").pack(anchor="w", padx=10)
-    date_entry = DateEntry(fields_frame, date_pattern='dd.mm.yyyy', style="Custom.DateEntry", locale='ru_RU')
+    ttk.Label(ctx.fields_frame, text=label_text, style="TLabel").pack(anchor="w", padx=10, )
+    date_entry = DateEntry(ctx.fields_frame, date_pattern='dd.mm.yyyy', style="Custom.DateEntry", locale='ru_RU')
     date_entry.pack(fill="x", padx=10, pady=2)
 
     def show_calendar(event):
@@ -198,28 +198,28 @@ def add_date_field(label_text, var_name):
 
     date_entry.bind("<Button-1>", show_calendar)
 
-    fields[var_name] = date_entry
-    input_fields.append(date_entry)
+    ctx.fields[var_name] = date_entry
+    ctx.input_fields.append(date_entry)
 
     def focus_next(event, current=date_entry):
-        i = input_fields.index(current)
-        if i + 1 < len(input_fields):
-            input_fields[i + 1].focus_set()
+        i = ctx.input_fields.index(current)
+        if i + 1 < len(ctx.input_fields):
+            ctx.input_fields[i + 1].focus_set()
         return "break"
 
     date_entry.bind("<Return>", focus_next)
     
 
-def add_meeting_room_field(label_bz, label_room, var_bz, var_room, rooms_data):
+def add_meeting_room_field(label_bz, label_room, var_bz, var_room, rooms_data, ctx: UIContext):
     # Label для БЦ
-    ttk.Label(fields_frame, text=label_bz, style="TLabel").pack(anchor="w", padx=10)
-    bz_combo = ttk.Combobox(fields_frame, values=list(rooms_data.keys()), state="readonly", style="Custom.TCombobox")
+    ttk.Label(ctx.fields_frame, text=label_bz, style="TLabel").pack(anchor="w", padx=10)
+    bz_combo = ttk.Combobox(ctx.fields_frame, values=list(rooms_data.keys()), state="readonly", style="Custom.TCombobox")
     bz_combo.pack(fill="x", padx=10, pady=2)
 
     # Label для переговорки
-    ttk.Label(fields_frame, text=label_room, style="TLabel").pack(anchor="w", padx=10)
+    ttk.Label(ctx.fields_frame, text=label_room, style="TLabel").pack(anchor="w", padx=10)
     room_var = tk.StringVar()
-    room_combo = ttk.Combobox(fields_frame, textvariable=room_var, style="Custom.TCombobox")
+    room_combo = ttk.Combobox(ctx.fields_frame, textvariable=room_var, style="Custom.TCombobox")
     room_combo.pack(fill="x", padx=10, pady=2)
 
     def update_room_options(event=None):
@@ -244,23 +244,23 @@ def add_meeting_room_field(label_bz, label_room, var_bz, var_room, rooms_data):
 
     for widget in [bz_combo, room_combo]:
         widget.bind("<ButtonRelease-1>", lambda e, w=widget: auto_dropdown(w))
-        input_fields.append(widget)
+        ctx.input_fields.append(widget)
         widget.bind("<Return>", lambda e, w=widget: focus_next(e, w))
 
 
-    fields[var_bz] = bz_combo
-    fields[var_room] = room_combo
+    ctx.fields[var_bz] = bz_combo
+    ctx.fields[var_room] = room_combo
 
 
-def add_smart_filter_field(label_text, var_name, bz_var_name):
-    ttk.Label(fields_frame, text=label_text, style="TLabel").pack(anchor="w", padx=10)
+def add_smart_filter_field(label_text, var_name, bz_var_name, ctx: UIContext):
+    ttk.Label(ctx.fields_frame, text=label_text, style="TLabel").pack(anchor="w", padx=10)
     
     var = tk.StringVar()
-    combo = AutocompleteCombobox(fields_frame, textvariable=var)
+    combo = AutocompleteCombobox(ctx.fields_frame, textvariable=var)
     combo.pack(fill="x", padx=10, pady=2)
 
     def update_rooms(*_):
-        current_bz = fields[bz_var_name].get()
+        current_bz = ctx.fields[bz_var_name].get()
         full_list = rooms_by_bz.get(current_bz, [])
         if not full_list:
             print(f"[DEBUG] Не найдена переговорка в БЦ: {current_bz}")
@@ -268,22 +268,22 @@ def add_smart_filter_field(label_text, var_name, bz_var_name):
         combo.set("")  # очистим поле
         combo.focus_set()
 
-    fields[bz_var_name].bind("<<ComboboxSelected>>", update_rooms)
+    ctx.fields[bz_var_name].bind("<<ComboboxSelected>>", update_rooms)
     combo.bind("<Return>", lambda e: combo.tk_focusNext().focus())  # переход дальше
     combo.bind("<Tab>", lambda e: combo.tk_focusNext().focus())
     
-    fields[var_name] = combo
-    input_fields.append(combo)
+    ctx.fields[var_name] = combo
+    ctx.input_fields.append(combo)
 
 
 
 
-def add_name_field_with_asya(label_text="Имя:", var_name="name"):
-    ttk.Label(fields_frame, text=label_text, style="TLabel").pack(anchor="w", padx=10)
+def add_name_field_with_asya(ctx: UIContext, label_text="Имя:", var_name="name"):
+    ttk.Label(ctx.fields_frame, text=label_text, style="TLabel").pack(anchor="w", padx=10)
 
     name_var = tk.StringVar()
 
-    frame = ttk.Frame(fields_frame, style="Custom.TFrame")
+    frame = ttk.Frame(ctx.fields_frame, style="Custom.TFrame")
     frame.pack(fill="x", padx=10, pady=2)
 
     name_var = tk.StringVar()
@@ -294,9 +294,9 @@ def add_name_field_with_asya(label_text="Имя:", var_name="name"):
     asya_check = ttk.Checkbutton(frame, text="Ася +", variable=asya_mode, style="TCheckbutton")
     asya_check.pack(side="left", padx=(5, 0))
 
-    fields["name"] = name_entry
-    input_fields.append(name_entry)
-    input_fields.append(asya_check)
+    ctx.fields["name"] = name_entry
+    ctx.input_fields.append(name_entry)
+    ctx.input_fields.append(asya_check)
 
     def focus_next(event):
         name_entry.tk_focusNext().focus()

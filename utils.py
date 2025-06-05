@@ -7,11 +7,11 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import pygame
 from ui_helpers import focus_next
+from ui_state import UIContext
 
 
 
 # Важно: подключить shared state
-from ui_state import fields, input_fields, fields_frame
 from config import DEEPL_API_KEY, DEEPL_URL, days, months
 
 
@@ -20,24 +20,24 @@ def get_resource_path(relative_path):
     base_path = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))
     return os.path.join(base_path, relative_path)
 
-def toggle_music(music_button, music_path, state):
-    if not music_path:
+def toggle_music(music_button, ctx: UIContext):
+    if not ctx.music_path:
         print("[INFO] Музыка не загружена — ничего не делаем.")
         return
 
-    if not state["playing"]:
+    if not ctx.state["playing"]:
         pygame.mixer.music.play(-1)
         music_button.config(text="⏸")
-        state["playing"] = True
-        state["paused"] = False
-    elif not state["paused"]:
+        ctx.state["playing"] = True
+        ctx.state["paused"] = False
+    elif not ctx.state["paused"]:
         pygame.mixer.music.pause()
         music_button.config(text="▶️")
-        state["paused"] = True
+        ctx.state["paused"] = True
     else:
         pygame.mixer.music.unpause()
         music_button.config(text="⏸")
-        state["paused"] = False
+        ctx.state["paused"] = False
 
 
 def parse_yandex_calendar_url(url):
@@ -85,8 +85,8 @@ def format_date_ru(date_obj):
 
 
 
-def translate_to_english(output_text, api_key, url):
-    text = output_text.get("1.0", tk.END).strip()
+def translate_to_english(ctx: UIContext, api_key, url):
+    text = ctx.output_text.get("1.0", tk.END).strip()
     if not text:
         return
 
@@ -101,22 +101,22 @@ def translate_to_english(output_text, api_key, url):
         response.raise_for_status()
         translated_text = response.json()["translations"][0]["text"]
 
-        output_text.delete("1.0", tk.END)
-        output_text.insert(tk.END, translated_text)
+        ctx.output_text.delete("1.0", tk.END)
+        ctx.output_text.insert(tk.END, translated_text)
     except Exception as e:
         messagebox.showerror("Ошибка перевода", f"Не удалось перевести текст:\n{e}")
 
 
-def copy_generated_text(output_text, root):
-    text = output_text.get("1.0", tk.END).strip()
+def copy_generated_text(ctx: UIContext, root):
+    text = ctx.output_text.get("1.0", tk.END).strip()
     if text:
         root.clipboard_clear()
         root.clipboard_append(text)
 
-def validate_fields(required_keys):
+def validate_fields(required_keys, ctx: UIContext):
     valid = True
     for key in required_keys:
-        widget = fields.get(key)
+        widget = ctx.fields.get(key)
         if not widget or not hasattr(widget, "get"):
             continue
 
@@ -139,7 +139,7 @@ def validate_fields(required_keys):
             widget.configure(style=style_name)
 
             # Надпись под полем
-            err_label = ttk.Label(fields_frame, text="Поле обязательно", foreground="red", background="#eeeeee", font=("Arial", 8))
+            err_label = ttk.Label(ctx.fields_frame, text="Поле обязательно", foreground="red", background="#eeeeee", font=("Arial", 8))
             err_label.pack(after=widget, anchor="w", padx=10)
             widget.error_label = err_label
     return valid

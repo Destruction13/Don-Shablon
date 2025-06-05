@@ -12,17 +12,7 @@ from ui_helpers import (add_field,
                         add_time_range_dropdown)
 
 
-from ui_state import (
-    fields,
-    type_var,
-    link_var,
-    asya_mode,
-    is_custom_asya,
-    asya_name_var,
-    asya_gender_var,
-    asya_extra_frame, 
-    output_text
-)
+from ui_state import UIContext
 
 from constants import rooms_by_bz
 from utils import parse_yandex_calendar_url, format_date_ru, validate_fields
@@ -31,9 +21,9 @@ from utils import parse_yandex_calendar_url, format_date_ru, validate_fields
 from themes import apply_theme
 
 
-def generate_message():
-    typ = type_var.get()
-    field_values = {k: v.get().strip() for k, v in fields.items()}
+def generate_message(ctx: UIContext):
+    typ = ctx.type_var.get()
+    field_values = {k: v.get().strip() for k, v in ctx.fields.items()}
     start = field_values.get("start_time", "").strip()
     end = field_values.get("end_time", "").strip()
 
@@ -57,17 +47,17 @@ def generate_message():
         time_part = ""
 
     name = field_values.get("name", "")
-    raw_date = fields["datetime"].get_date()
+    raw_date = ctx.fields["datetime"].get_date()
     formatted = format_date_ru(raw_date)
     link = field_values.get("link", "")
     link_part = f" ({link})" if link else ""
 
-    asya_on = asya_mode.get()
-    custom_asya_on = is_custom_asya.get()
+    asya_on = ctx.asya_mode.get()
+    custom_asya_on = ctx.is_custom_asya.get()
 
     if custom_asya_on:
-        asya_name = asya_name_var.get().strip() or "Ася"
-        gender = asya_gender_var.get().strip().lower()
+        asya_name = ctx.asya_name_var.get().strip() or "Ася"
+        gender = ctx.asya_gender_var.get().strip().lower()
         greeting = f"Привет, {name}! Я {asya_name}, ассистент. Приятно познакомиться!"
         gender_word1 = "признателен" if gender == "мужской" else "признательна"
         gender_word2 = "сам" if gender == "мужской" else "сама"
@@ -114,7 +104,7 @@ def generate_message():
     elif typ == "Разовая встреча":
         meeting_name = field_values.get("meeting_name", "")
         duration = field_values.get("duration", "")
-        raw_date = fields["datetime"].get_date()
+        raw_date = ctx.fields["datetime"].get_date()
         formatted = format_date_ru(raw_date)
         client_name = field_values.get("client_name", "")
         first_name = client_name.split()[0] if client_name else "клиент"
@@ -169,13 +159,13 @@ def generate_message():
     else:
         msg = "Тип встречи не выбран"
 
-    output_text.delete("1.0", tk.END)
-    output_text.insert(tk.END, msg)
+    ctx.output_text.delete("1.0", tk.END)
+    ctx.output_text.insert(tk.END, msg)
 
 
-def update_fields(*args):
+def update_fields(*args, ctx: UIContext):
     clear_frame()
-    typ = type_var.get()
+    typ = ctx.type_var.get()
     
 
     if typ == "Актуализация":
@@ -202,14 +192,14 @@ def update_fields(*args):
 
         # Обновлять оба списка при смене БЦ
         def update_all_rooms(*_):
-            current_bz = fields["bz"].get()
+            current_bz = ctx.fields["bz"].get()
             full_list = rooms_by_bz.get(current_bz, [])
-            fields["his_room"].set_completion_list(full_list)
-            fields["his_room"].set("")
-            fields["my_room"].set_completion_list(full_list)
-            fields["my_room"].set("")
+            ctx.fields["his_room"].set_completion_list(full_list)
+            ctx.fields["his_room"].set("")
+            ctx.fields["my_room"].set_completion_list(full_list)
+            ctx.fields["my_room"].set("")
 
-        fields["bz"].bind("<<ComboboxSelected>>", update_all_rooms)
+        ctx.fields["bz"].bind("<<ComboboxSelected>>", update_all_rooms)
         update_all_rooms()
 
 
@@ -229,19 +219,19 @@ def update_fields(*args):
     
     apply_theme()
 
-def on_link_change(*args):
+def on_link_change(*args, ctx: UIContext):
 
     # === ⛔️ Новое условие: если дата и время уже заданы — ничего не меняем
-    if fields.get("datetime") and fields["datetime"].get() and fields["start_time"].get() and fields["end_time"].get():
+    if ctx.fields.get("datetime") and ctx.fields["datetime"].get() and ctx.fields["start_time"].get() and ctx.fields["end_time"].get():
         print("[INFO] Дата и время уже заданы вручную — ничего не меняем")
         return
 
-    url = link_var.get()
+    url = ctx.link_var.get()
     date_str, time_str = parse_yandex_calendar_url(url)
 
     if date_str and time_str:
         try:
-            fields["datetime"].set_date(datetime.strptime(date_str, "%d.%m.%Y"))
+            ctx.fields["datetime"].set_date(datetime.strptime(date_str, "%d.%m.%Y"))
         except Exception as e:
             print("Ошибка при установке даты:", e)
 
@@ -252,7 +242,7 @@ def on_link_change(*args):
             adjusted_time = f"{h:02d}:{m:02d}"
 
             # Установим время начала
-            fields["start_time"].set(adjusted_time)
+            ctx.fields["start_time"].set(adjusted_time)
 
             # Вычисляем список всех слотов
             all_slots = [f"{h_:02d}:{m_:02d}" for h_ in range(8, 22) for m_ in (0, 30)]
@@ -266,22 +256,22 @@ def on_link_change(*args):
                 idx = -1  # фиктивное значение
 
             # Обновляем доступные значения для окончания
-            fields["end_time"]["values"] = available_ends
+            ctx.fields["end_time"]["values"] = available_ends
 
             # 👉 Автоподстановка +1 час, если в списке доступно
             if idx != -1 and idx + 1 < len(all_slots):
-                fields["end_time"].set(all_slots[idx + 1])  # +1 час (2 слота по 30 минут)
+                ctx.fields["end_time"].set(all_slots[idx + 1])  # +1 час (2 слота по 30 минут)
             elif available_ends:
-                fields["end_time"].set(available_ends[0])   # если 1 слот доступен — его
+                ctx.fields["end_time"].set(available_ends[0])   # если 1 слот доступен — его
             else:
-                fields["end_time"].set("")  # fallback
+                ctx.fields["end_time"].set("")  # fallback
 
         except Exception as e:
             print("Ошибка при установке времени:", e)
 
 
-def toggle_custom_asya():
-    if is_custom_asya.get():
-        asya_extra_frame.pack(fill="x", padx=10, pady=(0, 5))
+def toggle_custom_asya(ctx: UIContext):
+    if ctx.is_custom_asya.get():
+        ctx.asya_extra_frame.pack(fill="x", padx=10, pady=(0, 5))
     else:
-        asya_extra_frame.pack_forget()
+        ctx.asya_extra_frame.pack_forget()

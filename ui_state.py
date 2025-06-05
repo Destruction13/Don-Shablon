@@ -1,25 +1,45 @@
+# core/app_state.py
 import tkinter as tk
+from tkinter import ttk
 
-root = None
 
-current_theme_name = "Светлая"
-selected_theme = None  # ← теперь не создаём сразу!
+class UIContext:
+    def __init__(self):
+        # Основной root
+        self.root = tk.Tk()
+        self.root.title("Генератор шаблонов встреч")
+        self.root.configure(bg="white")
 
-input_fields = []
-fields = {}
-fields_frame = None
+        # Переменные интерфейса
+        self.type_var = tk.StringVar()
+        self.link_var = tk.StringVar()
+        self.asya_mode = tk.BooleanVar(value=False)
+        self.is_custom_asya = tk.BooleanVar(value=False)
+        self.asya_name_var = tk.StringVar()
+        self.asya_gender_var = tk.StringVar()
+        self.selected_theme = tk.StringVar(value="Светлая")
 
-type_var = None
-link_var = None
-asya_mode = None
-asya_extra_frame = None
-output_text = None
-music_path = "James.mp3"
+        # Хранилище виджетов
+        self.fields: dict[str, tk.Widget] = {}
+        self.input_fields: list[tk.Widget] = []
 
-is_custom_asya = None
-asya_name_var = None
-asya_gender_var = None
+        # Отдельные блоки UI
+        self.fields_frame: ttk.Frame | None = None
+        self.output_text: tk.Text | None = None
+        self.asya_extra_frame: ttk.Frame | None = None
 
-music_playing = False
-music_paused = False
+        # Музыка
+        self.music_path = "James.mp3"
+        self.music_state = {
+            "playing": False,
+            "paused": False
+        }
+
+    def reset_fields(self):
+        """Полностью очищает поля формы"""
+        for widget in self.fields_frame.winfo_children():
+            widget.destroy()
+        self.fields.clear()
+
+
 
