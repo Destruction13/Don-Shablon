@@ -78,7 +78,11 @@ def format_date_ru(date_obj):
             day_name = days[date_obj.weekday()]
             day = date_obj.day
             month = months[date_obj.month - 1]
-            return f"в {day_name}, {day} {month}"
+
+            # "во" используется перед вторником для правильного звучания
+            preposition = "во" if day_name == "вторник" else "в"
+
+            return f"{preposition} {day_name}, {day} {month}"
     except Exception as e:
         print(f"[ERROR] Невозможно отформатировать дату: {e}")
         return ""
