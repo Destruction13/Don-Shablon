@@ -4,6 +4,7 @@ from themes import themes, apply_theme_from_dropdown
 from logic import generate_message, update_fields, on_link_change, toggle_custom_asya
 from ocr import import_from_clipboard_image
 from utils import toggle_music, copy_generated_text, translate_to_english
+from config import DEEPL_API_KEY, DEEPL_URL
 from ui_helpers import clear_frame, focus_next, enable_ctrl_v, enable_ctrl_c
 from ui_state import UIContext
 import ui_state
@@ -40,6 +41,9 @@ def build_ui(ctx: UIContext):
     style = ttk.Style()
     style.theme_use("clam")
 
+    # Загрузим музыку, если файл присутствует
+    ctx.music_path = init_music(ctx.music_path or "James.mp3")
+
     # === Тема ===
     ui_state.current_theme_name = "Светлая"
     ui_state.selected_theme = tk.StringVar(value=ui_state.current_theme_name)
@@ -57,7 +61,7 @@ def build_ui(ctx: UIContext):
 
     # === Тип встречи ===
     ui_state.type_var = tk.StringVar()
-    ui_state.type_var.trace_add("write", update_fields)
+    ui_state.type_var.trace_add("write", lambda *_: update_fields(ctx=ctx))
 
     ttk.Label(ctx.root, text="Тип встречи:", style="TLabel").pack(anchor="w", padx=10, pady=(10, 0))
 
@@ -73,7 +77,7 @@ def build_ui(ctx: UIContext):
 
     # === Ссылка ===
     ui_state.link_var = tk.StringVar()
-    ui_state.link_var.trace_add("write", on_link_change)
+    ui_state.link_var.trace_add("write", lambda *_: on_link_change(ctx=ctx))
 
     # === Ася блок ===
     ui_state.asya_mode = tk.BooleanVar(value=False)
@@ -98,7 +102,7 @@ def build_ui(ctx: UIContext):
         ctx.root,
         text="ЛС",
         variable=ui_state.is_custom_asya,
-        command=toggle_custom_asya,
+        command=lambda: toggle_custom_asya(ctx),
         style="TCheckbutton"
     ).pack(anchor="e", padx=10)
 
@@ -107,14 +111,14 @@ def build_ui(ctx: UIContext):
     ui_state.fields_frame.pack(fill="x", expand=True, padx=10, pady=10)
 
     # === Кнопки ===
-    generate_button = ttk.Button(ctx.root, text="Сгенерировать сообщение", command=generate_message)
-    copy_button = ttk.Button(ctx.root, text="Скопировать текст", command=copy_generated_text)
+    generate_button = ttk.Button(ctx.root, text="Сгенерировать сообщение", command=lambda: generate_message(ctx))
+    copy_button = ttk.Button(ctx.root, text="Скопировать текст", command=lambda: copy_generated_text(ctx, ctx.root))
 
     music_button = ttk.Button(
         ctx.root,
         text="🎵",
         width=3,
-        command=lambda: toggle_music(music_button, ui_state.music_path, ui_state),
+        command=lambda: toggle_music(music_button, ctx),
         style="Custom.TButton"
     )
     music_button.pack(anchor="ne", padx=10, pady=(0, 5))
@@ -122,7 +126,7 @@ def build_ui(ctx: UIContext):
     clipboard_button = ttk.Button(
         ctx.root,
         text="📋 Из буфера",
-        command=import_from_clipboard_image,
+        command=lambda: import_from_clipboard_image(ctx),
         style="Custom.TButton"
     )
     clipboard_button.pack(anchor="e", padx=10, pady=(0, 5))
@@ -152,15 +156,15 @@ def build_ui(ctx: UIContext):
         output_frame,
         text="EN",
         width=3,
-        command=translate_to_english,
+        command=lambda: translate_to_english(ctx, DEEPL_API_KEY, DEEPL_URL),
         style="Custom.TButton"
     )
     translate_button.place(relx=1.0, rely=0.0, anchor="ne", x=-5, y=5)
 
     # === Горячие клавиши ===
-    ctx.root.bind("<Control-Return>", lambda e: generate_message())
-    ctx.root.bind("<Control-Shift-C>", lambda e: copy_generated_text())
-    ctx.root.bind("<Control-e>", lambda e: translate_to_english())
+    ctx.root.bind("<Control-Return>", lambda e: generate_message(ctx))
+    ctx.root.bind("<Control-Shift-C>", lambda e: copy_generated_text(ctx, ctx.root))
+    ctx.root.bind("<Control-e>", lambda e: translate_to_english(ctx, DEEPL_API_KEY, DEEPL_URL))
 
     # === Ctrl+C ===
     enable_ctrl_c(ui_state.output_text, ctx.root)
