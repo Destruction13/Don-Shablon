@@ -147,10 +147,7 @@ class MainWindow(QMainWindow):
         self.ctx.ls_active = checked
 
     def handle_clipboard_ocr(self):
-        print("[OCR] Button clicked")
-        from logic.ocr_paddle import ocr_pipeline
-        print("[DEBUG] calling ocr_pipeline...")
-        ocr_pipeline(self.ctx)
-        print("[DEBUG] done ocr_pipeline")
+        from logic.ocr_paddle import on_clipboard_button_click
+        on_clipboard_button_click(self.ctx)
 
 

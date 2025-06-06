@@ -1,7 +1,8 @@
 import logging
 import re
 from datetime import datetime
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
+from difflib import SequenceMatcher
 
 import numpy as np
 from PIL import Image, ImageGrab, ImageQt
@@ -163,6 +164,205 @@ def _apply_fields(ctx: UIContext, fields: Dict[str, str]) -> None:
         ctx.fields["end_time"].setCurrentText(fields["end"])
     if "regular" in ctx.fields:
         ctx.fields["regular"].setCurrentText("Обычная")
+
+
+def get_image_from_clipboard() -> Optional[Image.Image]:
+    """Return an image from clipboard or ``None`` if not available."""
+    try:
+        img = ImageGrab.grabclipboard()
+    except Exception as e:
+        logging.error("[OCR] Failed to grab from clipboard: %s", e)
+        img = None
+
+    if isinstance(img, list) or img is None:
+        qimg = QGuiApplication.clipboard().image()
+        if qimg.isNull():
+            return None
+        return ImageQt.fromqimage(qimg).convert("RGB")
+    if isinstance(img, Image.Image):
+        return img.convert("RGB")
+    return None
+
+
+def run_ocr(image: Image.Image) -> List[str]:
+    """Recognize text lines from an image using PaddleOCR."""
+    ocr = _init_ocr()
+    result = ocr.ocr(np.array(image), cls=True)
+    return _extract_text_lines(result)
+
+
+def parse_fields(ocr_lines: List[str]) -> Dict[str, str]:
+    """Extract fields from OCR text lines."""
+    fields = {
+        "name": "",
+        "date": "",
+        "start": "",
+        "end": "",
+        "bz_raw": "",
+        "room_raw": "",
+    }
+
+    lines = [l.strip() for l in ocr_lines if l.strip()]
+
+    for i, line in enumerate(lines):
+        lower = line.lower()
+        if "организатор" in lower:
+            parts = line.split(":", 1)
+            if len(parts) == 2 and parts[1].strip():
+                fields["name"] = parts[1].strip().split()[0]
+            elif i + 1 < len(lines):
+                fields["name"] = lines[i + 1].strip().split()[0]
+            break
+
+    date_pattern = re.compile(r"\b(\d{2}\.\d{2}\.\d{2,4})\b")
+    for line in lines:
+        m = date_pattern.search(line)
+        if m:
+            fields["date"] = m.group(1)
+            break
+
+    time_pattern = re.compile(r"\b\d{1,2}:\d{2}\b")
+    times: List[str] = []
+    for line in lines:
+        times.extend(time_pattern.findall(line))
+    if times:
+        fields["start"] = times[0]
+    if len(times) > 1:
+        fields["end"] = times[1]
+
+    bc_pattern = re.compile(r"б[цc]\s*[\"«]?([^\"»]+)[\"»]?(.*)", re.IGNORECASE)
+    for idx, line in enumerate(lines):
+        m = bc_pattern.search(line)
+        if m:
+            fields["bz_raw"] = m.group(1).strip()
+            rest = m.group(2).strip(" ,")
+            if rest:
+                fields["room_raw"] = rest
+            elif idx + 1 < len(lines):
+                fields["room_raw"] = lines[idx + 1].strip()
+            break
+
+    return fields
+
+
+def _fuzzy_match(value: str, choices: List[str], threshold: float) -> Optional[str]:
+    best = None
+    best_ratio = 0.0
+    for choice in choices:
+        ratio = SequenceMatcher(None, value.lower(), choice.lower()).ratio()
+        if ratio > best_ratio:
+            best_ratio = ratio
+            best = choice
+    if best_ratio >= threshold:
+        logging.debug("[OCR] Fuzzy match '%s' -> '%s' (%.2f)", value, best, best_ratio)
+        return best
+    logging.warning("[OCR] Fuzzy match for '%s' below threshold (%.2f)", value, best_ratio)
+    return None
+
+
+def _room_token_ratio(room: str, candidate: str) -> float:
+    tokens_room = set(re.findall(r"\w+", room.lower()))
+    tokens_cand = set(re.findall(r"\w+", candidate.lower()))
+    if not tokens_room:
+        return 0.0
+    return len(tokens_room & tokens_cand) / len(tokens_room)
+
+
+def validate_with_rooms(fields: Dict[str, str], rooms: Dict[str, List[str]]) -> Dict[str, str]:
+    """Validate and normalize BC and room using rooms dictionary."""
+    result = {
+        "name": fields.get("name", ""),
+        "date": fields.get("date", ""),
+        "start": fields.get("start", ""),
+        "end": fields.get("end", ""),
+        "bz": "",
+        "room": "",
+    }
+
+    raw_bz = fields.get("bz_raw", "")
+    if raw_bz:
+        match = _fuzzy_match(raw_bz, list(rooms.keys()), 0.8)
+        if match:
+            result["bz"] = match
+    if not result["bz"]:
+        logging.warning("[OCR] Business center not matched: %s", raw_bz)
+
+    raw_room = fields.get("room_raw", "")
+    if result["bz"] and raw_room:
+        best_room = None
+        best_ratio = 0.0
+        for cand in rooms[result["bz"]]:
+            ratio = _room_token_ratio(raw_room, cand)
+            if ratio > best_ratio:
+                best_ratio = ratio
+                best_room = cand
+        if best_room and best_ratio >= 0.5:
+            logging.debug(
+                "[OCR] Fuzzy room match '%s' -> '%s' (%.2f)", raw_room, best_room, best_ratio
+            )
+            result["room"] = best_room
+        else:
+            logging.warning(
+                "[OCR] Room '%s' not matched in BZ '%s'", raw_room, result["bz"]
+            )
+    return result
+
+
+def update_gui_fields(data: Dict[str, str], ctx: UIContext) -> None:
+    """Fill UI fields with parsed data."""
+    logging.info("[OCR] Updating GUI with: %s", data)
+    if data.get("name") and "name" in ctx.fields:
+        ctx.fields["name"].setText(data["name"])
+
+    if data.get("bz") and "bz" in ctx.fields:
+        ctx.fields["bz"].setCurrentText(data["bz"])
+
+    target = "his_room" if ctx.type_combo.currentText() == "Обмен" else "room"
+    if data.get("room") and target in ctx.fields:
+        ctx.fields[target].setEditText(data["room"])
+
+    if data.get("date") and "datetime" in ctx.fields:
+        dt = None
+        for fmt in ("%d.%m.%Y", "%d.%m.%y"):
+            try:
+                dt = datetime.strptime(data["date"], fmt)
+                break
+            except ValueError:
+                continue
+        if dt:
+            ctx.fields["datetime"].setDate(QDate(dt.year, dt.month, dt.day))
+
+    if data.get("start") and "start_time" in ctx.fields:
+        ctx.fields["start_time"].setCurrentText(data["start"])
+    if data.get("end") and "end_time" in ctx.fields:
+        ctx.fields["end_time"].setCurrentText(data["end"])
+    if "regular" in ctx.fields:
+        ctx.fields["regular"].setCurrentText("Обычная")
+
+
+def on_clipboard_button_click(ctx: UIContext) -> None:
+    """Entry point for the clipboard OCR workflow."""
+    img = get_image_from_clipboard()
+    if img is None:
+        QMessageBox.critical(ctx.window, "Ошибка", "Буфер обмена не содержит изображение.")
+        return
+
+    def worker():
+        lines = run_ocr(img)
+        logging.debug("[OCR] Lines: %s", lines)
+        parsed = parse_fields(lines)
+        validated = validate_with_rooms(parsed, rooms_by_bz)
+        return validated
+
+    def on_finish(result_error):
+        result, error = result_error
+        if error:
+            logging.error("[OCR] Pipeline failed: %s", error)
+            QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось распознать изображение:\n{error}")
+            return
+        update_gui_fields(result, ctx)
+
+    run_in_thread(worker, on_finish)
 
 
 def ocr_pipeline(ctx: UIContext) -> None:
