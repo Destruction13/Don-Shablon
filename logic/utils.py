@@ -25,6 +25,13 @@ DEEPL_API_KEY = os.getenv("DEEPL_API_KEY", "")
 def toggle_music(button, ctx: UIContext):
     if not ctx.music_path:
         return
+    if not pygame.mixer.get_init():
+        try:
+            pygame.mixer.init()
+            pygame.mixer.music.load(ctx.music_path)
+        except Exception as e:
+            QMessageBox.critical(ctx.window, "Ошибка", f"Музыка недоступна:\n{e}")
+            return
     if not ctx.music_state["playing"]:
         pygame.mixer.music.play(-1)
         button.setText("⏸")

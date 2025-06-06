@@ -3,9 +3,9 @@ import random
 
 from PySide6.QtWidgets import (
     QWidget, QLabel, QLineEdit, QComboBox, QHBoxLayout, QVBoxLayout, QPushButton,
-    QDateEdit, QTextEdit, QMessageBox
+    QDateEdit, QTextEdit, QMessageBox, QToolButton, QCompleter
 )
-from PySide6.QtCore import Qt, QDate
+from PySide6.QtCore import Qt, QDate, QStringListModel
 
 from logic.app_state import UIContext
 from constants import rooms_by_bz
@@ -20,15 +20,22 @@ def clear_layout(layout: QVBoxLayout):
             widget.deleteLater()
 
 
-def add_field(label: str, name: str, ctx: UIContext):
+def add_field(label: str, name: str, ctx: UIContext, clear: bool = False):
     container = QWidget()
     hl = QHBoxLayout(container)
     lbl = QLabel(label)
     edit = QLineEdit()
     hl.addWidget(lbl)
     hl.addWidget(edit)
+    if clear:
+        btn = QToolButton()
+        btn.setText("✖")
+        btn.clicked.connect(edit.clear)
+        hl.addWidget(btn)
     ctx.fields[name] = edit
     ctx.fields_layout.addWidget(container)
+    if name == "link":
+        edit.textChanged.connect(lambda _: on_link_change(ctx))
 
 
 def add_combo(label: str, name: str, values: list[str], ctx: UIContext):
@@ -43,6 +50,38 @@ def add_combo(label: str, name: str, values: list[str], ctx: UIContext):
     ctx.fields_layout.addWidget(container)
 
 
+def add_room_field(label: str, name: str, bz_name: str, ctx: UIContext):
+    container = QWidget()
+    hl = QHBoxLayout(container)
+    lbl = QLabel(label)
+    combo = QComboBox()
+    combo.setEditable(True)
+    completer = QCompleter()
+    combo.setCompleter(completer)
+    model = QStringListModel()
+    completer.setModel(model)
+
+    def update_rooms():
+        bz = ctx.fields.get(bz_name).currentText() if bz_name in ctx.fields else ''
+        rooms = rooms_by_bz.get(bz, [])
+        model.setStringList(rooms)
+        combo.clear()
+        combo.addItems(rooms)
+
+    if bz_name in ctx.fields:
+        ctx.fields[bz_name].currentTextChanged.connect(update_rooms)
+    update_rooms()
+
+    hl.addWidget(lbl)
+    hl.addWidget(combo)
+    btn = QToolButton()
+    btn.setText("✖")
+    btn.clicked.connect(lambda: combo.setEditText(""))
+    hl.addWidget(btn)
+    ctx.fields[name] = combo
+    ctx.fields_layout.addWidget(container)
+
+
 def add_date(name: str, ctx: UIContext):
     container = QWidget()
     hl = QHBoxLayout(container)
@@ -50,6 +89,14 @@ def add_date(name: str, ctx: UIContext):
     date_edit = QDateEdit()
     date_edit.setCalendarPopup(True)
     date_edit.setDisplayFormat("dd.MM.yyyy")
+    date_edit.setDate(QDate.currentDate())
+    orig_press = date_edit.mousePressEvent
+
+    def _on_press(event):
+        orig_press(event)
+        date_edit.showCalendarPopup()
+
+    date_edit.mousePressEvent = _on_press
     hl.addWidget(lbl)
     hl.addWidget(date_edit)
     ctx.fields[name] = date_edit
@@ -68,8 +115,16 @@ def add_time_range(start_name: str, end_name: str, ctx: UIContext):
     )
     hl.addWidget(QLabel("Начало:"))
     hl.addWidget(start_combo)
+    btn_clear_start = QToolButton()
+    btn_clear_start.setText("✖")
+    btn_clear_start.clicked.connect(lambda: start_combo.setCurrentIndex(-1))
+    hl.addWidget(btn_clear_start)
     hl.addWidget(QLabel("Конец:"))
     hl.addWidget(end_combo)
+    btn_clear_end = QToolButton()
+    btn_clear_end.setText("✖")
+    btn_clear_end.clicked.connect(lambda: end_combo.setCurrentIndex(-1))
+    hl.addWidget(btn_clear_end)
     ctx.fields[start_name] = start_combo
     ctx.fields[end_name] = end_combo
     ctx.fields_layout.addWidget(container)
@@ -88,24 +143,24 @@ def update_fields(ctx: UIContext):
     typ = ctx.type_combo.currentText()
     if typ == "Актуализация":
         add_field("Имя:", "name", ctx)
-        add_field("Ссылка:", "link", ctx)
+        add_field("Ссылка:", "link", ctx, clear=True)
         add_date("datetime", ctx)
         add_time_range("start_time", "end_time", ctx)
         add_combo("БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
-        add_field("Переговорка:", "room", ctx)
+        add_room_field("Переговорка:", "room", "bz", ctx)
         add_combo("Тип встречи:", "regular", ["Обычная", "Регулярная"], ctx)
     elif typ == "Обмен":
         add_field("Имя:", "name", ctx)
-        add_field("Ссылка:", "link", ctx)
+        add_field("Ссылка:", "link", ctx, clear=True)
         add_date("datetime", ctx)
         add_time_range("start_time", "end_time", ctx)
         add_combo("БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
-        add_field("Его переговорка:", "his_room", ctx)
-        add_field("Твоя переговорка:", "my_room", ctx)
+        add_room_field("Его переговорка:", "his_room", "bz", ctx)
+        add_room_field("Твоя переговорка:", "my_room", "bz", ctx)
         add_combo("Тип встречи:", "regular", ["Обычная", "Регулярная"], ctx)
     elif typ == "Разовая встреча":
         add_field("Имя:", "name", ctx)
-        add_field("Ссылка:", "link", ctx)
+        add_field("Ссылка:", "link", ctx, clear=True)
         add_field("Название встречи:", "meeting_name", ctx)
         add_field("Продолжительность:", "duration", ctx)
         add_date("datetime", ctx)
@@ -149,6 +204,9 @@ def generate_message(ctx: UIContext):
     else:
         time_part = ""
     name = get("name")
+    if not name or ((typ == "Актуализация" and not get("room")) or (typ == "Обмен" and (not get("his_room") or not get("my_room")))):
+        QMessageBox.warning(ctx.window, "Предупреждение", "Заполните имя и переговорку")
+        return
     if "datetime" not in ctx.fields:
         QMessageBox.critical(ctx.window, "Ошибка", "Сначала выберите тип встречи")
         return
@@ -157,6 +215,8 @@ def generate_message(ctx: UIContext):
     link = get("link")
     link_part = f" ({link})" if link else ""
     greeting = f"Привет, {name}!"
+    if ctx.asya_mode:
+        greeting = f"Привет, {name}! Я Ася, ассистент. Приятно познакомиться!"
     if typ == "Актуализация":
         room = get("room")
         regular = get("regular")
