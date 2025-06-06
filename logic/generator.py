@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QDateEdit, QTextEdit, QMessageBox, QToolButton, QCompleter
 )
 from PySide6.QtCore import Qt, QDate, QStringListModel
+from PySide6.QtTest import QTest
 
 from logic.app_state import UIContext
 from constants import rooms_by_bz
@@ -93,15 +94,19 @@ def add_date(name: str, ctx: UIContext):
     orig_press = date_edit.mousePressEvent
     orig_focus = date_edit.focusInEvent
 
+    def open_calendar():
+        if not date_edit.calendarWidget().isVisible():
+            QTest.keyClick(date_edit, Qt.Key_F4)
+
     def _on_press(event):
         orig_press(event)
-        date_edit.showCalendarPopup()
+        open_calendar()
 
     date_edit.mousePressEvent = _on_press
 
     def _on_focus(event):
         orig_focus(event)
-        date_edit.showCalendarPopup()
+        open_calendar()
 
     date_edit.focusInEvent = _on_focus
     hl.addWidget(lbl)
@@ -148,6 +153,7 @@ def update_fields(ctx: UIContext):
     clear_layout(ctx.fields_layout)
     ctx.fields.clear()
     typ = ctx.type_combo.currentText()
+
     if typ == "Актуализация":
         add_field("Имя:", "name", ctx)
         add_field("Ссылка:", "link", ctx, clear=True)
@@ -224,8 +230,14 @@ def generate_message(ctx: UIContext):
     greeting = f"Привет, {name}!"
     if ctx.ls_active and ctx.ls_saved:
         greeting = f"Привет, {name}! Я {ctx.user_name}, ассистент. Приятно познакомиться!"
+        gender = ctx.user_gender
     elif ctx.asya_mode:
         greeting = f"Привет, {name}! Я Ася, ассистент. Приятно познакомиться!"
+        gender = "ж"
+    else:
+        gender = "ж"
+    thanks_word = "признательна" if gender == "ж" else "признателен"
+    myself_word = "сама" if gender == "ж" else "сам"
     if typ == "Актуализация":
         room = get("room")
         regular = get("regular")
@@ -236,9 +248,9 @@ def generate_message(ctx: UIContext):
 У тебя {formatted}{time_part} состоится {is_regular}{link_part} в переговорной {room}.
 
 Уточни, пожалуйста, сможешь ли {share_word} переговорной?
-Буду очень признательна!
+Буду очень {thanks_word}!
 
-Если сможешь, то сделаю всё сама. Только не удаляй её из встречи, чтобы не потерять :)"""
+Если сможешь, то сделаю всё {myself_word}. Только не удаляй её из встречи, чтобы не потерять :)"""
     elif typ == "Обмен":
         his_room = get("his_room")
         my_room = get("my_room")
@@ -250,9 +262,9 @@ def generate_message(ctx: UIContext):
 У тебя {formatted}{time_part} состоится {is_regular}{link_part} в переговорной {his_room}.
 
 Уточни, пожалуйста, сможем ли {share_word} на {my_room}?
-Буду тебе очень признательна!
+Буду тебе очень {thanks_word}!
 
-Если сможем, то я всё сделаю сама :)"""
+Если сможем, то я всё сделаю {myself_word} :)"""
     elif typ == "Разовая встреча":
         meeting_name = get("meeting_name")
         duration = get("duration")

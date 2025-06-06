@@ -22,6 +22,9 @@ days = [
 DEEPL_URL = "https://api-free.deepl.com/v2/translate"
 DEEPL_API_KEY = os.getenv("DEEPL_API_KEY", "")
 
+# Keep references to running threads to avoid premature garbage collection
+_threads: list[QThread] = []
+
 
 class _Worker(QObject):
     finished = Signal(object)
@@ -55,6 +58,14 @@ def run_in_thread(func, callback):
     worker.finished.connect(handle_done)
     worker.finished.connect(worker.deleteLater)
     thread.finished.connect(thread.deleteLater)
+
+    # keep a reference until finished
+    _threads.append(thread)
+
+    def cleanup():
+        _threads.remove(thread)
+
+    thread.finished.connect(cleanup)
     thread.start()
 
 
@@ -115,7 +126,10 @@ def format_date_ru(date_obj):
 
 def translate_to_english(ctx: UIContext):
     text = ctx.output_text.toPlainText().strip()
-    if not text or not DEEPL_API_KEY:
+    if not text:
+        return
+    if not DEEPL_API_KEY:
+        QMessageBox.warning(ctx.window, "Ошибка", "Не указан ключ DeepL API")
         return
 
     def do_translate():
