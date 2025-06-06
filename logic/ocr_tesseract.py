@@ -3,7 +3,8 @@ from datetime import datetime
 
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QMessageBox
-from PySide6.QtCore import QtConcurrent, QFutureWatcher
+from PySide6.QtCore import QFutureWatcher
+from PySide6.QtConcurrent import run
 from PIL import Image, ImageQt
 import pytesseract
 
@@ -104,4 +105,4 @@ def extract_data_from_screenshot(ctx: UIContext):
             watcher.deleteLater()
 
     watcher.finished.connect(handle)
-    watcher.setFuture(QtConcurrent.run(do_ocr))
+    watcher.setFuture(run(do_ocr))

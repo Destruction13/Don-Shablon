@@ -5,7 +5,8 @@ import requests
 import pygame
 from PySide6.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QTextEdit
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtCore import QtConcurrent, QFutureWatcher
+from PySide6.QtCore import QFutureWatcher
+from PySide6.QtConcurrent import run
 
 from logic.app_state import UIContext
 
@@ -107,7 +108,7 @@ def translate_to_english(ctx: UIContext):
             watcher.deleteLater()
 
     watcher.finished.connect(show_result)
-    watcher.setFuture(QtConcurrent.run(do_translate))
+    watcher.setFuture(run(do_translate))
 
 
 def copy_generated_text(ctx: UIContext):
