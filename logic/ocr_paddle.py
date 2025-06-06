@@ -1,199 +1,180 @@
-import re
 import logging
-import traceback
+import re
 from datetime import datetime
+from typing import Dict, List, Tuple
 
 import numpy as np
+from PIL import Image, ImageGrab, ImageQt
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QMessageBox
 from PySide6.QtCore import QDate
-from PIL import Image, ImageQt
 from paddleocr import PaddleOCR
+from pathlib import Path
 
 from constants import rooms_by_bz
 from logic.app_state import UIContext
 from logic.utils import run_in_thread
 
 
-def get_ocr():
-    # Переиспользовать не будем — создаём новый экземпляр каждый раз
-    return PaddleOCR(
-        use_angle_cls=True,
-        lang="ru",
-        det_model_dir="C:/AI/Bots/OCR_Models/.paddleocr/whl/det/ml/Multilingual_PP-OCRv3_det_infer",
-        rec_model_dir="C:/AI/Bots/OCR_Models/.paddleocr/whl/rec/cyrillic/cyrillic_PP-OCRv3_rec_infer",
-        cls_model_dir="C:/AI/Bots/OCR_Models/.paddleocr/whl/cls/ch_ppocr_mobile_v2.0_cls_infer"
-    )
+_ocr_instance: PaddleOCR | None = None
+
+
+def _init_ocr() -> PaddleOCR:
+    global _ocr_instance
+    if _ocr_instance is None:
+        logging.debug("[OCR] Initializing PaddleOCR")
+        models_dir = Path(__file__).resolve().parent.parent / "data" / "ocr_models"
+        _ocr_instance = PaddleOCR(
+            use_angle_cls=True,
+            det_model_dir=str(models_dir / "det" / "Multilingual_PP-OCRv3_det_infer"),
+            rec_model_dir=str(models_dir / "rec" / "cyrillic_PP-OCRv3_rec_infer"),
+            cls_model_dir=str(models_dir / "cls" / "ch_ppocr_mobile_v2.0_cls_infer"),
+        )
+    return _ocr_instance
 
 
 
-def _extract_texts(result) -> list[str]:
-    """Return recognized text lines from PaddleOCR result."""
-    if not result:
-        return []
-    if isinstance(result, dict):
-        return result.get("rec_texts", [])
-    first = result[0]
-    if isinstance(first, dict):
-        return first.get("rec_texts", [])
-    texts = []
-    for item in result:
-        if isinstance(item, (list, tuple)) and len(item) >= 2:
-            val = item[1]
-            if isinstance(val, (list, tuple)) and val:
-                texts.append(str(val[0]))
-            else:
-                texts.append(str(val))
-    return texts
+def _normalize(text: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9а-яА-Я]", "", text).lower()
 
 
-def extract_fields_from_text(texts: list[str], rooms: dict[str, list[str]]):
-    name = ""
-    bz = ""
-    room = ""
-    start_time = ""
-    end_time = ""
-    date = ""
+def _extract_text_lines(result) -> List[str]:
+    if isinstance(result, list) and result:
+        first = result[0]
+        if isinstance(first, list):
+            return [line[1][0] for line in first]
+    if isinstance(result, list):
+        return [str(r) for r in result]
+    return []
 
-    for i, txt in enumerate(texts):
-        if "организатор" in txt.lower() and i + 1 < len(texts):
-            full_name = texts[i + 1]
-            name = full_name.split()[0]
 
-    found_times = []
-    for txt in texts:
-        cleaned = re.sub(r"[^\d]", ":", txt.strip())
-        if re.fullmatch(r"\d{2}:\d{2}", cleaned):
-            found_times.append(cleaned)
-            if len(found_times) == 2:
-                break
-    if len(found_times) == 2:
-        start_time, end_time = found_times
+def _parse_fields(texts: List[str]) -> Dict[str, str]:
+    fields = {"name": "", "date": "", "start": "", "end": "", "bz": "", "room": ""}
 
-    for txt in texts:
-        if re.fullmatch(r"\d{2}\.\d{2}\.\d{4}", txt.strip()):
-            date = txt.strip()
+    # Имя организатора
+    for i, t in enumerate(texts):
+        if "организатор" in t.lower():
+            after_colon = t.split(":", 1)
+            if len(after_colon) == 2 and after_colon[1].strip():
+                fields["name"] = after_colon[1].strip().split()[0]
+            elif i + 1 < len(texts):
+                fields["name"] = texts[i + 1].strip().split()[0]
             break
 
-    for txt in texts:
-        if "морозов" in txt.lower():
-            bz = "БЦ Морозов"
+    # Время начала и конца
+    time_pattern = re.compile(r"\b\d{1,2}:\d{2}\b")
+    all_times = []
+    for t in texts:
+        all_times.extend(time_pattern.findall(t))
+    if len(all_times) >= 2:
+        fields["start"], fields["end"] = all_times[0], all_times[1]
 
-    flat = []
-    for bz_key, rooms_list in rooms.items():
-        for room_name in rooms_list:
-            flat.append((bz_key, room_name))
-    for txt in texts:
-        txt_l = txt.lower()
-        for bz_key, room_name in flat:
-            short = room_name.split(".")[-1].split()[0].lower()
-            if short and short in txt_l and len(short) > 3:
-                room = room_name
-                bz = bz_key
+    # Дата
+    date_pattern = re.compile(r"\b(\d{2}\.\d{2}\.\d{2,4})\b")
+    for t in texts:
+        m = date_pattern.search(t)
+        if m:
+            fields["date"] = m.group(1)
+            break
+
+    # Бизнес-центр и переговорка
+    flat_rooms: List[Tuple[str, str, str]] = []
+    for bz, rooms in rooms_by_bz.items():
+        for room in rooms:
+            flat_rooms.append((bz, room, _normalize(room)))
+    for t in texts:
+        norm = _normalize(t)
+        for bz, room, room_norm in flat_rooms:
+            if room_norm and room_norm in norm:
+                fields["room"] = room
+                fields["bz"] = bz
                 break
-    return name, bz, room, date, start_time, end_time
+        if not fields["bz"]:
+            for bz in rooms_by_bz:
+                if _normalize(bz) in norm:
+                    fields["bz"] = bz
+                    break
+    return fields
 
 
-def is_checkbox_checked(image: Image.Image, x: int, y: int, size: int = 12, threshold: int = 200, fill_threshold: float = 0.2) -> bool:
-    cropped = image.crop((x, y, x + size, y + size)).convert("L")
-    pixels = cropped.getdata()
-    dark_pixels = sum(1 for p in pixels if p < threshold)
-    total_pixels = len(pixels)
-    fill_ratio = dark_pixels / total_pixels
-    return fill_ratio > fill_threshold
-
-
-def detect_repeat_checkbox(image: Image.Image, ocr_result: dict) -> bool:
-    texts = ocr_result.get("rec_texts", [])
-    boxes = ocr_result.get("rec_boxes", [])
-    for i, text in enumerate(texts):
-        if text.strip().lower() == "повторять" and i < len(boxes):
-            box = boxes[i]
-            x = int(box[0]) - 15
-            y = int(box[1]) + 11
-            return is_checkbox_checked(image, x, y)
-    return False
-
-
-def extract_data_from_screenshot(ctx: UIContext):
-    logging.debug("[OCR] Кнопка нажата")
-
-    # Получаем изображение в главном потоке
-    image = QGuiApplication.clipboard().image()
-    if image.isNull():
-        logging.debug("[OCR] QImage is null — выход")
-        QMessageBox.critical(ctx.window, "Ошибка", "Буфер обмена не содержит изображения.")
+def _validate_room(fields: Dict[str, str]) -> None:
+    bz = fields.get("bz")
+    room = fields.get("room")
+    if not bz or bz not in rooms_by_bz:
+        logging.warning("[OCR] Unknown business center: %s", bz)
+        fields["bz"] = ""
+        fields["room"] = "" if room and bz else room
         return
+    if room and room not in rooms_by_bz[bz]:
+        logging.warning("[OCR] Room '%s' not found in BZ '%s'", room, bz)
+        fields["room"] = ""
 
-    pil_image = ImageQt.fromqimage(image).convert("RGB")
-    logging.debug("[OCR] Получено PIL-изображение: %s", pil_image.size)
+
+def _apply_fields(ctx: UIContext, fields: Dict[str, str]) -> None:
+    logging.info("[OCR] Parsed fields: %s", fields)
+    if fields.get("name") and "name" in ctx.fields:
+        ctx.fields["name"].setText(fields["name"])
+    if fields.get("bz") and "bz" in ctx.fields:
+        ctx.fields["bz"].setCurrentText(fields["bz"])
+    if ctx.type_combo.currentText() == "Обмен":
+        target = "his_room"
+    else:
+        target = "room"
+    if fields.get("room") and target in ctx.fields:
+        ctx.fields[target].setEditText(fields["room"])
+    if fields.get("date") and "datetime" in ctx.fields:
+        try:
+            dt = datetime.strptime(fields["date"], "%d.%m.%Y")
+        except ValueError:
+            try:
+                dt = datetime.strptime(fields["date"], "%d.%m.%y")
+            except ValueError:
+                dt = None
+        if dt:
+            ctx.fields["datetime"].setDate(QDate(dt.year, dt.month, dt.day))
+    if fields.get("start") and "start_time" in ctx.fields:
+        ctx.fields["start_time"].setCurrentText(fields["start"])
+    if fields.get("end") and "end_time" in ctx.fields:
+        ctx.fields["end_time"].setCurrentText(fields["end"])
+    if "regular" in ctx.fields:
+        ctx.fields["regular"].setCurrentText("Обычная")
+
+
+def ocr_pipeline(ctx: UIContext) -> None:
+    logging.debug("[OCR] Start pipeline")
+
+    img = ImageGrab.grabclipboard()
+    if isinstance(img, list) or img is None:
+        qimg = QGuiApplication.clipboard().image()
+        if qimg.isNull():
+            QMessageBox.critical(ctx.window, "Ошибка", "Буфер обмена не содержит изображение.")
+            return
+        img = ImageQt.fromqimage(qimg).convert("RGB")
+    else:
+        if not isinstance(img, Image.Image):
+            QMessageBox.critical(ctx.window, "Ошибка", "Буфер обмена не содержит изображение.")
+            return
+        img = img.convert("RGB")
 
     def do_ocr():
-        try:
-            logging.debug("[OCR] Создаём экземпляр PaddleOCR")
-            ocr = get_ocr()
-            logging.debug("[OCR] Запускаем OCR")
-            result = ocr.ocr(np.array(pil_image), cls=True)
-            logging.debug("[OCR] OCR завершён")
-            return result
-        except Exception as e:
-            logging.exception("[OCR] Ошибка в do_ocr: %s", e)
-            raise
+        ocr = _init_ocr()
+        return ocr.ocr(np.array(img), cls=True)
 
-    def handle(result_error):
+    def on_result(result_error):
         result, error = result_error
         if error:
-            logging.error("[OCR] Ошибка при обработке OCR: %s", error)
+            logging.error("[OCR] OCR failed: %s", error)
             QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось распознать изображение:\n{error}")
             return
-
         try:
-            # 💬 Для отладки — покажем, что там вообще пришло
-            print("[DEBUG] OCR result type:", type(result))
-            print("[DEBUG] OCR result preview:", result[:3])
-
-            # 🔥 Парсим текст вручную, без _extract_texts
-            # Формат результата: [[box, (text, confidence)], ...]
-            texts = [line[1][0] for line in result[0]]  # потому что PaddleOCR возвращает список из списков!
-
-
-            logging.debug("[OCR] Распознанный текст: %s", texts)
-
-            # Теперь извлекаем поля
-            name, bz, room, date, start_time, end_time = extract_fields_from_text(texts, rooms_by_bz)
-
-            # Заполнение UI (осталось без изменений)
-            if name and "name" in ctx.fields:
-                ctx.fields["name"].setText(name)
-            if bz:
-                if bz not in rooms_by_bz:
-                    rooms_by_bz[bz] = []
-                if "bz" in ctx.fields:
-                    ctx.fields["bz"].setCurrentText(bz)
-            if ctx.type_combo.currentText() == "Обмен":
-                if "his_room" in ctx.fields and room:
-                    ctx.fields["his_room"].setEditText(room)
-            else:
-                if "room" in ctx.fields and room:
-                    ctx.fields["room"].setEditText(room)
-            if "datetime" in ctx.fields and date:
-                try:
-                    dt = datetime.strptime(date, "%d.%m.%Y")
-                    ctx.fields["datetime"].setDate(QDate(dt.year, dt.month, dt.day))
-                except Exception as e:
-                    logging.warning("[OCR] Не удалось установить дату: %s", e)
-            if "start_time" in ctx.fields and start_time:
-                ctx.fields["start_time"].setCurrentText(start_time)
-            if "end_time" in ctx.fields and end_time:
-                ctx.fields["end_time"].setCurrentText(end_time)
-            if "regular" in ctx.fields:
-                ctx.fields["regular"].setCurrentText("Обычная")
-
+            texts = _extract_text_lines(result)
+            logging.debug("[OCR] Text lines: %s", texts)
+            fields = _parse_fields(texts)
+            _validate_room(fields)
+            _apply_fields(ctx, fields)
         except Exception as e:
-            logging.exception("[OCR] Ошибка в handle: %s", e)
+            logging.exception("[OCR] Parsing failed: %s", e)
             QMessageBox.critical(ctx.window, "Ошибка", f"Ошибка при разборе OCR-результата:\n{e}")
 
-
-    run_in_thread(do_ocr, handle)
-
+    run_in_thread(do_ocr, on_result)
 
