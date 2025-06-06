@@ -1,12 +1,25 @@
 import re
 from datetime import datetime
 
+import os
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QMessageBox
 from PySide6.QtCore import QDate
 import logging
 from PIL import Image, ImageQt
 import pytesseract
+
+# Set tesseract binary path on Windows for convenience
+_tesseract_cmd = os.getenv("TESSERACT_CMD")
+if not _tesseract_cmd and os.name == "nt":
+    default_path = r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+    if os.path.exists(default_path):
+        _tesseract_cmd = default_path
+if _tesseract_cmd:
+    pytesseract.pytesseract.tesseract_cmd = _tesseract_cmd
+    tessdata_dir = os.path.join(os.path.dirname(_tesseract_cmd), "tessdata")
+    if os.path.isdir(tessdata_dir) and not os.getenv("TESSDATA_PREFIX"):
+        os.environ["TESSDATA_PREFIX"] = tessdata_dir
 
 from constants import rooms_by_bz
 from logic.app_state import UIContext
