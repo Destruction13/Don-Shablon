@@ -48,6 +48,10 @@ class UIContext:
         self.bg_image_tk = None
         self.bg_image_path: str | None = None
 
+        # Кеширование и дебаунс фоновой картинки
+        self.bg_resize_cache: dict = {}
+        self.bg_update_after_id: str | None = None
+
     def reset_fields(self):
         """Полностью очищает поля формы"""
         for widget in self.fields_frame.winfo_children():

@@ -1,6 +1,10 @@
 from tkinter import ttk, messagebox
 import tkinter as tk
-from themes import themes, apply_theme_from_dropdown, update_background
+from themes import (
+    themes,
+    apply_theme_from_dropdown,
+    debounced_update_background,
+)
 from logic import (
     generate_message,
     update_fields,
@@ -60,7 +64,7 @@ def build_ui(ctx: UIContext):
     ctx.bg_label = tk.Label(ctx.root)
     ctx.bg_label.place(relx=0, rely=0, relwidth=1, relheight=1)
     ctx.bg_label.lower()
-    ctx.root.bind("<Configure>", lambda e: update_background(ctx))
+    ctx.root.bind("<Configure>", lambda e: debounced_update_background(ctx))
 
     # === Тема ===
     ctx.current_theme_name = "Светлая"

@@ -288,10 +288,14 @@ def update_background(ctx: UIContext):
             if path_full != ctx.bg_image_path:
                 ctx.bg_image_raw = Image.open(path_full)
                 ctx.bg_image_path = path_full
+                ctx.bg_resize_cache = {}
             w, h = ctx.root.winfo_width(), ctx.root.winfo_height()
             if w > 0 and h > 0 and ctx.bg_image_raw:
-                resized = ctx.bg_image_raw.resize((w, h), Image.LANCZOS)
-                ctx.bg_image_tk = ImageTk.PhotoImage(resized)
+                key = (w, h)
+                if key not in ctx.bg_resize_cache:
+                    resized = ctx.bg_image_raw.resize((w, h), Image.LANCZOS)
+                    ctx.bg_resize_cache[key] = ImageTk.PhotoImage(resized)
+                ctx.bg_image_tk = ctx.bg_resize_cache[key]
                 ctx.bg_label.configure(image=ctx.bg_image_tk)
                 ctx.bg_label.lower()
         except Exception as e:
@@ -301,3 +305,16 @@ def update_background(ctx: UIContext):
         ctx.bg_label.configure(image="")
         ctx.bg_image_raw = None
         ctx.bg_image_tk = None
+        ctx.bg_resize_cache = {}
+
+
+def _run_bg_update(ctx: UIContext):
+    ctx.bg_update_after_id = None
+    update_background(ctx)
+
+
+def debounced_update_background(ctx: UIContext, delay: int = 100):
+    """Schedule background update with debounce."""
+    if ctx.bg_update_after_id is not None:
+        ctx.root.after_cancel(ctx.bg_update_after_id)
+    ctx.bg_update_after_id = ctx.root.after(delay, lambda: _run_bg_update(ctx))
