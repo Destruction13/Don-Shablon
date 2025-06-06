@@ -1,5 +1,6 @@
 import re
 import logging
+import traceback
 from datetime import datetime
 
 import numpy as np
@@ -26,13 +27,14 @@ def get_ocr():
     return _ocr
 
 
-def _extract_texts(result: list) -> list[str]:
+def _extract_texts(result) -> list[str]:
     """Return recognized text lines from PaddleOCR result."""
     if not result:
         return []
+    if isinstance(result, dict):
+        return result.get("rec_texts", [])
     first = result[0]
     if isinstance(first, dict):
-        # output="dict" style -> list of dicts
         return first.get("rec_texts", [])
     texts = []
     for item in result:
@@ -116,6 +118,7 @@ def detect_repeat_checkbox(image: Image.Image, ocr_result: dict) -> bool:
 def extract_data_from_screenshot(ctx: UIContext):
     logging.debug("[OCR] Кнопка нажата")
     image = QGuiApplication.clipboard().image()
+    logging.debug("[OCR] Clipboard image size: %s", image.size())
     if image.isNull():
         QMessageBox.critical(ctx.window, "Ошибка", "Буфер обмена не содержит изображения.")
         return
@@ -125,11 +128,14 @@ def extract_data_from_screenshot(ctx: UIContext):
         logging.debug("[OCR] OCR thread running")
         ocr = get_ocr()
         try:
-            logging.debug("[OCR] Calling PaddleOCR")
+            logging.debug("[OCR] Calling PaddleOCR. Image size: %s", pil_image.size)
             result = ocr.ocr(np.array(pil_image), cls=True, output="dict")
+            print("[OCR] result type", type(result), repr(result)[:200])
             logging.debug("[OCR] OCR raw result: %s", result)
             return result
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             logging.debug("[OCR] Ошибка при вызове OCR: %s", e)
             raise
 
@@ -143,38 +149,51 @@ def extract_data_from_screenshot(ctx: UIContext):
                 raise ValueError("Empty OCR result")
             texts = _extract_texts(result)
             name, bz, room, date, start_time, end_time = extract_fields_from_text(texts, rooms_by_bz)
-            first = result[0] if result else {}
-            if isinstance(first, dict):
-                ocr_dict = first
+            if isinstance(result, dict):
+                ocr_dict = result
+            elif isinstance(result, list) and result and isinstance(result[0], dict):
+                ocr_dict = result[0]
             else:
                 ocr_dict = {}
-            is_reg = detect_repeat_checkbox(pil_image, ocr_dict)
+            # temporarily skip checkbox detection for debugging
+            is_reg = False  # detect_repeat_checkbox(pil_image, ocr_dict)
+            logging.debug("[OCR] ctx.fields['name'] = %s", ctx.fields.get("name"))
             if "name" in ctx.fields and name:
+                logging.debug("[OCR] Setting name to %s", name)
                 ctx.fields["name"].setText(name)
             if bz:
+                logging.debug("[OCR] Setting bz to %s", bz)
                 if bz not in rooms_by_bz:
                     rooms_by_bz[bz] = []
                 if "bz" in ctx.fields:
                     ctx.fields["bz"].setCurrentText(bz)
             if ctx.type_combo.currentText() == "Обмен":
                 if "his_room" in ctx.fields and room:
+                    logging.debug("[OCR] Setting his_room to %s", room)
                     ctx.fields["his_room"].setEditText(room)
             else:
                 if "room" in ctx.fields and room:
+                    logging.debug("[OCR] Setting room to %s", room)
                     ctx.fields["room"].setEditText(room)
             if "datetime" in ctx.fields and date:
                 try:
                     dt = datetime.strptime(date, "%d.%m.%Y")
+                    logging.debug("[OCR] Setting date to %s", dt)
                     ctx.fields["datetime"].setDate(QDate(dt.year, dt.month, dt.day))
                 except Exception:
-                    pass
+                    traceback.print_exc()
             if "start_time" in ctx.fields and start_time:
+                logging.debug("[OCR] Setting start_time to %s", start_time)
                 ctx.fields["start_time"].setCurrentText(start_time)
             if "end_time" in ctx.fields and end_time:
+                logging.debug("[OCR] Setting end_time to %s", end_time)
                 ctx.fields["end_time"].setCurrentText(end_time)
             if "regular" in ctx.fields:
+                logging.debug("[OCR] Setting regular to %s", "Регулярная" if is_reg else "Обычная")
                 ctx.fields["regular"].setCurrentText("Регулярная" if is_reg else "Обычная")
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             logging.debug("[OCR] Failed: %s", e)
             QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось распознать изображение:\n{e}")
 

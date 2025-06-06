@@ -47,12 +47,14 @@ class _Worker(QObject):
 
     @Slot()
     def run(self):
+        logging.debug("[THREAD] Worker run start")
         result = None
         error = None
         try:
             result = self._func()
         except Exception as exc:  # capture any exceptions
             error = exc
+        logging.debug("[THREAD] Worker run done error=%s", error)
         self.finished.emit((result, error))
 
 
@@ -71,7 +73,9 @@ def run_in_thread(func, callback):
                 "[THREAD] Worker finished on %s", QThread.currentThread()
             )
             result, error = data
+            logging.debug("[THREAD] Sending result to callback")
             callback(result, error)
+            logging.debug("[THREAD] Callback finished")
             thread.quit()
 
     cb_obj = _Callback()
