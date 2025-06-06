@@ -35,6 +35,7 @@ themes = {
         "highlight": "#ff00c8",
         "font": ("Courier New", 10),
         "background_image": os.path.join("assets", "cyberpunk.jpg"),
+        "overlay_alpha": 0.3,
     },
     "Гёрлпанк": {
         "bg": "#fff0f5",
@@ -44,6 +45,7 @@ themes = {
         "highlight": "#ffb6c1",
         "font": ("Comic Sans MS", 10),
         "background_image": os.path.join("assets", "girlpunk.jpg"),
+        "overlay_alpha": 0.3,
     },
     "Айс-минимал": {
         "bg": "#eaf6ff",
@@ -53,6 +55,7 @@ themes = {
         "highlight": "#b9d8e8",
         "font": ("Helvetica", 10),
         "background_image": os.path.join("assets", "ice_minimal.jpg"),
+        "overlay_alpha": 0.3,
     },
     "Японский дзен": {
         "bg": "#f5f5f5",
@@ -62,6 +65,7 @@ themes = {
         "highlight": "#c8e6c9",
         "font": ("Arial", 10),
         "background_image": os.path.join("assets", "japan_dzen.jpg"),
+        "overlay_alpha": 0.3,
     },
     "Корпоратив": {
         "bg": "#f1f4f8",
@@ -71,6 +75,7 @@ themes = {
         "highlight": "#b0c4de",
         "font": ("Verdana", 10),
         "background_image": os.path.join("assets", "corporate.jpg"),
+        "overlay_alpha": 0.3,
     },
     "Ретро 80-х": {
         "bg": "#2d0036",
@@ -80,6 +85,7 @@ themes = {
         "highlight": "#00e1ff",
         "font": ("Courier New", 10),
         "background_image": os.path.join("assets", "retro.jpg"),
+        "overlay_alpha": 0.3,
     },
     "Моночёрный": {
         "bg": "#000000",
@@ -89,6 +95,7 @@ themes = {
         "highlight": "#666666",
         "font": ("Arial", 10),
         "background_image": os.path.join("assets", "monoblack.jpg"),
+        "overlay_alpha": 0.3,
     }
 }
 
@@ -117,8 +124,9 @@ def apply_theme(ctx: UIContext):
         return rgb_to_hex((r, g, b))
 
     base_overlay = "#000000" if brightness(theme["fg"]) > 128 else "#FFFFFF"
-    overlay = blend(base_overlay, theme["bg"], 0.3)
-    entry_overlay = blend(base_overlay, theme["entry_bg"], 0.3)
+    alpha = theme.get("overlay_alpha", 0.3)
+    overlay = blend(base_overlay, theme["bg"], alpha)
+    entry_overlay = blend(base_overlay, theme["entry_bg"], alpha)
 
     ctx.root.configure(bg=overlay)
     if ctx.asya_popup:
