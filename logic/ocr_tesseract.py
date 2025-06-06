@@ -99,10 +99,11 @@ def extract_data_from_screenshot(ctx: UIContext):
 
     def do_ocr():
         logging.debug("[OCR] OCR thread running")
+        text = pytesseract.image_to_string(pil_image, lang="rus+eng")
         data = pytesseract.image_to_data(
             pil_image, lang="rus+eng", output_type=pytesseract.Output.DICT
         )
-        return data
+        return text, data
 
     def handle(result, error):
         logging.debug("[OCR] handle result error=%s", error)
@@ -110,21 +111,8 @@ def extract_data_from_screenshot(ctx: UIContext):
         try:
             if error:
                 raise error
-            data = result
-            n = len(data.get("text", []))
-            lines = []
-            current_line = []
-            line_nums = data.get("line_num", [])
-            for i in range(n):
-                text = data["text"][i].strip()
-                if not text:
-                    continue
-                if current_line and line_nums[i] != line_nums[i - 1]:
-                    lines.append(" ".join(current_line))
-                    current_line = []
-                current_line.append(text)
-            if current_line:
-                lines.append(" ".join(current_line))
+            text, data = result
+            lines = [t.strip() for t in text.splitlines() if t.strip()]
 
             print("[OCR] Текст распознан")
 
