@@ -26,9 +26,9 @@ def _init_ocr() -> PaddleOCR:
         models_dir = Path(__file__).resolve().parent.parent / "data" / "ocr_models"
         _ocr_instance = PaddleOCR(
             use_angle_cls=True,
-            det_model_dir=str(models_dir / "det"),
-            rec_model_dir=str(models_dir / "rec"),
-            cls_model_dir=str(models_dir / "cls"),
+            det_model_dir=str(models_dir / "det" / "Multilingual_PP-OCRv3_det_infer"),
+            rec_model_dir=str(models_dir / "rec" / "cyrillic_PP-OCRv3_rec_infer"),
+            cls_model_dir=str(models_dir / "cls" / "ch_ppocr_mobile_v2.0_cls_infer"),
         )
     return _ocr_instance
 
