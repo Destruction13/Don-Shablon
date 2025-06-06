@@ -13,6 +13,31 @@ from logic.app_state import UIContext
 from logic.utils import run_in_thread
 
 
+def is_checkbox_checked(image: Image.Image, x: int, y: int, size: int = 12,
+                        threshold: int = 200, fill_threshold: float = 0.2) -> bool:
+    """Check small square region for dark pixel ratio to detect tick."""
+    cropped = image.crop((x, y, x + size, y + size)).convert("L")
+    pixels = list(cropped.getdata())
+    dark = sum(1 for p in pixels if p < threshold)
+    ratio = dark / len(pixels)
+    logging.debug("[OCR] checkbox fill ratio %.2f", ratio)
+    return ratio > fill_threshold
+
+
+def detect_repeat_checkbox(image: Image.Image, data: dict) -> bool:
+    """Return True if word 'Повторять' found and checkbox nearby is checked."""
+    texts = data.get("text", [])
+    lefts = data.get("left", [])
+    tops = data.get("top", [])
+    for i, word in enumerate(texts):
+        if word.strip().lower() == "повторять":
+            x = lefts[i] - 15
+            y = tops[i] + 11
+            logging.debug("[OCR] Checking checkbox at %s,%s", x, y)
+            return is_checkbox_checked(image, x, y)
+    return False
+
+
 def extract_fields_from_text(texts: list[str], rooms: dict[str, list[str]]):
     name = ""
     bz = ""
@@ -20,7 +45,6 @@ def extract_fields_from_text(texts: list[str], rooms: dict[str, list[str]]):
     start_time = ""
     end_time = ""
     date = ""
-    is_regular = False
     for i, txt in enumerate(texts):
         if "организатор" in txt.lower() and i + 1 < len(texts):
             full_name = texts[i + 1]
@@ -39,23 +63,27 @@ def extract_fields_from_text(texts: list[str], rooms: dict[str, list[str]]):
             date = txt.strip()
             break
     for txt in texts:
-        if "морозов" in txt.lower():
-            bz = "БЦ Морозов"
+        txt_l = txt.lower()
+        for bz_key in rooms.keys():
+            keyword = bz_key.lower().replace("бц", "").strip()
+            if keyword and keyword in txt_l:
+                bz = bz_key
+                break
+        if bz:
+            break
     flat = []
     for bz_key, rooms_list in rooms.items():
         for room_name in rooms_list:
             flat.append((bz_key, room_name))
     for txt in texts:
         txt_l = txt.lower()
-        if "повтор" in txt_l:
-            is_regular = True
         for bz_key, room_name in flat:
             short = room_name.split(".")[-1].split()[0].lower()
             if short and short in txt_l and len(short) > 3:
                 room = room_name
                 bz = bz_key
                 break
-    return name, bz, room, date, start_time, end_time, is_regular
+    return name, bz, room, date, start_time, end_time
 
 
 def extract_data_from_screenshot(ctx: UIContext):
@@ -66,11 +94,15 @@ def extract_data_from_screenshot(ctx: UIContext):
         logging.debug("[OCR] Clipboard is empty")
         QMessageBox.critical(ctx.window, "Ошибка", "Буфер обмена не содержит изображения.")
         return
+    print("[OCR] Буфер получен")
     pil_image = ImageQt.fromqimage(image)
 
     def do_ocr():
         logging.debug("[OCR] OCR thread running")
-        return pytesseract.image_to_string(pil_image, lang="rus+eng")
+        data = pytesseract.image_to_data(
+            pil_image, lang="rus+eng", output_type=pytesseract.Output.DICT
+        )
+        return data
 
     def handle(result, error):
         logging.debug("[OCR] handle result error=%s", error)
@@ -78,8 +110,28 @@ def extract_data_from_screenshot(ctx: UIContext):
         try:
             if error:
                 raise error
-            lines = [t.strip() for t in result.splitlines() if t.strip()]
-            name, bz, room, date, start_time, end_time, is_reg = extract_fields_from_text(lines, rooms_by_bz)
+            data = result
+            n = len(data.get("text", []))
+            lines = []
+            current_line = []
+            line_nums = data.get("line_num", [])
+            for i in range(n):
+                text = data["text"][i].strip()
+                if not text:
+                    continue
+                if current_line and line_nums[i] != line_nums[i - 1]:
+                    lines.append(" ".join(current_line))
+                    current_line = []
+                current_line.append(text)
+            if current_line:
+                lines.append(" ".join(current_line))
+
+            print("[OCR] Текст распознан")
+
+            name, bz, room, date, start_time, end_time = extract_fields_from_text(lines, rooms_by_bz)
+            is_reg = detect_repeat_checkbox(pil_image, data)
+            if is_reg:
+                print("[OCR] Чекбокс обнаружен")
             result_dict = {
                 "name": name,
                 "bz": bz,
@@ -115,6 +167,7 @@ def extract_data_from_screenshot(ctx: UIContext):
                 ctx.fields["end_time"].setCurrentText(end_time)
             if is_reg and "regular" in ctx.fields:
                 ctx.fields["regular"].setCurrentText("Регулярная")
+            print("[OCR] Вставка завершена")
         except Exception as e:
             logging.debug("[OCR] Failed: %s", e)
             QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось распознать изображение:\n{e}")
