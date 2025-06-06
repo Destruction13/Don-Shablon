@@ -3,13 +3,12 @@ from datetime import datetime
 
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QMessageBox
-from PySide6.QtCore import QFutureWatcher
-from PySide6.QtConcurrent import run
 from PIL import Image, ImageQt
 import pytesseract
 
 from constants import rooms_by_bz
 from logic.app_state import UIContext
+from logic.utils import run_in_thread
 
 
 def extract_fields_from_text(texts: list[str], rooms: dict[str, list[str]]):
@@ -64,14 +63,13 @@ def extract_data_from_screenshot(ctx: UIContext):
         return
     pil_image = ImageQt.fromqimage(image)
 
-    watcher = QFutureWatcher()
-
     def do_ocr():
         return pytesseract.image_to_string(pil_image, lang="rus+eng")
 
-    def handle():
+    def handle(result, error):
         try:
-            result = watcher.result()
+            if error:
+                raise error
             lines = [t.strip() for t in result.splitlines() if t.strip()]
             name, bz, room, date, start_time, end_time, is_reg = extract_fields_from_text(lines, rooms_by_bz)
             if "name" in ctx.fields and name:
@@ -101,8 +99,5 @@ def extract_data_from_screenshot(ctx: UIContext):
                 ctx.fields["regular"].setCurrentText("Регулярная")
         except Exception as e:
             QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось распознать изображение:\n{e}")
-        finally:
-            watcher.deleteLater()
 
-    watcher.finished.connect(handle)
-    watcher.setFuture(run(do_ocr))
+    run_in_thread(do_ocr, handle)
