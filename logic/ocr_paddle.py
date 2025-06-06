@@ -26,6 +26,7 @@ def get_ocr():
     )
 
 
+
 def _extract_texts(result) -> list[str]:
     """Return recognized text lines from PaddleOCR result."""
     if not result:
