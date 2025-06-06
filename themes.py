@@ -100,7 +100,8 @@ themes = {
 }
 
 def apply_theme(ctx: UIContext):
-    style = ttk.Style()
+    style = ttk.Style(ctx.root)
+    style.theme_use("clam")
     theme = themes[ctx.current_theme_name]
 
     def brightness(hex_color: str) -> float:
@@ -123,10 +124,14 @@ def apply_theme(ctx: UIContext):
         b = int(alpha * b1 + (1 - alpha) * b2)
         return rgb_to_hex((r, g, b))
 
-    base_overlay = "#000000" if brightness(theme["fg"]) > 128 else "#FFFFFF"
-    alpha = theme.get("overlay_alpha", 0.3)
-    overlay = blend(base_overlay, theme["bg"], alpha)
-    entry_overlay = blend(base_overlay, theme["entry_bg"], alpha)
+    alpha = theme.get("overlay_alpha")
+    if alpha is not None:
+        base_overlay = "#000000" if brightness(theme["fg"]) > 128 else "#FFFFFF"
+        overlay = blend(base_overlay, theme["bg"], alpha)
+        entry_overlay = blend(base_overlay, theme["entry_bg"], alpha)
+    else:
+        overlay = theme["bg"]
+        entry_overlay = theme["entry_bg"]
 
     ctx.root.configure(bg=overlay)
     if ctx.asya_popup:
