@@ -8,47 +8,85 @@ from widgets import AutocompleteCombobox  # если ты вынес его ту
 
 themes = {
     "Светлая": {
-        "bg": "white",
-        "fg": "black",
-        "entry_bg": "white",
-        "entry_fg": "black",
-        "highlight": "#fff8d4"
+        "bg": "#ffffff",
+        "fg": "#000000",
+        "entry_bg": "#ffffff",
+        "entry_fg": "#000000",
+        "highlight": "#e0e0e0",
+        "font": ("Arial", 10)
     },
     "Тёмная": {
         "bg": "#1e1e1e",
         "fg": "#f2f2f2",
         "entry_bg": "#2e2e2e",
         "entry_fg": "#f5f5f5",
-        "highlight": "#573c3c"
-    },
-    "Гёрли-пак": {
-        "bg": "#fff0f5",  # лаванда
-        "fg": "#8b008b",  # тёмно-фиолетовый
-        "entry_bg": "#ffe4f3",
-        "entry_fg": "#8b008b",
-        "highlight": "#ffb6c1"  # светло-розовый
+        "highlight": "#444444",
+        "font": ("Arial", 10)
     },
     "Киберпанк": {
         "bg": "#0f0f1a",
-        "fg": "#39ff14",  # неоново-зелёный
+        "fg": "#39ff14",
         "entry_bg": "#1a1a2e",
-        "entry_fg": "#00fff7",  # неоново-голубой
-        "highlight": "#ff00c8"  # неоново-розовый
+        "entry_fg": "#00fff7",
+        "highlight": "#ff00c8",
+        "font": ("Courier New", 10)
     },
-    "Минимализм": {
-        "bg": "#f0f0f0",
-        "fg": "#222222",
+    "Гёрлпанк": {
+        "bg": "#fff0f5",
+        "fg": "#8b008b",
+        "entry_bg": "#ffe4f3",
+        "entry_fg": "#8b008b",
+        "highlight": "#ffb6c1",
+        "font": ("Comic Sans MS", 10)
+    },
+    "Айс-минимал": {
+        "bg": "#eaf6ff",
+        "fg": "#0a2c47",
         "entry_bg": "#ffffff",
-        "entry_fg": "#222222",
-        "highlight": "#c7ecee"
+        "entry_fg": "#0a2c47",
+        "highlight": "#b9d8e8",
+        "font": ("Helvetica", 10)
     },
-    "Ретро DOS": {
+    "Японский дзен": {
+        "bg": "#f5f5f5",
+        "fg": "#6b705c",
+        "entry_bg": "#ffffff",
+        "entry_fg": "#6b705c",
+        "highlight": "#c8e6c9",
+        "font": ("Arial", 10)
+    },
+    "Корпоратив": {
+        "bg": "#f1f4f8",
+        "fg": "#203864",
+        "entry_bg": "#ffffff",
+        "entry_fg": "#203864",
+        "highlight": "#b0c4de",
+        "font": ("Verdana", 10)
+    },
+    "Ретро 80-х": {
+        "bg": "#2d0036",
+        "fg": "#ff77ff",
+        "entry_bg": "#3a0057",
+        "entry_fg": "#ff77ff",
+        "highlight": "#00e1ff",
+        "font": ("Courier New", 10)
+    },
+    "Моночёрный": {
         "bg": "#000000",
-        "fg": "#00ff00",  # зелёный терминал
-        "entry_bg": "#000000",
-        "entry_fg": "#00ff00",
-        "highlight": "#005500"
-    }
+        "fg": "#ffffff",
+        "entry_bg": "#1b1b1b",
+        "entry_fg": "#ffffff",
+        "highlight": "#666666",
+        "font": ("Arial", 10)
+    },
+    "Радужный градиент": {
+        "bg": "#ffffff",
+        "fg": "#000000",
+        "entry_bg": "#ffffff",
+        "entry_fg": "#000000",
+        "highlight": "#ff5722",
+        "font": ("Arial", 10)
+    },
 }
 
 def apply_theme(ctx: UIContext):
@@ -62,11 +100,36 @@ def apply_theme(ctx: UIContext):
     
 
     # Стили для стандартных элементов
-    style.configure("TLabel", background=theme["bg"], foreground=theme["fg"])
-    style.configure("TEntry", fieldbackground=theme["entry_bg"], foreground=theme["entry_fg"])
-    style.configure("TButton", background=theme["entry_bg"], foreground=theme["entry_fg"])
-    style.configure("Error.TEntry", fieldbackground=theme["highlight"], foreground=theme["fg"])
-    style.configure("Error.TCombobox", fieldbackground=theme["highlight"], foreground=theme["fg"])
+    style.configure(
+        "TLabel",
+        background=theme["bg"],
+        foreground=theme["fg"],
+        font=theme.get("font")
+    )
+    style.configure(
+        "TEntry",
+        fieldbackground=theme["entry_bg"],
+        foreground=theme["entry_fg"],
+        font=theme.get("font")
+    )
+    style.configure(
+        "TButton",
+        background=theme["entry_bg"],
+        foreground=theme["entry_fg"],
+        font=theme.get("font")
+    )
+    style.configure(
+        "Error.TEntry",
+        fieldbackground=theme["highlight"],
+        foreground=theme["fg"],
+        font=theme.get("font")
+    )
+    style.configure(
+        "Error.TCombobox",
+        fieldbackground=theme["highlight"],
+        foreground=theme["fg"],
+        font=theme.get("font")
+    )
 
     # Кастомные стили
     style.configure("Custom.TCombobox",
@@ -75,14 +138,16 @@ def apply_theme(ctx: UIContext):
                     background=theme["entry_bg"],
                     fieldbackground=theme["entry_bg"],
                     borderwidth=1,
-                    relief="solid")
+                    relief="solid",
+                    font=theme.get("font"))
     
     style.configure("Custom.TButton",
         background=theme["entry_bg"],
         foreground=theme["entry_fg"],
         borderwidth=1,
         focusthickness=1,
-        focuscolor=theme["highlight"])
+        focuscolor=theme["highlight"],
+        font=theme.get("font"))
 
     style.map("Custom.TButton",
         background=[("active", theme["highlight"])],
@@ -96,6 +161,7 @@ def apply_theme(ctx: UIContext):
         borderwidth=1,
         focusthickness=1,
         focuscolor=theme["highlight"],
+        font=theme.get("font"),
     )
     style.map(
         "Accent.TButton",
@@ -107,7 +173,8 @@ def apply_theme(ctx: UIContext):
     style.configure("Custom.DateEntry",
                     fieldbackground=theme["entry_bg"],
                     background=theme["entry_bg"],
-                    foreground=theme["entry_fg"])
+                    foreground=theme["entry_fg"],
+                    font=theme.get("font"))
     style.configure("Custom.TFrame", background=theme["bg"])
 
     style.map("Custom.TCombobox",
@@ -138,7 +205,11 @@ def apply_theme(ctx: UIContext):
             continue  # Пропустить мёртвые виджеты
 
         try:
-            widget.configure(background=theme["entry_bg"], foreground=theme["entry_fg"])
+            widget.configure(
+                background=theme["entry_bg"],
+                foreground=theme["entry_fg"],
+                font=theme.get("font")
+            )
         except:
             pass
 
@@ -153,9 +224,12 @@ def apply_theme(ctx: UIContext):
             widget.configure(style="Custom.TFrame")
 
     # Настройка output_text
-    ctx.output_text.configure(bg=theme["entry_bg"],
-                          fg=theme["entry_fg"],
-                          insertbackground=theme["fg"])
+    ctx.output_text.configure(
+        bg=theme["entry_bg"],
+        fg=theme["entry_fg"],
+        insertbackground=theme["fg"],
+        font=theme.get("font")
+    )
     
 def apply_theme_from_dropdown(*_, ctx: UIContext):
     ctx.current_theme_name = ctx.selected_theme.get()
