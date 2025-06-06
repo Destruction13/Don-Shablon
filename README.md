@@ -18,6 +18,7 @@
    ```bash
    pip install -r requirements.txt
    ```
+   > Для работы OCR требуется установленный `tesseract` с языковым пакетом `rus`. Библиотека `pytesseract` устанавливается из `requirements.txt`.
 3. **(Необязательно) подключите DeepL для перевода**
    * Получите API‑ключ на [deepl.com](https://www.deepl.com/account/summary).
    * Создайте рядом с `main.py` файл `.env` и впишите:
