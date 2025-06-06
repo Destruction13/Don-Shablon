@@ -2,6 +2,7 @@ import os
 import urllib.parse
 from datetime import datetime, timedelta
 import requests
+import logging
 import pygame
 from PySide6.QtWidgets import (
     QMessageBox,
@@ -15,6 +16,8 @@ from PySide6.QtCore import QObject, QThread, Signal
 
 from logic.app_state import UIContext
 
+logging.basicConfig(level=logging.DEBUG)
+
 months = [
     "января", "февраля", "марта", "апреля", "мая", "июня",
     "июля", "августа", "сентября", "октября", "ноября", "декабря",
@@ -26,10 +29,8 @@ days = [
 ]
 
 DEEPL_URL = "https://api-free.deepl.com/v2/translate"
-# Default public key for DeepL used if no environment variable is provided
-DEEPL_API_KEY = os.getenv(
-    "DEEPL_API_KEY", "69999737-95c3-440e-84bc-96fb8550f83a:fx"
-)
+# Hardcoded DeepL API key as requested
+DEEPL_API_KEY = "69999737-95c3-440e-84bc-96fb8550f83a:fx"
 
 # Keep references to running threads to avoid premature garbage collection
 _threads: list[QThread] = []
@@ -54,12 +55,14 @@ class _Worker(QObject):
 
 def run_in_thread(func, callback):
     """Execute *func* in a separate thread and call *callback* with (result, error)."""
+    logging.debug("[THREAD] Starting new worker thread")
     thread = QThread()
     worker = _Worker(func)
     worker.moveToThread(thread)
     thread.started.connect(worker.run)
 
     def handle_done(data):
+        logging.debug("[THREAD] Worker finished")
         result, error = data
         callback(result, error)
         thread.quit()
@@ -76,6 +79,7 @@ def run_in_thread(func, callback):
 
     thread.finished.connect(cleanup)
     thread.start()
+    logging.debug("[THREAD] Thread started")
 
 
 def toggle_music(button, ctx: UIContext):
@@ -136,27 +140,33 @@ def format_date_ru(date_obj):
 def translate_to_english(ctx: UIContext):
     text = ctx.output_text.toPlainText().strip()
     if not text:
+        QMessageBox.warning(ctx.window, "Предупреждение", "Нет текста для перевода")
         return
     if not DEEPL_API_KEY:
         QMessageBox.warning(ctx.window, "Ошибка", "Не указан ключ DeepL API")
         return
 
     def do_translate():
+        logging.debug("[DEEPL] Sending translation request")
         params = {
-            "auth_key": DEEPL_API_KEY,
             "text": text,
             "target_lang": "EN",
         }
-        response = requests.post(DEEPL_URL, data=params, timeout=10)
+        headers = {"Authorization": f"DeepL-Auth-Key {DEEPL_API_KEY}"}
+        logging.debug("[DEEPL] Request params: %s", params)
+        response = requests.post(DEEPL_URL, data=params, headers=headers, timeout=10)
+        logging.debug("[DEEPL] Status %s, body: %s", response.status_code, response.text)
         if response.status_code != 200:
             raise Exception(f"HTTP {response.status_code}: {response.text}")
         return response.json()["translations"][0]["text"]
 
     def show_result(result, error):
+        logging.debug("[DEEPL] show_result error=%s", error)
         if error:
             QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось перевести текст:\n{error}")
             return
         translated = result
+        logging.debug("[DEEPL] Translation completed")
         dlg = QDialog(ctx.window)
         dlg.setWindowTitle("Перевод")
         v = QVBoxLayout(dlg)

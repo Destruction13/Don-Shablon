@@ -72,8 +72,7 @@ class MainWindow(QMainWindow):
         trans_btn = QPushButton("EN")
         trans_btn.clicked.connect(lambda: translate_to_english(ctx))
         cv_btn = QPushButton("📋 Из буфера")
-        from logic.ocr_tesseract import extract_data_from_screenshot
-        cv_btn.clicked.connect(lambda: extract_data_from_screenshot(ctx))
+        cv_btn.clicked.connect(self.handle_clipboard_ocr)
         for w in [generate_btn, self.asya_btn, self.asya_mode_btn, music_btn, trans_btn, cv_btn]:
             action_row.addWidget(w)
         self.main_layout.addLayout(action_row)
@@ -146,4 +145,9 @@ class MainWindow(QMainWindow):
                 self.asya_btn.setChecked(False)
                 return
         self.ctx.ls_active = checked
+
+    def handle_clipboard_ocr(self):
+        print("[OCR] Button clicked")
+        from logic.ocr_tesseract import extract_data_from_screenshot
+        extract_data_from_screenshot(self.ctx)
 

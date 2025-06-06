@@ -3,6 +3,7 @@ from datetime import datetime
 
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QMessageBox
+import logging
 from PIL import Image, ImageQt
 import pytesseract
 
@@ -57,17 +58,21 @@ def extract_fields_from_text(texts: list[str], rooms: dict[str, list[str]]):
 
 
 def extract_data_from_screenshot(ctx: UIContext):
+    logging.debug("[OCR] Кнопка нажата")
     print("Запуск OCR из буфера")
     image = QGuiApplication.clipboard().image()
     if image.isNull():
+        logging.debug("[OCR] Clipboard is empty")
         QMessageBox.critical(ctx.window, "Ошибка", "Буфер обмена не содержит изображения.")
         return
     pil_image = ImageQt.fromqimage(image)
 
     def do_ocr():
+        logging.debug("[OCR] OCR thread running")
         return pytesseract.image_to_string(pil_image, lang="rus+eng")
 
     def handle(result, error):
+        logging.debug("[OCR] handle result error=%s", error)
         try:
             if error:
                 raise error
@@ -99,6 +104,8 @@ def extract_data_from_screenshot(ctx: UIContext):
             if is_reg and "regular" in ctx.fields:
                 ctx.fields["regular"].setCurrentText("Регулярная")
         except Exception as e:
+            logging.debug("[OCR] Failed: %s", e)
             QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось распознать изображение:\n{e}")
 
     run_in_thread(do_ocr, handle)
+    logging.debug("[OCR] Thread started")
