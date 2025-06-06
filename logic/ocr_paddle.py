@@ -23,15 +23,40 @@ def _init_ocr() -> PaddleOCR:
     global _ocr_instance
     if _ocr_instance is None:
         logging.debug("[OCR] Initializing PaddleOCR")
+
         models_dir = Path(__file__).resolve().parent.parent / "data" / "ocr_models"
+
+        det_path = models_dir / "det" / "Multilingual_PP-OCRv3_det_infer"
+        rec_path = models_dir / "rec" / "cyrillic_PP-OCRv3_rec_infer"
+        cls_path = models_dir / "cls" / "ch_ppocr_mobile_v2.0_cls_infer"
+
+        required_files = [
+            det_path / "inference.pdmodel",
+            det_path / "inference.pdiparams",
+            rec_path / "inference.pdmodel",
+            rec_path / "inference.pdiparams",
+            cls_path / "inference.pdmodel",
+            cls_path / "inference.pdiparams",
+        ]
+
+        for file in required_files:
+            if not file.exists():
+                raise FileNotFoundError(f"[OCR] ❌ Модель не найдена: {file}")
+
         _ocr_instance = PaddleOCR(
             use_angle_cls=True,
-            det_model_dir=str(models_dir / "det" / "Multilingual_PP-OCRv3_det_infer"),
-            rec_model_dir=str(models_dir / "rec" / "cyrillic_PP-OCRv3_rec_infer"),
-            cls_model_dir=str(models_dir / "cls" / "ch_ppocr_mobile_v2.0_cls_infer"),
+            lang='ru',
+            ocr_version='PP-OCRv3',  # 🔥 Обязательно!
+            det_model_dir=str(det_path),
+            rec_model_dir=str(rec_path),
+            cls_model_dir=str(cls_path),
+            drop_score=0.5,  # ⬅️ помогает отсеивать мусор
+            use_gpu=False     # ⬅️ убери, если запускаешь с GPU
         )
-    return _ocr_instance
 
+        logging.debug("[OCR] PaddleOCR успешно инициализирован")
+
+    return _ocr_instance
 
 
 def _normalize(text: str) -> str:
