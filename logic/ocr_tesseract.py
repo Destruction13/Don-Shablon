@@ -57,6 +57,7 @@ def extract_fields_from_text(texts: list[str], rooms: dict[str, list[str]]):
 
 
 def extract_data_from_screenshot(ctx: UIContext):
+    print("Запуск OCR из буфера")
     image = QGuiApplication.clipboard().image()
     if image.isNull():
         QMessageBox.critical(ctx.window, "Ошибка", "Буфер обмена не содержит изображения.")

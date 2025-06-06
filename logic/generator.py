@@ -2,15 +2,40 @@ from datetime import datetime
 import random
 
 from PySide6.QtWidgets import (
-    QWidget, QLabel, QLineEdit, QComboBox, QHBoxLayout, QVBoxLayout, QPushButton,
-    QDateEdit, QTextEdit, QMessageBox, QToolButton, QCompleter
+    QWidget,
+    QLabel,
+    QLineEdit,
+    QComboBox,
+    QHBoxLayout,
+    QVBoxLayout,
+    QPushButton,
+    QDateEdit,
+    QTextEdit,
+    QMessageBox,
+    QToolButton,
+    QCompleter,
 )
-from PySide6.QtCore import Qt, QDate, QStringListModel
-from PySide6.QtTest import QTest
+from PySide6.QtCore import QDate, QStringListModel
 
 from logic.app_state import UIContext
 from constants import rooms_by_bz
 from logic.utils import format_date_ru, parse_yandex_calendar_url
+
+
+class ClickableDateEdit(QDateEdit):
+    """Date edit that opens the calendar when focused or clicked."""
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        self.setCalendarPopup(True)
+        if self.calendarWidget():
+            self.calendarWidget().show()
+
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        self.setCalendarPopup(True)
+        if self.calendarWidget():
+            self.calendarWidget().show()
 
 
 def clear_layout(layout: QVBoxLayout):
@@ -87,28 +112,10 @@ def add_date(name: str, ctx: UIContext):
     container = QWidget()
     hl = QHBoxLayout(container)
     lbl = QLabel("Дата:")
-    date_edit = QDateEdit()
+    date_edit = ClickableDateEdit()
     date_edit.setCalendarPopup(True)
     date_edit.setDisplayFormat("dd.MM.yyyy")
     date_edit.setDate(QDate.currentDate())
-    orig_press = date_edit.mousePressEvent
-    orig_focus = date_edit.focusInEvent
-
-    def open_calendar():
-        if not date_edit.calendarWidget().isVisible():
-            QTest.keyClick(date_edit, Qt.Key_F4)
-
-    def _on_press(event):
-        orig_press(event)
-        open_calendar()
-
-    date_edit.mousePressEvent = _on_press
-
-    def _on_focus(event):
-        orig_focus(event)
-        open_calendar()
-
-    date_edit.focusInEvent = _on_focus
     hl.addWidget(lbl)
     hl.addWidget(date_edit)
     ctx.fields[name] = date_edit

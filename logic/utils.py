@@ -3,7 +3,13 @@ import urllib.parse
 from datetime import datetime, timedelta
 import requests
 import pygame
-from PySide6.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QTextEdit
+from PySide6.QtWidgets import (
+    QMessageBox,
+    QDialog,
+    QVBoxLayout,
+    QTextEdit,
+    QPushButton,
+)
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtCore import QObject, QThread, Signal
 
@@ -20,7 +26,10 @@ days = [
 ]
 
 DEEPL_URL = "https://api-free.deepl.com/v2/translate"
-DEEPL_API_KEY = os.getenv("DEEPL_API_KEY", "")
+# Default public key for DeepL used if no environment variable is provided
+DEEPL_API_KEY = os.getenv(
+    "DEEPL_API_KEY", "69999737-95c3-440e-84bc-96fb8550f83a:fx"
+)
 
 # Keep references to running threads to avoid premature garbage collection
 _threads: list[QThread] = []
@@ -133,9 +142,14 @@ def translate_to_english(ctx: UIContext):
         return
 
     def do_translate():
-        params = {"auth_key": DEEPL_API_KEY, "text": text, "target_lang": "EN"}
+        params = {
+            "auth_key": DEEPL_API_KEY,
+            "text": text,
+            "target_lang": "EN",
+        }
         response = requests.post(DEEPL_URL, data=params, timeout=10)
-        response.raise_for_status()
+        if response.status_code != 200:
+            raise Exception(f"HTTP {response.status_code}: {response.text}")
         return response.json()["translations"][0]["text"]
 
     def show_result(result, error):
@@ -149,6 +163,14 @@ def translate_to_english(ctx: UIContext):
         edit = QTextEdit()
         edit.setPlainText(translated)
         v.addWidget(edit)
+        copy_btn = QPushButton("Скопировать")
+        v.addWidget(copy_btn)
+
+        def copy_text():
+            QGuiApplication.clipboard().setText(edit.toPlainText())
+
+        copy_btn.clicked.connect(copy_text)
+
         dlg.exec()
 
     run_in_thread(do_translate, show_result)
