@@ -6,7 +6,7 @@ import numpy as np
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QMessageBox
 from PySide6.QtCore import QDate
-from PIL import Image, ImageQt, ImageDraw
+from PIL import Image, ImageQt
 from paddleocr import PaddleOCR
 
 from constants import rooms_by_bz
@@ -19,7 +19,12 @@ _ocr = None
 def get_ocr():
     global _ocr
     if _ocr is None:
-        _ocr = PaddleOCR(use_textline_orientation=True, lang="ru", ocr_version="PP-OCRv3")
+        # Initialize PaddleOCR once. Models will be downloaded automatically.
+        _ocr = PaddleOCR(
+            use_angle_cls=True,
+            lang="ru",
+            ocr_version="PP-OCRv3",
+        )
     return _ocr
 
 
@@ -97,15 +102,23 @@ def extract_data_from_screenshot(ctx: UIContext):
     if image.isNull():
         QMessageBox.critical(ctx.window, "Ошибка", "Буфер обмена не содержит изображения.")
         return
-    pil_image = ImageQt.fromqimage(image)
+    pil_image = ImageQt.fromqimage(image).convert("RGB")
 
     def do_ocr():
         logging.debug("[OCR] OCR thread running")
         ocr = get_ocr()
-        return ocr.ocr(np.array(pil_image))
+        try:
+            logging.debug("[OCR] Calling PaddleOCR")
+            result = ocr.ocr(np.array(pil_image), cls=True, output="dict")
+            logging.debug("[OCR] OCR raw result: %s", result)
+            return result
+        except Exception as e:
+            logging.debug("[OCR] Ошибка при вызове OCR: %s", e)
+            raise
 
     def handle(result, error):
         logging.debug("[OCR] handle result error=%s", error)
+        logging.debug("[OCR] handle raw result: %s", result)
         try:
             if error:
                 raise error
