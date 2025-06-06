@@ -1,5 +1,5 @@
 pygame
 requests
 Pillow
-tkcalendar
-easyocr
+pytesseract
+PySide6
