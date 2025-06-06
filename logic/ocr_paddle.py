@@ -9,6 +9,7 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QMessageBox
 from PySide6.QtCore import QDate
 from paddleocr import PaddleOCR
+from pathlib import Path
 
 from constants import rooms_by_bz
 from logic.app_state import UIContext
@@ -22,7 +23,15 @@ def _init_ocr() -> PaddleOCR:
     global _ocr_instance
     if _ocr_instance is None:
         logging.debug("[OCR] Initializing PaddleOCR")
-        _ocr_instance = PaddleOCR(use_angle_cls=True, lang="ru")
+        models_dir = Path(__file__).resolve().parent.parent / "data" / "ocr_models"
+        _ocr_instance = PaddleOCR(
+            use_angle_cls=True,
+            lang="ru",
+            use_gpu=False,
+            det_model_dir=str(models_dir / "det"),
+            rec_model_dir=str(models_dir / "rec"),
+            cls_model_dir=str(models_dir / "cls"),
+        )
     return _ocr_instance
 
 
