@@ -4,16 +4,26 @@ from tempfile import NamedTemporaryFile
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QMessageBox
 from PIL import Image, ImageQt
-import easyocr
 from constants import rooms_by_bz
 from logic.app_state import UIContext
 
 _reader = None
+_easyocr_error = None
 
 def get_reader():
-    global _reader
-    if _reader is None:
+    global _reader, _easyocr_error
+    if _reader is not None:
+        return _reader
+    try:
+        import easyocr
+    except Exception as e:
+        _easyocr_error = e
+        return None
+    try:
         _reader = easyocr.Reader(['ru', 'en'])
+    except Exception as e:
+        _easyocr_error = e
+        _reader = None
     return _reader
 
 
@@ -64,10 +74,18 @@ def import_from_clipboard_image(ctx: UIContext):
     if image.isNull():
         QMessageBox.critical(ctx.window, "Ошибка", "Буфер обмена не содержит изображения.")
         return
+    reader = get_reader()
+    if reader is None:
+        QMessageBox.critical(
+            ctx.window,
+            "Ошибка",
+            f"OCR недоступен: {_easyocr_error}"
+        )
+        return
     pil_image = ImageQt.fromqimage(image)
     with NamedTemporaryFile(suffix='.png', delete=False) as tmp:
         pil_image.save(tmp.name)
-        results = get_reader().readtext(tmp.name)
+        results = reader.readtext(tmp.name)
     texts = [x[1] for x in results]
     name, bz, room, date, start_time, end_time = extract_fields_from_text(texts, rooms_by_bz)
     if "name" in ctx.fields and name:

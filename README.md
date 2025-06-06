@@ -18,6 +18,7 @@
    ```bash
    pip install -r requirements.txt
    ```
+   > OCR работает только если установить опциональный пакет `easyocr` из `requirements.txt`.
 3. **(Необязательно) подключите DeepL для перевода**
    * Получите API‑ключ на [deepl.com](https://www.deepl.com/account/summary).
    * Создайте рядом с `main.py` файл `.env` и впишите:
