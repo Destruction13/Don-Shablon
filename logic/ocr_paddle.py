@@ -122,19 +122,22 @@ def extract_data_from_screenshot(ctx: UIContext):
     if image.isNull():
         QMessageBox.critical(ctx.window, "Ошибка", "Буфер обмена не содержит изображения.")
         return
-    pil_image = ImageQt.fromqimage(image).convert("RGB")
+    pil_debug = ImageQt.fromqimage(image).convert("RGB")
+    logging.debug("[OCR] Image size: %s, type: %s", pil_debug.size, type(pil_debug))
 
     def do_ocr():
         logging.debug("[OCR] OCR thread running")
-        ocr = get_ocr()
         try:
+            image = QGuiApplication.clipboard().image()
+            pil_image = ImageQt.fromqimage(image).convert("RGB")
+            logging.debug("[OCR] Creating OCR instance")
+            ocr = get_ocr()
             logging.debug("[OCR] Calling PaddleOCR. Image size: %s", pil_image.size)
             result = ocr.ocr(np.array(pil_image), cls=True, output="dict")
             print("[OCR] result type", type(result), repr(result)[:200])
             logging.debug("[OCR] OCR raw result: %s", result)
             return result
         except Exception as e:
-            import traceback
             traceback.print_exc()
             logging.debug("[OCR] Ошибка при вызове OCR: %s", e)
             raise
@@ -197,5 +200,8 @@ def extract_data_from_screenshot(ctx: UIContext):
             logging.debug("[OCR] Failed: %s", e)
             QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось распознать изображение:\n{e}")
 
-    run_in_thread(do_ocr, handle)
+    try:
+        run_in_thread(do_ocr, handle)
+    except Exception as e:
+        logging.exception("Failed to run OCR thread: %s", e)
     logging.debug("[OCR] Thread started")

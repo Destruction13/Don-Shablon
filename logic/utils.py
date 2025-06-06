@@ -47,6 +47,7 @@ class _Worker(QObject):
 
     @Slot()
     def run(self):
+        logging.debug("[THREAD] Entered _Worker.run()")
         logging.debug("[THREAD] Worker run start")
         result = None
         error = None
