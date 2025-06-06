@@ -1,6 +1,6 @@
 from tkinter import ttk, messagebox
 import tkinter as tk
-from themes import themes, apply_theme_from_dropdown
+from themes import themes, apply_theme_from_dropdown, update_background
 from logic import (
     generate_message,
     update_fields,
@@ -56,6 +56,12 @@ def build_ui(ctx: UIContext):
     style = ttk.Style()
     style.theme_use("clam")
 
+    # --- Background image holder ---
+    ctx.bg_label = tk.Label(ctx.root)
+    ctx.bg_label.place(relx=0, rely=0, relwidth=1, relheight=1)
+    ctx.bg_label.lower()
+    ctx.root.bind("<Configure>", lambda e: update_background(ctx))
+
     # === Тема ===
     ctx.current_theme_name = "Светлая"
     ctx.selected_theme = tk.StringVar(value=ctx.current_theme_name)
@@ -98,12 +104,20 @@ def build_ui(ctx: UIContext):
     ctx.asya_popup = None
     ctx.asya_extra_frame = None
 
+
+    def brightness(hex_color: str) -> float:
+        hex_color = hex_color.lstrip('#')
+        r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+        return 0.299 * r + 0.587 * g + 0.114 * b
+
+    overlay = '#0000004C' if brightness(theme['fg']) > 128 else '#FFFFFF4C'
+
     # === Поля ===
-    ctx.fields_frame = ttk.Frame(ctx.root, style="Custom.TFrame")
+    ctx.fields_frame = tk.Frame(ctx.root, bg=overlay)
     ctx.fields_frame.pack(fill="x", expand=True, padx=10, pady=10)
 
     # === Кнопки ===
-    ctx.action_frame = ttk.Frame(ctx.root, style="Custom.TFrame")
+    ctx.action_frame = tk.Frame(ctx.root, bg=overlay)
     ctx.action_frame.pack(pady=(5, 2))
 
     generate_button = ttk.Button(ctx.action_frame, text="Сгенерировать сообщение", command=lambda: generate_message(ctx))
@@ -148,7 +162,7 @@ def build_ui(ctx: UIContext):
     copy_button.pack(pady=(0, 10))
 
     # === Output ===
-    output_frame = tk.Frame(ctx.root, bg=theme["bg"])
+    output_frame = tk.Frame(ctx.root, bg=overlay)
     output_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
     ctx.output_text = tk.Text(
@@ -180,3 +194,6 @@ def build_ui(ctx: UIContext):
 
     # === Ctrl+C ===
     enable_ctrl_c(ctx.output_text, ctx.root)
+
+    # Initial theme application
+    apply_theme_from_dropdown(ctx=ctx)
