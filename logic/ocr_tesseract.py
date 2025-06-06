@@ -3,6 +3,7 @@ from datetime import datetime
 
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QMessageBox
+from PySide6.QtCore import QDate
 import logging
 from PIL import Image, ImageQt
 import pytesseract
@@ -73,11 +74,13 @@ def extract_data_from_screenshot(ctx: UIContext):
 
     def handle(result, error):
         logging.debug("[OCR] handle result error=%s", error)
+        print("OCR raw result:\n", result)
         try:
             if error:
                 raise error
             lines = [t.strip() for t in result.splitlines() if t.strip()]
             name, bz, room, date, start_time, end_time, is_reg = extract_fields_from_text(lines, rooms_by_bz)
+            print("Parsed:", name, bz, room, date, start_time, end_time, is_reg)
             if "name" in ctx.fields and name:
                 ctx.fields["name"].setText(name)
             if bz:
@@ -94,7 +97,7 @@ def extract_data_from_screenshot(ctx: UIContext):
             if "datetime" in ctx.fields and date:
                 try:
                     dt = datetime.strptime(date, "%d.%m.%Y")
-                    ctx.fields["datetime"].setDate(dt.date())
+                    ctx.fields["datetime"].setDate(QDate(dt.year, dt.month, dt.day))
                 except Exception:
                     pass
             if "start_time" in ctx.fields and start_time:

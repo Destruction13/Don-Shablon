@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QPushButton,
 )
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, QThread, Signal, Slot, Qt
 
 from logic.app_state import UIContext
 
@@ -34,6 +34,8 @@ DEEPL_API_KEY = "69999737-95c3-440e-84bc-96fb8550f83a:fx"
 
 # Keep references to running threads to avoid premature garbage collection
 _threads: list[QThread] = []
+# Keep references to callback objects as well
+_callbacks: list[QObject] = []
 
 
 class _Worker(QObject):
@@ -43,6 +45,7 @@ class _Worker(QObject):
         super().__init__()
         self._func = func
 
+    @Slot()
     def run(self):
         result = None
         error = None
@@ -61,13 +64,18 @@ def run_in_thread(func, callback):
     worker.moveToThread(thread)
     thread.started.connect(worker.run)
 
-    def handle_done(data):
-        logging.debug("[THREAD] Worker finished")
-        result, error = data
-        callback(result, error)
-        thread.quit()
+    class _Callback(QObject):
+        @Slot(object)
+        def handle(self, data):
+            logging.debug("[THREAD] Worker finished")
+            result, error = data
+            callback(result, error)
+            thread.quit()
 
-    worker.finished.connect(handle_done)
+    cb_obj = _Callback()
+    _callbacks.append(cb_obj)
+
+    worker.finished.connect(cb_obj.handle, Qt.QueuedConnection)
     worker.finished.connect(worker.deleteLater)
     thread.finished.connect(thread.deleteLater)
 
@@ -76,6 +84,7 @@ def run_in_thread(func, callback):
 
     def cleanup():
         _threads.remove(thread)
+        _callbacks.remove(cb_obj)
 
     thread.finished.connect(cleanup)
     thread.start()
