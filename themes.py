@@ -233,13 +233,30 @@ def apply_theme(ctx: UIContext):
         font=theme.get("font")
     )
 
-    # Полупрозрачный фон блоков
+    # Полупрозрачный фон блоков (имитируем 70% прозрачность без alpha-канала)
+
     def brightness(hex_color: str) -> float:
-        hex_color = hex_color.lstrip('#')
+        hex_color = hex_color.lstrip("#")
         r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
         return 0.299 * r + 0.587 * g + 0.114 * b
 
-    overlay = '#0000004C' if brightness(theme['fg']) > 128 else '#FFFFFF4C'
+    def hex_to_rgb(value: str) -> tuple[int, int, int]:
+        value = value.lstrip("#")
+        return int(value[0:2], 16), int(value[2:4], 16), int(value[4:6], 16)
+
+    def rgb_to_hex(rgb: tuple[int, int, int]) -> str:
+        return "#%02X%02X%02X" % rgb
+
+    def blend(fg: str, bg: str, alpha: float) -> str:
+        r1, g1, b1 = hex_to_rgb(fg)
+        r2, g2, b2 = hex_to_rgb(bg)
+        r = int(alpha * r1 + (1 - alpha) * r2)
+        g = int(alpha * g1 + (1 - alpha) * g2)
+        b = int(alpha * b1 + (1 - alpha) * b2)
+        return rgb_to_hex((r, g, b))
+
+    base_overlay = "#000000" if brightness(theme["fg"]) > 128 else "#FFFFFF"
+    overlay = blend(base_overlay, theme["bg"], 0.3)  # 70% прозрачность
     if ctx.fields_frame:
         ctx.fields_frame.configure(bg=overlay)
     if ctx.action_frame:
