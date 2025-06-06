@@ -12,11 +12,13 @@ from PySide6.QtWidgets import (
     QPushButton,
 )
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtCore import QObject, QThread, Signal, Slot, Qt
+from PySide6.QtCore import QRunnable, QThreadPool, QObject, Signal, Slot
+import logging
 
 from logic.app_state import UIContext
 
 logging.basicConfig(level=logging.DEBUG)
+_threadpool = QThreadPool.globalInstance()
 
 months = [
     "января", "февраля", "марта", "апреля", "мая", "июня",
@@ -32,65 +34,33 @@ DEEPL_URL = "https://api-free.deepl.com/v2/translate"
 # Hardcoded DeepL API key as requested
 DEEPL_API_KEY = "69999737-95c3-440e-84bc-96fb8550f83a:fx"
 
-# Keep references to running threads to avoid premature garbage collection
-_threads: list[QThread] = []
-# Keep references to callback objects as well
-_callbacks: list[QObject] = []
 
-
-class _Worker(QObject):
+class _TaskSignals(QObject):
     finished = Signal(object)
 
-    def __init__(self, func):
+class _Task(QRunnable):
+    def __init__(self, func, callback):
         super().__init__()
-        self._func = func
+        self.func = func
+        self.signals = _TaskSignals()
+        self.signals.finished.connect(callback)
 
     @Slot()
     def run(self):
+        logging.debug("[POOL] Task running")
         result = None
         error = None
         try:
-            result = self._func()
-        except Exception as exc:  # capture any exceptions
-            error = exc
-        self.finished.emit((result, error))
-
+            result = self.func()
+        except Exception as e:
+            error = e
+        logging.debug("[POOL] Task done")
+        self.signals.finished.emit((result, error))
 
 def run_in_thread(func, callback):
-    """Execute *func* in a separate thread and call *callback* with (result, error)."""
-    logging.debug("[THREAD] Starting new worker thread")
-    thread = QThread()
-    worker = _Worker(func)
-    worker.moveToThread(thread)
-    thread.started.connect(worker.run)
-
-    class _Callback(QObject):
-        @Slot(object)
-        def handle(self, data):
-            logging.debug(
-                "[THREAD] Worker finished on %s", QThread.currentThread()
-            )
-            result, error = data
-            callback(result, error)
-            thread.quit()
-
-    cb_obj = _Callback()
-    _callbacks.append(cb_obj)
-
-    worker.finished.connect(cb_obj.handle, Qt.QueuedConnection)
-    worker.finished.connect(worker.deleteLater)
-    thread.finished.connect(thread.deleteLater)
-
-    # keep a reference until finished
-    _threads.append(thread)
-
-    def cleanup():
-        _threads.remove(thread)
-        _callbacks.remove(cb_obj)
-
-    thread.finished.connect(cleanup)
-    thread.start()
-    logging.debug("[THREAD] Thread started")
+    logging.debug("[POOL] Submitting task to thread pool")
+    task = _Task(func, callback)
+    _threadpool.start(task)
 
 
 def toggle_music(button, ctx: UIContext):

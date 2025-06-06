@@ -1,5 +1,6 @@
 import re
 import logging
+import traceback
 from datetime import datetime
 
 import numpy as np
@@ -13,17 +14,16 @@ from constants import rooms_by_bz
 from logic.app_state import UIContext
 from logic.utils import run_in_thread
 
-_ocr = None
-
 
 def get_ocr():
-    global _ocr
-    if _ocr is None:
-        # Initialize PaddleOCR once. Pin to PP-OCRv3 for Russian.
-        # The API slightly differs between versions, so we keep args minimal
-        # to remain compatible with both 2.x and 3.x releases.
-        _ocr = PaddleOCR(use_angle_cls=True, lang="ru")
-    return _ocr
+    # Переиспользовать не будем — создаём новый экземпляр каждый раз
+    return PaddleOCR(
+        use_angle_cls=True,
+        lang="ru",
+        det_model_dir="C:/AI/Bots/OCR_Models/.paddleocr/whl/det/ml/Multilingual_PP-OCRv3_det_infer",
+        rec_model_dir="C:/AI/Bots/OCR_Models/.paddleocr/whl/rec/cyrillic/cyrillic_PP-OCRv3_rec_infer",
+        cls_model_dir="C:/AI/Bots/OCR_Models/.paddleocr/whl/cls/ch_ppocr_mobile_v2.0_cls_infer"
+    )
 
 
 def _extract_texts(result) -> list[str]:
@@ -116,42 +116,53 @@ def detect_repeat_checkbox(image: Image.Image, ocr_result: dict) -> bool:
 
 def extract_data_from_screenshot(ctx: UIContext):
     logging.debug("[OCR] Кнопка нажата")
+
+    # Получаем изображение в главном потоке
     image = QGuiApplication.clipboard().image()
     if image.isNull():
+        logging.debug("[OCR] QImage is null — выход")
         QMessageBox.critical(ctx.window, "Ошибка", "Буфер обмена не содержит изображения.")
         return
+
     pil_image = ImageQt.fromqimage(image).convert("RGB")
+    logging.debug("[OCR] Получено PIL-изображение: %s", pil_image.size)
 
     def do_ocr():
-        logging.debug("[OCR] OCR thread running")
-        ocr = get_ocr()
         try:
-            logging.debug("[OCR] Calling PaddleOCR. Image size: %s", pil_image.size)
-            result = ocr.ocr(np.array(pil_image), cls=True, output="dict")
-            logging.debug("[OCR] OCR raw result: %s", result)
+            logging.debug("[OCR] Создаём экземпляр PaddleOCR")
+            ocr = get_ocr()
+            logging.debug("[OCR] Запускаем OCR")
+            result = ocr.ocr(np.array(pil_image), cls=True)
+            logging.debug("[OCR] OCR завершён")
             return result
         except Exception as e:
-            logging.debug("[OCR] Ошибка при вызове OCR: %s", e)
+            logging.exception("[OCR] Ошибка в do_ocr: %s", e)
             raise
 
-    def handle(result, error):
-        logging.debug("[OCR] handle result error=%s", error)
-        logging.debug("[OCR] handle raw result: %s", result)
+    def handle(result_error):
+        result, error = result_error
+        if error:
+            logging.error("[OCR] Ошибка при обработке OCR: %s", error)
+            QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось распознать изображение:\n{error}")
+            return
+
         try:
-            if error:
-                raise error
-            if not result:
-                raise ValueError("Empty OCR result")
-            texts = _extract_texts(result)
+            # 💬 Для отладки — покажем, что там вообще пришло
+            print("[DEBUG] OCR result type:", type(result))
+            print("[DEBUG] OCR result preview:", result[:3])
+
+            # 🔥 Парсим текст вручную, без _extract_texts
+            # Формат результата: [[box, (text, confidence)], ...]
+            texts = [line[1][0] for line in result[0]]  # потому что PaddleOCR возвращает список из списков!
+
+
+            logging.debug("[OCR] Распознанный текст: %s", texts)
+
+            # Теперь извлекаем поля
             name, bz, room, date, start_time, end_time = extract_fields_from_text(texts, rooms_by_bz)
-            if isinstance(result, dict):
-                ocr_dict = result
-            elif isinstance(result, list) and result and isinstance(result[0], dict):
-                ocr_dict = result[0]
-            else:
-                ocr_dict = {}
-            is_reg = detect_repeat_checkbox(pil_image, ocr_dict)
-            if "name" in ctx.fields and name:
+
+            # Заполнение UI (осталось без изменений)
+            if name and "name" in ctx.fields:
                 ctx.fields["name"].setText(name)
             if bz:
                 if bz not in rooms_by_bz:
@@ -168,17 +179,20 @@ def extract_data_from_screenshot(ctx: UIContext):
                 try:
                     dt = datetime.strptime(date, "%d.%m.%Y")
                     ctx.fields["datetime"].setDate(QDate(dt.year, dt.month, dt.day))
-                except Exception:
-                    pass
+                except Exception as e:
+                    logging.warning("[OCR] Не удалось установить дату: %s", e)
             if "start_time" in ctx.fields and start_time:
                 ctx.fields["start_time"].setCurrentText(start_time)
             if "end_time" in ctx.fields and end_time:
                 ctx.fields["end_time"].setCurrentText(end_time)
             if "regular" in ctx.fields:
-                ctx.fields["regular"].setCurrentText("Регулярная" if is_reg else "Обычная")
+                ctx.fields["regular"].setCurrentText("Обычная")
+
         except Exception as e:
-            logging.debug("[OCR] Failed: %s", e)
-            QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось распознать изображение:\n{e}")
+            logging.exception("[OCR] Ошибка в handle: %s", e)
+            QMessageBox.critical(ctx.window, "Ошибка", f"Ошибка при разборе OCR-результата:\n{e}")
+
 
     run_in_thread(do_ocr, handle)
-    logging.debug("[OCR] Thread started")
+
+
