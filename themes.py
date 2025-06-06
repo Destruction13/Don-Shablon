@@ -3,6 +3,7 @@ from tkinter import ttk
 
 from core.app_state import UIContext
 from widgets import AutocompleteCombobox  # если ты вынес его туда
+import os
 
 
 
@@ -78,15 +79,7 @@ themes = {
         "entry_fg": "#ffffff",
         "highlight": "#666666",
         "font": ("Arial", 10)
-    },
-    "Радужный градиент": {
-        "bg": "#ffffff",
-        "fg": "#000000",
-        "entry_bg": "#ffffff",
-        "entry_fg": "#000000",
-        "highlight": "#ff5722",
-        "font": ("Arial", 10)
-    },
+    }
 }
 
 def apply_theme(ctx: UIContext):
