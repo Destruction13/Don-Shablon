@@ -150,4 +150,6 @@ class MainWindow(QMainWindow):
         print("[OCR] Button clicked")
         from logic.ocr_paddle import extract_data_from_screenshot
         extract_data_from_screenshot(self.ctx)
+        print("[DEBUG] ctx:", self.ctx)
+
 
