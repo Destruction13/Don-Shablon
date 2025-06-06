@@ -26,13 +26,12 @@ def _init_ocr() -> PaddleOCR:
         models_dir = Path(__file__).resolve().parent.parent / "data" / "ocr_models"
         _ocr_instance = PaddleOCR(
             use_angle_cls=True,
-            lang="ru",
-            use_gpu=False,
             det_model_dir=str(models_dir / "det"),
             rec_model_dir=str(models_dir / "rec"),
             cls_model_dir=str(models_dir / "cls"),
         )
     return _ocr_instance
+
 
 
 def _normalize(text: str) -> str:
