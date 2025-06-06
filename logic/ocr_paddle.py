@@ -26,13 +26,14 @@ def get_ocr():
     return _ocr
 
 
-def _extract_texts(result: list) -> list[str]:
+def _extract_texts(result) -> list[str]:
     """Return recognized text lines from PaddleOCR result."""
     if not result:
         return []
+    if isinstance(result, dict):
+        return result.get("rec_texts", [])
     first = result[0]
     if isinstance(first, dict):
-        # output="dict" style -> list of dicts
         return first.get("rec_texts", [])
     texts = []
     for item in result:
@@ -125,7 +126,7 @@ def extract_data_from_screenshot(ctx: UIContext):
         logging.debug("[OCR] OCR thread running")
         ocr = get_ocr()
         try:
-            logging.debug("[OCR] Calling PaddleOCR")
+            logging.debug("[OCR] Calling PaddleOCR. Image size: %s", pil_image.size)
             result = ocr.ocr(np.array(pil_image), cls=True, output="dict")
             logging.debug("[OCR] OCR raw result: %s", result)
             return result
@@ -143,9 +144,10 @@ def extract_data_from_screenshot(ctx: UIContext):
                 raise ValueError("Empty OCR result")
             texts = _extract_texts(result)
             name, bz, room, date, start_time, end_time = extract_fields_from_text(texts, rooms_by_bz)
-            first = result[0] if result else {}
-            if isinstance(first, dict):
-                ocr_dict = first
+            if isinstance(result, dict):
+                ocr_dict = result
+            elif isinstance(result, list) and result and isinstance(result[0], dict):
+                ocr_dict = result[0]
             else:
                 ocr_dict = {}
             is_reg = detect_repeat_checkbox(pil_image, ocr_dict)
