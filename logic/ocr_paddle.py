@@ -19,7 +19,7 @@ _ocr = None
 def get_ocr():
     global _ocr
     if _ocr is None:
-        _ocr = PaddleOCR(use_angle_cls=True, lang="ru")
+        _ocr = PaddleOCR(use_textline_orientation=True, lang="ru", ocr_version="PP-OCRv3")
     return _ocr
 
 
@@ -79,13 +79,14 @@ def is_checkbox_checked(image: Image.Image, x: int, y: int, size: int = 12, thre
     return fill_ratio > fill_threshold
 
 
-def detect_repeat_checkbox(image: Image.Image, ocr_results) -> bool:
-    for item in ocr_results:
-        bbox = item[0]
-        text = item[1][0]
-        if text.strip().lower() == "повторять":
-            x = int(bbox[0][0]) - 15
-            y = int(bbox[0][1]) + 11
+def detect_repeat_checkbox(image: Image.Image, ocr_result: dict) -> bool:
+    texts = ocr_result.get("rec_texts", [])
+    boxes = ocr_result.get("rec_boxes", [])
+    for i, text in enumerate(texts):
+        if text.strip().lower() == "повторять" and i < len(boxes):
+            box = boxes[i]
+            x = int(box[0]) - 15
+            y = int(box[1]) + 11
             return is_checkbox_checked(image, x, y)
     return False
 
@@ -101,16 +102,18 @@ def extract_data_from_screenshot(ctx: UIContext):
     def do_ocr():
         logging.debug("[OCR] OCR thread running")
         ocr = get_ocr()
-        return ocr.ocr(np.array(pil_image), cls=True)
+        return ocr.ocr(np.array(pil_image))
 
     def handle(result, error):
         logging.debug("[OCR] handle result error=%s", error)
         try:
             if error:
                 raise error
-            texts = [r[1][0] for r in result]
+            if not result:
+                raise ValueError("Empty OCR result")
+            texts = result[0].get("rec_texts", [])
             name, bz, room, date, start_time, end_time = extract_fields_from_text(texts, rooms_by_bz)
-            is_reg = detect_repeat_checkbox(pil_image, result)
+            is_reg = detect_repeat_checkbox(pil_image, result[0])
             if "name" in ctx.fields and name:
                 ctx.fields["name"].setText(name)
             if bz:
