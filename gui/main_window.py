@@ -148,6 +148,6 @@ class MainWindow(QMainWindow):
 
     def handle_clipboard_ocr(self):
         print("[OCR] Button clicked")
-        from logic.ocr_tesseract import extract_data_from_screenshot
+        from logic.ocr_paddle import extract_data_from_screenshot
         extract_data_from_screenshot(self.ctx)
 
