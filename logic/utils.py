@@ -67,7 +67,9 @@ def run_in_thread(func, callback):
     class _Callback(QObject):
         @Slot(object)
         def handle(self, data):
-            logging.debug("[THREAD] Worker finished")
+            logging.debug(
+                "[THREAD] Worker finished on %s", QThread.currentThread()
+            )
             result, error = data
             callback(result, error)
             thread.quit()

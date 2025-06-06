@@ -80,7 +80,16 @@ def extract_data_from_screenshot(ctx: UIContext):
                 raise error
             lines = [t.strip() for t in result.splitlines() if t.strip()]
             name, bz, room, date, start_time, end_time, is_reg = extract_fields_from_text(lines, rooms_by_bz)
-            print("Parsed:", name, bz, room, date, start_time, end_time, is_reg)
+            result_dict = {
+                "name": name,
+                "bz": bz,
+                "room": room,
+                "date": date,
+                "start_time": start_time,
+                "end_time": end_time,
+                "regular": is_reg,
+            }
+            print("Parsed:", result_dict)
             if "name" in ctx.fields and name:
                 ctx.fields["name"].setText(name)
             if bz:
