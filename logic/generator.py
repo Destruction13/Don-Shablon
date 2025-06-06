@@ -91,12 +91,19 @@ def add_date(name: str, ctx: UIContext):
     date_edit.setDisplayFormat("dd.MM.yyyy")
     date_edit.setDate(QDate.currentDate())
     orig_press = date_edit.mousePressEvent
+    orig_focus = date_edit.focusInEvent
 
     def _on_press(event):
         orig_press(event)
         date_edit.showCalendarPopup()
 
     date_edit.mousePressEvent = _on_press
+
+    def _on_focus(event):
+        orig_focus(event)
+        date_edit.showCalendarPopup()
+
+    date_edit.focusInEvent = _on_focus
     hl.addWidget(lbl)
     hl.addWidget(date_edit)
     ctx.fields[name] = date_edit
@@ -215,7 +222,9 @@ def generate_message(ctx: UIContext):
     link = get("link")
     link_part = f" ({link})" if link else ""
     greeting = f"Привет, {name}!"
-    if ctx.asya_mode:
+    if ctx.ls_active and ctx.ls_saved:
+        greeting = f"Привет, {name}! Я {ctx.user_name}, ассистент. Приятно познакомиться!"
+    elif ctx.asya_mode:
         greeting = f"Привет, {name}! Я Ася, ассистент. Приятно познакомиться!"
     if typ == "Актуализация":
         room = get("room")

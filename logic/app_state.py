@@ -12,6 +12,11 @@ class UIContext:
         self.custom_asya_on = False
         self.asya_name = ''
         self.asya_gender = ''
+        # personal assistant settings for "ЛС" button
+        self.user_name = ''
+        self.user_gender = ''
+        self.ls_saved = False
+        self.ls_active = False
         self.music_path = "James.mp3"
         self.music_state = {
             "playing": False,

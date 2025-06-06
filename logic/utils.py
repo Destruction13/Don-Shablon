@@ -3,8 +3,9 @@ import urllib.parse
 from datetime import datetime, timedelta
 import requests
 import pygame
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QTextEdit
 from PySide6.QtGui import QGuiApplication
+from PySide6.QtCore import QtConcurrent, QFutureWatcher
 
 from logic.app_state import UIContext
 
@@ -81,14 +82,32 @@ def translate_to_english(ctx: UIContext):
     text = ctx.output_text.toPlainText().strip()
     if not text or not DEEPL_API_KEY:
         return
-    params = {"auth_key": DEEPL_API_KEY, "text": text, "target_lang": "EN"}
-    try:
-        response = requests.post(DEEPL_URL, data=params)
+
+    watcher = QFutureWatcher()
+
+    def do_translate():
+        params = {"auth_key": DEEPL_API_KEY, "text": text, "target_lang": "EN"}
+        response = requests.post(DEEPL_URL, data=params, timeout=10)
         response.raise_for_status()
-        translated = response.json()["translations"][0]["text"]
-        ctx.output_text.setPlainText(translated)
-    except Exception as e:
-        QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось перевести текст:\n{e}")
+        return response.json()["translations"][0]["text"]
+
+    def show_result():
+        try:
+            translated = watcher.result()
+            dlg = QDialog(ctx.window)
+            dlg.setWindowTitle("Перевод")
+            v = QVBoxLayout(dlg)
+            edit = QTextEdit()
+            edit.setPlainText(translated)
+            v.addWidget(edit)
+            dlg.exec()
+        except Exception as e:
+            QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось перевести текст:\n{e}")
+        finally:
+            watcher.deleteLater()
+
+    watcher.finished.connect(show_result)
+    watcher.setFuture(QtConcurrent.run(do_translate))
 
 
 def copy_generated_text(ctx: UIContext):

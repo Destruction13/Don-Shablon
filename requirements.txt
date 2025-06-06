@@ -1,5 +1,5 @@
 pygame
 requests
 Pillow
-easyocr==1.6.2  # optional, only for OCR features
+pytesseract
 PySide6

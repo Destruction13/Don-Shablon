@@ -1,10 +1,9 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton,
-    QTextEdit, QComboBox
+    QTextEdit, QComboBox, QMessageBox
 )
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
-import random
 import os
 import pygame
 
@@ -61,7 +60,8 @@ class MainWindow(QMainWindow):
         generate_btn = QPushButton("Сгенерировать")
         generate_btn.clicked.connect(lambda: generate_message(ctx))
         self.asya_btn = QPushButton("ЛС")
-        self.asya_btn.clicked.connect(self.show_ls_dialog)
+        self.asya_btn.setCheckable(True)
+        self.asya_btn.toggled.connect(self.toggle_ls)
         self.asya_mode_btn = QPushButton("Ася +")
         self.asya_mode_btn.setCheckable(True)
         self.asya_mode_btn.toggled.connect(lambda val: setattr(ctx, 'asya_mode', val))
@@ -72,8 +72,8 @@ class MainWindow(QMainWindow):
         trans_btn = QPushButton("EN")
         trans_btn.clicked.connect(lambda: translate_to_english(ctx))
         cv_btn = QPushButton("📋 Из буфера")
-        from logic.ocr_qt import import_from_clipboard_image
-        cv_btn.clicked.connect(lambda: import_from_clipboard_image(ctx))
+        from logic.ocr_tesseract import extract_data_from_screenshot
+        cv_btn.clicked.connect(lambda: extract_data_from_screenshot(ctx))
         for w in [generate_btn, self.asya_btn, self.asya_mode_btn, music_btn, trans_btn, cv_btn]:
             action_row.addWidget(w)
         self.main_layout.addLayout(action_row)
@@ -104,15 +104,17 @@ class MainWindow(QMainWindow):
             self.bg_label.lower()
 
     def show_ls_dialog(self):
-        from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QRadioButton, QPushButton
+        from PySide6.QtWidgets import (
+            QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QRadioButton, QPushButton
+        )
         dlg = QDialog(self)
-        dlg.setWindowTitle("Выбор имени")
+        dlg.setWindowTitle("Личный ассистент")
         v = QVBoxLayout(dlg)
         name_edit = QLineEdit()
         male = QRadioButton("Мужской")
         female = QRadioButton("Женский")
-        female.setChecked(True)
-        v.addWidget(QLabel("Имя:"))
+        male.setChecked(True)
+        v.addWidget(QLabel("Имя ассистента:"))
         v.addWidget(name_edit)
         h = QHBoxLayout()
         h.addWidget(male)
@@ -121,16 +123,27 @@ class MainWindow(QMainWindow):
         ok_btn = QPushButton("OK")
         v.addWidget(ok_btn)
 
+        result = {"accepted": False}
+
         def accept():
             name = name_edit.text().strip()
-            males = ["Алексей", "Дмитрий", "Иван", "Сергей"]
-            females = ["Анастасия", "Мария", "Елена", "Ольга"]
             if not name:
-                name = random.choice(males if male.isChecked() else females)
-            if "name" in self.ctx.fields:
-                self.ctx.fields["name"].setText(name)
+                QMessageBox.warning(dlg, "Ошибка", "Введите имя")
+                return
+            self.ctx.user_name = name
+            self.ctx.user_gender = "м" if male.isChecked() else "ж"
+            self.ctx.ls_saved = True
+            result["accepted"] = True
             dlg.accept()
 
         ok_btn.clicked.connect(accept)
         dlg.exec()
+        return result["accepted"]
+
+    def toggle_ls(self, checked):
+        if checked and not self.ctx.ls_saved:
+            if not self.show_ls_dialog():
+                self.asya_btn.setChecked(False)
+                return
+        self.ctx.ls_active = checked
 
