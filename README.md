@@ -24,9 +24,9 @@
      ```bash
      DEEPL_API_KEY=ваш_ключ_от_deepl
      ```
-4. **Запускайте программу**
+4. **Запускайте программу (версия PySide6)**
    ```bash
-   python main.py
+   python main_qt.py
    ```
 
 ---
