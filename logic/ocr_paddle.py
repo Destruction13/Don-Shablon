@@ -84,6 +84,41 @@ def _normalize(text: str) -> str:
     return re.sub(r"[^a-zA-Z0-9а-яА-Я]", "", text).lower()
 
 
+def normalize_russian(text: str) -> str:
+    return (
+        text.replace("A", "А")
+            .replace("B", "В")
+            .replace("E", "Е")
+            .replace("K", "К")
+            .replace("M", "М")
+            .replace("H", "Н")
+            .replace("O", "О")
+            .replace("P", "Р")
+            .replace("C", "С")
+            .replace("T", "Т")
+            .replace("Y", "У")
+            .replace("X", "Х")
+            .replace("a", "а")
+            .replace("e", "е")
+            .replace("o", "о")
+            .replace("p", "р")
+            .replace("c", "с")
+            .replace("x", "х")
+    )
+
+
+def normalize_generic(text: str) -> str:
+    return text.lower().strip()
+
+
+def has_organizer_typo(text: str) -> bool:
+    return (
+        "рганизатор" in text
+        or "рганизатop" in text
+        or SequenceMatcher(None, text, "организатор").ratio() > 0.75
+    )
+
+
 def _extract_text_lines(result) -> List[str]:
     if isinstance(result, list) and result:
         first = result[0]
@@ -259,27 +294,6 @@ def parse_fields(ocr_lines: List[Dict]) -> Dict[str, str]:
     from constants import rooms_by_bz
     from difflib import SequenceMatcher
 
-    def normalize_cyrillic(text: str) -> str:
-        return (
-            text.replace("A", "А")
-                .replace("B", "В")
-                .replace("E", "Е")
-                .replace("K", "К")
-                .replace("M", "М")
-                .replace("H", "Н")
-                .replace("O", "О")
-                .replace("P", "Р")
-                .replace("C", "С")
-                .replace("T", "Т")
-                .replace("Y", "У")
-                .replace("X", "Х")
-                .replace("a", "а")
-                .replace("e", "е")
-                .replace("o", "о")
-                .replace("p", "р")
-                .replace("c", "с")
-                .replace("x", "х")
-        )
     def fix_ocr_time(s):
         return (
             s.replace("о", "0")
@@ -293,7 +307,7 @@ def parse_fields(ocr_lines: List[Dict]) -> Dict[str, str]:
         best = ""
         best_score = 0
         for c in choices:
-            score = SequenceMatcher(None, normalize_cyrillic(text.lower()), normalize_cyrillic(c.lower())).ratio()
+            score = SequenceMatcher(None, text.lower(), c.lower()).ratio()
             if score > best_score:
                 best = c
                 best_score = score
@@ -308,12 +322,24 @@ def parse_fields(ocr_lines: List[Dict]) -> Dict[str, str]:
         "room_raw": "",
     }
 
-    # remove empty and normalize
-    lines = [
-        {**l, "text": normalize_cyrillic(l["text"]).strip()}
-        for l in ocr_lines
-        if l["text"].strip()
-    ]
+    # remove empty and normalize selectively
+    lines = []
+    for l in ocr_lines:
+        txt = l["text"].strip()
+        if not txt:
+            continue
+        if any(key in txt.lower() for key in [
+            "организатор",
+            "бц",
+            "участник",
+            "место",
+            "дата",
+            "время",
+        ]):
+            txt = normalize_russian(txt)
+        else:
+            txt = normalize_generic(txt)
+        lines.append({**l, "text": txt})
 
     lines = [l for l in lines if l["score"] >= SCORE_THRESHOLD or FORCE_FUZZY]
 
@@ -326,7 +352,7 @@ def parse_fields(ocr_lines: List[Dict]) -> Dict[str, str]:
 
     # 🧠 Имя после "Организатор"
     for i, line in enumerate(lines):
-        if "организатор" in line["text"].lower():
+        if "организатор" in line["text"].lower() or has_organizer_typo(line["text"].lower()):
             base_x = min(x for x, _ in line["bbox"])  # left
             base_y = max(y for _, y in line["bbox"])  # bottom
             name_parts = []
