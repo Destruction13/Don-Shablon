@@ -204,12 +204,13 @@ def run_ocr(image: Image.Image, *, ignore_threshold: float = SCORE_IGNORE_THRESH
     image: PIL.Image
         Image to process.
     ignore_threshold: float
-        Lines with score below this value will be discarded.
+        Lines with score below this value will be kept but marked as low score.
 
     Returns
     -------
     List[Dict]
-        Each dict contains ``text``, ``score`` and ``bbox``.
+        Each dict contains ``text``, ``score`` and ``bbox``. Low confidence
+        entries have ``low_score`` set to ``True``.
     """
 
     reader = _init_ocr()
@@ -219,14 +220,16 @@ def run_ocr(image: Image.Image, *, ignore_threshold: float = SCORE_IGNORE_THRESH
 
     lines: List[Dict] = []
     for bbox, text, score in result:
-        if score < ignore_threshold:
-            continue
+        low_score = score < ignore_threshold
+        if low_score:
+            logging.warning("[OCR] Low confidence %.2f for text '%s'", score, text)
         bbox_int = [[int(x), int(y)] for x, y in bbox]
         lines.append({
             "text": text.strip(),
             "score": float(score),
             "bbox": bbox_int,
             "raw_text": text.strip(),
+            "low_score": low_score,
         })
 
     save_debug_ocr_image(image, lines)
@@ -362,18 +365,39 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
     for i, line in enumerate(lines):
         txt_norm = line["norm"]
 
-        if is_label_like(txt_norm, "организатор") and line["score"] >= SCORE_THRESHOLD:
+        if is_label_like(txt_norm, "организатор"):
+            if line["score"] < SCORE_THRESHOLD:
+                logging.warning(
+                    "[OCR] Low confidence label 'Организатор' (%.2f)", line["score"]
+                )
             parts = []
             part_scores = []
             for j in range(i + 1, i + 3):
                 if j >= len(lines):
                     break
-                if lines[j]["score"] >= SCORE_THRESHOLD:
-                    parts.append(lines[j]["text"])
-                    part_scores.append(lines[j]["score"])
+                jnorm = lines[j]["norm"]
+                if (
+                    is_label_like(jnorm, "участники")
+                    or "участник" in jnorm
+                    or is_any_label(jnorm, [
+                        "время",
+                        "время и дата",
+                        "дата",
+                        "дата и время",
+                        "переговорка",
+                        "место",
+                        "адрес",
+                        "бц",
+                    ])
+                ):
+                    break
+                parts.append(lines[j]["text"])
+                part_scores.append(lines[j]["score"])
             if parts:
-                fields["name"] = clean_name(" ".join(parts))
-                scores["name"] = min(part_scores) if part_scores else line["score"]
+                # Используем только первое слово для большей стабильности
+                first_word = parts[0].split()[0]
+                fields["name"] = clean_name(first_word)
+                scores["name"] = part_scores[0]
             continue
 
         if is_any_label(txt_norm, ["время", "время и дата", "дата и время"]):
@@ -425,15 +449,16 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
                 if j >= len(lines):
                     break
                 jnorm = lines[j]["norm"]
+                candidate_text = lines[j]["text"].strip()
                 if (
                     is_label_like(jnorm, "адрес")
                     or "выбрать" in jnorm
                     or "бц" in jnorm
+                    or len(candidate_text) <= 2
                 ):
                     continue
-                if lines[j]["score"] >= SCORE_IGNORE_THRESHOLD:
-                    room_parts.append(lines[j]["text"])
-                    room_scores.append(lines[j]["score"])
+                room_parts.append(candidate_text)
+                room_scores.append(lines[j]["score"])
             if room_parts:
                 fields["room_raw"] = " ".join(room_parts)
                 scores["room_raw"] = min(room_scores)
@@ -444,10 +469,9 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
         for j in range(bz_idx + 1, min(len(lines), bz_idx + 4)):
             if is_label_like(lines[j]["norm"], "адрес") or "выбрать" in lines[j]["norm"]:
                 continue
-            if lines[j]["score"] >= SCORE_IGNORE_THRESHOLD:
-                fields["room_raw"] = lines[j]["text"]
-                scores["room_raw"] = lines[j]["score"]
-                break
+            fields["room_raw"] = lines[j]["text"]
+            scores["room_raw"] = lines[j]["score"]
+            break
 
     if not fields["start"] or not fields["end"]:
         time_re = re.compile(r"\d{2}[:\.]\d{2}")
@@ -566,6 +590,23 @@ def validate_with_rooms(
                 best = cand
         if best and best_score >= 0.4:
             matched_room = best
+        else:
+            if room_raw:
+                parts = room_raw.split('.')
+                last_part = parts[-1] if parts else ""
+                words = last_part.split()
+                if words:
+                    short = words[0].lower()
+                    if len(short) > 3:
+                        for cand in candidates:
+                            if short in cand.lower():
+                                matched_room = cand
+                                logging.warning(
+                                    "[OCR] Room matched by short word '%s' despite low fuzzy score %.2f",
+                                    short,
+                                    best_score,
+                                )
+                                break
 
     if not matched_bz:
         logging.warning("[OCR] Failed to match business center for '%s'", bz_raw)

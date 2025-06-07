@@ -5,7 +5,8 @@ from tkinter import messagebox
 import tkinter as tk
 from datetime import datetime
 from constants import rooms_by_bz
-from core.app_state import UIContext
+# In the updated project the UI context lives under logic.app_state
+from logic.app_state import UIContext
 
 import easyocr
 

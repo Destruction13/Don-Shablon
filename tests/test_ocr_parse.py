@@ -71,7 +71,7 @@ sample_lines = [
 def test_parse_and_validate():
     parsed = parse_fields(sample_lines)
     validated = validate_with_rooms(parsed, rooms)
-    assert validated["name"] == "Наталья Шевченко"
+    assert validated["name"] == "Наталья"
     assert validated["bz"] == "БЦ Морозов"
     assert validated["room"] == "1.Кофе"
 
