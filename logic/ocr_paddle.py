@@ -81,6 +81,7 @@ def normalize_russian(text: str) -> str:
             .replace("p", "р")
             .replace("c", "с")
             .replace("x", "х")
+            .replace("3", "з")
     )
 
 
@@ -253,6 +254,11 @@ def merge_split_lines(lines: List[Dict]) -> List[Dict]:
 def is_label_like(text, label):
     return SequenceMatcher(None, text.lower(), label.lower()).ratio() > 0.7
 
+
+def is_any_label(text: str, labels: List[str]) -> bool:
+    """Return True if text is similar to any label from the list."""
+    return any(is_label_like(text, lbl) for lbl in labels)
+
 def save_debug_ocr_image(image: Image.Image, lines: List[Dict], path="ocr_debug_output.jpg"):
     """Save OCR debugging overlay and JSON info."""
 
@@ -300,54 +306,6 @@ def extract_bc_and_room(lines: List[Dict]) -> Tuple[str, str]:
     return bz_raw, room_raw
 
 
-def normalize_russian(text: str) -> str:
-    return (
-        text.replace("A", "А")
-            .replace("B", "В")
-            .replace("E", "Е")
-            .replace("K", "К")
-            .replace("M", "М")
-            .replace("H", "Н")
-            .replace("O", "О")
-            .replace("P", "Р")
-            .replace("C", "С")
-            .replace("T", "Т")
-            .replace("Y", "У")
-            .replace("X", "Х")
-            .replace("a", "а")
-            .replace("e", "е")
-            .replace("o", "о")
-            .replace("p", "р")
-            .replace("c", "с")
-            .replace("x", "х")
-            .replace("3", "з")
-    )
-
-def normalize_generic(text: str) -> str:
-    return text.lower().strip()
-
-def fix_ocr_time_garbage(text: str) -> str:
-    return (
-        text.replace("з", "3")
-            .replace("o", "0")
-            .replace("l", "1")
-    )
-
-def is_label_like(text, label):
-    return SequenceMatcher(None, text.lower(), label.lower()).ratio() > 0.7
-
-def fuzzy_best_match(text, candidates, threshold=FUZZY_THRESHOLD):
-    best_score = 0
-    best_match = None
-    for c in candidates:
-        score = SequenceMatcher(None, text.lower(), c.lower()).ratio()
-        if score > best_score:
-            best_score = score
-            best_match = c
-    if best_score >= threshold:
-        return best_match
-    logging.warning("[OCR] Fuzzy match for '%s' below threshold (%.2f)", text, best_score)
-    return None
 
 # -----------------------------------------------
 # Основной парсер
@@ -395,7 +353,7 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
                 scores["name"] = min(part_scores) if part_scores else line["score"]
             continue
 
-        if is_label_like(txt_norm, "время"):
+        if is_any_label(txt_norm, ["время", "время и дата", "дата и время"]):
             time_scores = []
             times = []
             for j in range(i + 1, i + 3):
@@ -451,18 +409,41 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
                 scores["room_raw"] = min(room_scores)
             continue
 
-        if bz_idx is not None and i > bz_idx and not fields["room_raw"]:
-            if lines[i]["score"] >= SCORE_IGNORE_THRESHOLD:
-                fields["room_raw"] = lines[i]["text"]
-                scores["room_raw"] = lines[i]["score"]
+
+    if not fields["room_raw"] and bz_idx is not None:
+        for j in range(bz_idx + 1, min(len(lines), bz_idx + 3)):
+            if lines[j]["score"] >= SCORE_IGNORE_THRESHOLD:
+                fields["room_raw"] = lines[j]["text"]
+                scores["room_raw"] = lines[j]["score"]
+                break
+
+    if not fields["start"] and not fields["end"]:
+        time_re = re.compile(r"\d{2}[:\.]\d{2}")
+        for line in ocr_lines:
+            m = time_re.search(line["text"])
+            if not m:
+                continue
+            t = normalize_time(m.group())
+            if not t:
+                continue
+            if not fields["start"]:
+                fields["start"] = t
+                scores["start"] = line["score"]
+            elif not fields["end"]:
+                fields["end"] = t
+                scores["end"] = line["score"]
+            if fields["start"] and fields["end"]:
+                break
 
     if not fields["date"]:
-        for line in lines:
-            if re.match(r"\d{2}\.\d{2}\.\d{2,4}", line["raw_text"]):
+        for line in ocr_lines:
+            if line.get("score", 0) < 0.5:
+                continue
+            if re.match(r"\d{2}\.\d{2}\.\d{2,4}", line["text"]):
                 for fmt in ("%d.%m.%Y", "%d.%m.%y"):
                     try:
-                        datetime.strptime(line["raw_text"], fmt)
-                        fields["date"] = line["raw_text"]
+                        datetime.strptime(line["text"], fmt)
+                        fields["date"] = line["text"]
                         scores["date"] = line["score"]
                         break
                     except ValueError:
