@@ -365,7 +365,7 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
         if is_any_label(txt_norm, ["время", "время и дата", "дата и время"]):
             time_scores = []
             times = []
-            for j in range(i + 1, i + 3):
+            for j in range(i + 1, i + 5):  # allow for date line in between
                 if j >= len(lines):
                     break
                 t = normalize_time(lines[j]["raw_text"])
@@ -410,7 +410,12 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
             for j in range(i + 1, i + 4):
                 if j >= len(lines):
                     break
-                if is_label_like(lines[j]["norm"], "адрес") or "выбрать" in lines[j]["norm"]:
+                jnorm = lines[j]["norm"]
+                if (
+                    is_label_like(jnorm, "адрес")
+                    or "выбрать" in jnorm
+                    or "бц" in jnorm
+                ):
                     continue
                 if lines[j]["score"] >= SCORE_IGNORE_THRESHOLD:
                     room_parts.append(lines[j]["text"])
@@ -421,7 +426,7 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
             continue
 
 
-    if not fields["room_raw"] and bz_idx is not None:
+    if bz_idx is not None and (not fields["room_raw"] or "бц" in normalize_generic(fields["room_raw"])):
         for j in range(bz_idx + 1, min(len(lines), bz_idx + 4)):
             if is_label_like(lines[j]["norm"], "адрес") or "выбрать" in lines[j]["norm"]:
                 continue
