@@ -9,7 +9,6 @@ from PIL import Image, ImageGrab, ImageQt, ImageDraw, ImageFont
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QMessageBox
 from PySide6.QtCore import QDate
-import easyocr
 from pathlib import Path
 
 from constants import rooms_by_bz
@@ -37,13 +36,20 @@ logging.basicConfig(
 
 
 
-_ocr_instance: easyocr.Reader | None = None
+from typing import Any
+
+_ocr_instance: Any = None
 
 
-def _init_ocr() -> easyocr.Reader:
+def _init_ocr():
     global _ocr_instance
     if _ocr_instance is None:
         logging.debug("[OCR] Initializing EasyOCR")
+        try:
+            import easyocr
+        except Exception as e:
+            logging.error("[OCR] Failed to import EasyOCR: %s", e)
+            raise
         _ocr_instance = easyocr.Reader(['ru'], gpu=False)
         logging.debug("[OCR] EasyOCR successfully initialized")
 
