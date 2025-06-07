@@ -4,10 +4,15 @@ import logging
 from logic.app_state import UIContext
 from gui.main_window import MainWindow
 import logging
-logging.basicConfig(level=logging.DEBUG)
+
+logging.getLogger().setLevel(logging.DEBUG)
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    force=True  # 💥 Вот это критично
+)
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
     app = QApplication(sys.argv)
     ctx = UIContext()
     ctx.app = app
