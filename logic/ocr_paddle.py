@@ -410,6 +410,8 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
             for j in range(i + 1, i + 4):
                 if j >= len(lines):
                     break
+                if is_label_like(lines[j]["norm"], "адрес") or "выбрать" in lines[j]["norm"]:
+                    continue
                 if lines[j]["score"] >= SCORE_IGNORE_THRESHOLD:
                     room_parts.append(lines[j]["text"])
                     room_scores.append(lines[j]["score"])
@@ -420,33 +422,37 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
 
 
     if not fields["room_raw"] and bz_idx is not None:
-        for j in range(bz_idx + 1, min(len(lines), bz_idx + 3)):
+        for j in range(bz_idx + 1, min(len(lines), bz_idx + 4)):
+            if is_label_like(lines[j]["norm"], "адрес") or "выбрать" in lines[j]["norm"]:
+                continue
             if lines[j]["score"] >= SCORE_IGNORE_THRESHOLD:
                 fields["room_raw"] = lines[j]["text"]
                 scores["room_raw"] = lines[j]["score"]
                 break
 
-    if not fields["start"] and not fields["end"]:
+    if not fields["start"] or not fields["end"]:
         time_re = re.compile(r"\d{2}[:\.]\d{2}")
+        found: list[tuple[str, float]] = []
         for line in ocr_lines:
-            m = time_re.search(line["text"])
-            if not m:
+            if not re.fullmatch(r"\d{1,2}[:\.]\d{2}", line["text"].strip()):
                 continue
-            t = normalize_time(m.group())
+            t = normalize_time(line["text"].strip())
             if not t:
                 continue
+            if not found or found[-1][0] != t:
+                found.append((t, line["score"]))
+        if found:
             if not fields["start"]:
-                fields["start"] = t
-                scores["start"] = line["score"]
-            elif not fields["end"]:
-                fields["end"] = t
-                scores["end"] = line["score"]
-            if fields["start"] and fields["end"]:
-                break
+                fields["start"], scores["start"] = found[0]
+            if len(found) > 1 and not fields["end"]:
+                start_val = fields["start"]
+                idx = next((i for i, (tt, _) in enumerate(found) if tt == start_val), 0)
+                if idx + 1 < len(found):
+                    fields["end"], scores["end"] = found[idx + 1]
 
     if not fields["date"]:
         for line in ocr_lines:
-            if line.get("score", 0) < 0.5:
+            if line.get("score", 0) < 0.45:
                 continue
             if re.match(r"\d{2}\.\d{2}\.\d{2,4}", line["text"]):
                 for fmt in ("%d.%m.%Y", "%d.%m.%y"):
@@ -491,8 +497,9 @@ def _fuzzy_match(value: str, choices: List[str], threshold: float) -> Optional[s
 
 
 def _room_token_ratio(room: str, candidate: str) -> float:
-    tokens_room = set(re.findall(r"\w+", room.lower()))
-    tokens_cand = set(re.findall(r"\w+", candidate.lower()))
+    cleanup = lambda t: [w for w in re.findall(r"\w+", t.lower()) if w not in {"этаж", "мест", "место", "этажей"} and not w.isdigit()]
+    tokens_room = set(cleanup(room))
+    tokens_cand = set(cleanup(candidate))
     if not tokens_room:
         return 0.0
     return len(tokens_room & tokens_cand) / len(tokens_room)
