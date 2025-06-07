@@ -17,6 +17,20 @@ from logic.app_state import UIContext
 from logic.utils import run_in_thread
 import logging
 
+# --- OCR configuration ---
+# Threshold below which OCR results are ignored
+SCORE_IGNORE_THRESHOLD = 0.7
+# Threshold for accepting a value without fuzzy matching
+SCORE_THRESHOLD = 0.82
+# Fuzzy matching acceptance level
+FUZZY_THRESHOLD = 0.75
+# How far in pixels two boxes may be on Y to be considered on one line
+BBOX_Y_TOLERANCE = 25
+# Maximum horizontal gap between splitted tokens
+SPLIT_TOKEN_MAX_GAP = 70
+# Force fuzzy matching even for low score items (debug)
+FORCE_FUZZY = True
+
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -70,6 +84,41 @@ def _normalize(text: str) -> str:
     return re.sub(r"[^a-zA-Z0-9а-яА-Я]", "", text).lower()
 
 
+def normalize_russian(text: str) -> str:
+    return (
+        text.replace("A", "А")
+            .replace("B", "В")
+            .replace("E", "Е")
+            .replace("K", "К")
+            .replace("M", "М")
+            .replace("H", "Н")
+            .replace("O", "О")
+            .replace("P", "Р")
+            .replace("C", "С")
+            .replace("T", "Т")
+            .replace("Y", "У")
+            .replace("X", "Х")
+            .replace("a", "а")
+            .replace("e", "е")
+            .replace("o", "о")
+            .replace("p", "р")
+            .replace("c", "с")
+            .replace("x", "х")
+    )
+
+
+def normalize_generic(text: str) -> str:
+    return text.lower().strip()
+
+
+def has_organizer_typo(text: str) -> bool:
+    return (
+        "рганизатор" in text
+        or "рганизатop" in text
+        or SequenceMatcher(None, text, "организатор").ratio() > 0.75
+    )
+
+
 def _extract_text_lines(result) -> List[str]:
     if isinstance(result, list) and result:
         first = result[0]
@@ -79,54 +128,6 @@ def _extract_text_lines(result) -> List[str]:
         return [str(r) for r in result]
     return []
 
-
-def _parse_fields(texts: List[str]) -> Dict[str, str]:
-    fields = {"name": "", "date": "", "start": "", "end": "", "bz": "", "room": ""}
-
-    # Имя организатора
-    for i, t in enumerate(texts):
-        if "организатор" in t.lower():
-            after_colon = t.split(":", 1)
-            if len(after_colon) == 2 and after_colon[1].strip():
-                fields["name"] = after_colon[1].strip().split()[0]
-            elif i + 1 < len(texts):
-                fields["name"] = texts[i + 1].strip().split()[0]
-            break
-
-    # Время начала и конца
-    time_pattern = re.compile(r"\b\d{1,2}:\d{2}\b")
-    all_times = []
-    for t in texts:
-        all_times.extend(time_pattern.findall(t))
-    if len(all_times) >= 2:
-        fields["start"], fields["end"] = all_times[0], all_times[1]
-
-    # Дата
-    date_pattern = re.compile(r"\b(\d{2}\.\d{2}\.\d{2,4})\b")
-    for t in texts:
-        m = date_pattern.search(t)
-        if m:
-            fields["date"] = m.group(1)
-            break
-
-    # Бизнес-центр и переговорка
-    flat_rooms: List[Tuple[str, str, str]] = []
-    for bz, rooms in rooms_by_bz.items():
-        for room in rooms:
-            flat_rooms.append((bz, room, _normalize(room)))
-    for t in texts:
-        norm = _normalize(t)
-        for bz, room, room_norm in flat_rooms:
-            if room_norm and room_norm in norm:
-                fields["room"] = room
-                fields["bz"] = bz
-                break
-        if not fields["bz"]:
-            for bz in rooms_by_bz:
-                if _normalize(bz) in norm:
-                    fields["bz"] = bz
-                    break
-    return fields
 
 
 def _validate_room(fields: Dict[str, str]) -> None:
@@ -190,168 +191,218 @@ def get_image_from_clipboard() -> Optional[Image.Image]:
     return None
 
 
-def run_ocr(image: Image.Image) -> List[str]:
-    """Recognize text lines from an image using PaddleOCR."""
+def run_ocr(image: Image.Image, *, ignore_threshold: float = SCORE_IGNORE_THRESHOLD) -> List[Dict]:
+    """Recognize text lines from an image using PaddleOCR.
+
+    Parameters
+    ----------
+    image: PIL.Image
+        Image to process.
+    ignore_threshold: float
+        Lines with score below this value will be discarded.
+
+    Returns
+    -------
+    List[Dict]
+        Each dict contains ``text``, ``score`` and ``bbox``.
+    """
+
     ocr = _init_ocr()
     image = image.resize((image.width * 2, image.height * 2), Image.LANCZOS)
     result = ocr.ocr(np.array(image), cls=True)
-    save_debug_ocr_image(image, result)
     logging.debug("[OCR] RAW PaddleOCR result: %s", result)
-    return _extract_text_lines(result)
 
-def save_debug_ocr_image(image: Image.Image, ocr_result, path="ocr_debug_output.jpg"):
+    lines: List[Dict] = []
+    if isinstance(result, list) and result:
+        for box, (txt, score) in result[0]:
+            if score < ignore_threshold:
+                continue
+            lines.append({"text": txt.strip(), "score": float(score), "bbox": box})
+
+    save_debug_ocr_image(image, lines)
+    return lines
+
+
+def merge_split_lines(lines: List[Dict]) -> List[Dict]:
+    """Merge neighbouring OCR lines that likely belong to the same word."""
+    if not lines:
+        return []
+
+    lines = sorted(lines, key=lambda l: min(y for x, y in l["bbox"]))
+    merged: List[Dict] = []
+    for line in lines:
+        if merged:
+            prev = merged[-1]
+            prev_y = min(y for x, y in prev["bbox"])
+            line_y = min(y for x, y in line["bbox"])
+            if abs(line_y - prev_y) <= BBOX_Y_TOLERANCE:
+                prev_right = max(x for x, y in prev["bbox"])
+                line_left = min(x for x, y in line["bbox"])
+                if 0 <= line_left - prev_right <= SPLIT_TOKEN_MAX_GAP:
+                    new_text = f"{prev['text']} {line['text']}"
+                    logging.debug("[OCR] Merging '%s' + '%s' -> '%s'", prev['text'], line['text'], new_text)
+                    prev['text'] = new_text
+                    prev['score'] = min(prev['score'], line['score'])
+                    xs = [p[0] for p in prev['bbox']] + [p[0] for p in line['bbox']]
+                    ys = [p[1] for p in prev['bbox']] + [p[1] for p in line['bbox']]
+                    prev['bbox'] = [[min(xs), min(ys)], [max(xs), min(ys)], [max(xs), max(ys)], [min(xs), max(ys)]]
+                    continue
+        merged.append(dict(line))
+    return merged
+
+def is_label_like(text, label):
+    return SequenceMatcher(None, text.lower(), label.lower()).ratio() > 0.7
+
+def save_debug_ocr_image(image: Image.Image, lines: List[Dict], path="ocr_debug_output.jpg"):
+    """Save OCR debugging overlay and JSON info."""
     from paddleocr import draw_ocr
-    import matplotlib.pyplot as plt
 
-    boxes = [line[0] for line in ocr_result[0]]
-    txts = [line[1][0] for line in ocr_result[0]]
-    scores = [line[1][1] for line in ocr_result[0]]
+    if not lines:
+        return
 
-    img_with_ocr = draw_ocr(np.array(image), boxes, txts, scores, font_path='path/to/arial.ttf')
+    boxes = [l["bbox"] for l in lines]
+    txts = [l["text"] for l in lines]
+    scores = [l["score"] for l in lines]
+
+    img_with_ocr = draw_ocr(np.array(image), boxes, txts, scores, font_path="C:/Windows/Fonts/arial.ttf")
     Image.fromarray(img_with_ocr).save(path)
 
+    debug_info = [
+        {"text": t, "score": s, "bbox": b}
+        for b, t, s in zip(boxes, txts, scores)
+    ]
+    with open(Path(path).with_suffix(".json"), "w", encoding="utf-8") as f:
+        import json
+        json.dump(debug_info, f, ensure_ascii=False, indent=2)
 
-def extract_bc_and_room(lines: List[str]) -> Tuple[str, str]:
+
+def extract_bc_and_room(lines: List[Dict]) -> Tuple[str, str]:
+    """Try to extract business center and room from OCR lines."""
     bz_raw = ""
     room_raw = ""
 
     for i, line in enumerate(lines):
-        lower = line.lower()
+        lower = line["text"].lower()
         if "морозов" in lower or "бц" in lower or "мopозов" in lower:
             bz_raw = "БЦ Морозов"
-            # Пробуем взять соседнюю строку как переговорку
             if i + 1 < len(lines):
-                room_raw = lines[i + 1].strip()
+                room_raw = lines[i + 1]["text"].strip()
             break
 
     return bz_raw, room_raw
 
 
-def parse_fields(ocr_lines: List[str]) -> Dict[str, str]:
-    from constants import rooms_by_bz
-    from difflib import SequenceMatcher
+def normalize_russian(text: str) -> str:
+    return (
+        text.replace("A", "А")
+            .replace("B", "В")
+            .replace("E", "Е")
+            .replace("K", "К")
+            .replace("M", "М")
+            .replace("H", "Н")
+            .replace("O", "О")
+            .replace("P", "Р")
+            .replace("C", "С")
+            .replace("T", "Т")
+            .replace("Y", "У")
+            .replace("X", "Х")
+            .replace("a", "а")
+            .replace("e", "е")
+            .replace("o", "о")
+            .replace("p", "р")
+            .replace("c", "с")
+            .replace("x", "х")
+            .replace("3", "з")
+    )
 
-    def normalize_cyrillic(text: str) -> str:
-        return (
-            text.replace("A", "А")
-                .replace("B", "В")
-                .replace("E", "Е")
-                .replace("K", "К")
-                .replace("M", "М")
-                .replace("H", "Н")
-                .replace("O", "О")
-                .replace("P", "Р")
-                .replace("C", "С")
-                .replace("T", "Т")
-                .replace("Y", "У")
-                .replace("X", "Х")
-                .replace("a", "а")
-                .replace("e", "е")
-                .replace("o", "о")
-                .replace("p", "р")
-                .replace("c", "с")
-                .replace("x", "х")
-        )
-    def fix_ocr_time(s):
-        return (
-            s.replace("о", "0")
-            .replace("O", "0")
+def normalize_generic(text: str) -> str:
+    return text.lower().strip()
+
+def fix_ocr_time_garbage(text: str) -> str:
+    return (
+        text.replace("з", "3")
+            .replace("o", "0")
             .replace("l", "1")
-            .replace("I", "1")
-        )
+    )
 
+def is_label_like(text, label):
+    return SequenceMatcher(None, text.lower(), label.lower()).ratio() > 0.7
 
-    def fuzzy_best_match(text, choices, threshold=0.6):
-        best = ""
-        best_score = 0
-        for c in choices:
-            score = SequenceMatcher(None, normalize_cyrillic(text.lower()), normalize_cyrillic(c.lower())).ratio()
-            if score > best_score:
-                best = c
-                best_score = score
-        return best if best_score >= threshold else ""
+def fuzzy_best_match(text, candidates, threshold=FUZZY_THRESHOLD):
+    best_score = 0
+    best_match = None
+    for c in candidates:
+        score = SequenceMatcher(None, text.lower(), c.lower()).ratio()
+        if score > best_score:
+            best_score = score
+            best_match = c
+    if best_score >= threshold:
+        return best_match
+    logging.warning("[OCR] Fuzzy match for '%s' below threshold (%.2f)", text, best_score)
+    return None
 
-    fields = {
-        "name": "",
-        "date": "",
-        "start": "",
-        "end": "",
-        "bz_raw": "",
-        "room_raw": "",
-    }
+# -----------------------------------------------
+# Основной парсер
+# -----------------------------------------------
+def parse_fields(ocr_lines: list) -> dict:
+    lines = []
+    for l in ocr_lines:
+        raw = l["text"].strip()
+        if not raw:
+            continue
+        norm = normalize_generic(raw)
+        # Нормализация только по нужным словам
+        if any(k in norm for k in ["организатор", "бц", "место", "дата", "время"]):
+            norm = normalize_russian(norm)
+        lines.append({**l, "text": norm, "raw_text": raw})
 
-    lines = [l.strip() for l in ocr_lines if l.strip()]
-    lines = [normalize_cyrillic(l) for l in lines]
-    
-    bz_raw, room_raw = extract_bc_and_room(lines)
-    fields["bz_raw"] = bz_raw
-    fields["room_raw"] = room_raw
+    fields = {"name": "", "bz_raw": "", "room_raw": "", "date": "", "start": "", "end": ""}
 
-    # 🧠 Имя после "Организатор"
     for i, line in enumerate(lines):
-        if "организатор" in line.lower():
-            for j in range(1, 3):
-                if i + j < len(lines):
-                    maybe_name = lines[i + j].strip().split()
-                    if maybe_name:
-                        fields["name"] = maybe_name[0]
-                        break
-            break
+        txt = line["text"]
 
-    # 📅 Дата
-    for line in lines:
-        m = re.search(r"\d{2}\.\d{2}\.\d{4}", line)
-        if m:
-            fields["date"] = m.group(0)
-            break
+        # Организатор
+        if is_label_like(txt, "организатор"):
+            parts = []
+            for j in range(i+1, i+4):
+                if j >= len(lines): break
+                if lines[j]["score"] >= SCORE_THRESHOLD:
+                    parts.append(lines[j]["text"])
+            if parts:
+                fields["name"] = " ".join(parts)
 
-    # ⏰ Время (ищем 2 первых)
-    time_pattern = re.compile(r"\d{1,2}[:.]\d{2}")
-    def fix_ocr_time_garbage(text: str) -> str:
-        return (
-            text.replace('о', '0')
-                .replace('O', '0')
-                .replace('l', '1')
-                .replace('I', '1')
-                .replace('i', '1')
-        )
+        # Время и дата
+        if is_label_like(txt, "время"):
+            for j in range(i+1, i+5):
+                if j >= len(lines): break
+                raw = fix_ocr_time_garbage(lines[j]["raw_text"])
+                if re.match(r"\d{1,2}:\d{2}", raw) and not fields["start"]:
+                    fields["start"] = raw
+                elif re.match(r"\d{1,2}:\d{2}", raw):
+                    fields["end"] = raw
+        if is_label_like(txt, "дата"):
+            for j in range(i+1, i+4):
+                if j >= len(lines): break
+                if re.match(r"\d{2}\.\d{2}\.\d{4}", lines[j]["raw_text"]):
+                    fields["date"] = lines[j]["raw_text"]
 
-    for line in lines:
-        fixed_line = fix_ocr_time_garbage(line)
-        found = time_pattern.findall(fixed_line)
-        if len(found) >= 2:
-            fields["start"], fields["end"] = found[:2]
-            break
-        elif len(found) == 1 and not fields["start"]:
-            fields["start"] = found[0]
+        # БЦ
+        if is_label_like(txt, "бц") and i + 1 < len(lines):
+            candidate = f"{txt} {lines[i+1]['raw_text']}"
+            fields["bz_raw"] = candidate
 
+        # Переговорка
+        if is_label_like(txt, "переговорка"):
+            room_parts = []
+            for j in range(i+1, i+4):
+                if j >= len(lines): break
+                if lines[j]["score"] >= 0.75:
+                    room_parts.append(lines[j]["raw_text"])
+            fields["room_raw"] = " ".join(room_parts)
 
-
-    # 🏢 БЦ
-    if not fields["bz_raw"]:
-        all_bz = list(rooms_by_bz.keys())
-        for line in lines:
-            match = fuzzy_best_match(line, all_bz, threshold=0.6)
-            if match:
-                fields["bz_raw"] = match
-                break
-
-    # 🚪 Переговорка
-    if fields["bz_raw"] and not fields["room_raw"]:
-        candidates = rooms_by_bz[fields["bz_raw"]]
-        for line in lines:
-            match = fuzzy_best_match(line, candidates, threshold=0.5)
-            if match:
-                fields["room_raw"] = match
-                break
-
-
-    logging.debug("[OCR] Parsed name: %s", fields['name'])
-    logging.debug("[OCR] Parsed date: %s", fields['date'])
-    logging.debug("[OCR] Parsed start: %s, end: %s", fields['start'], fields['end'])
-    logging.debug("[OCR] Raw BZ: %s, raw room: %s", fields['bz_raw'], fields['room_raw'])
-
+    logging.debug("[OCR] Parsed fields: %s", fields)
     return fields
+
 
 
 
@@ -385,20 +436,20 @@ def best_match(target, candidates):
         return SequenceMatcher(None, a.lower(), b.lower()).ratio()
     return max(candidates, key=lambda c: score(target, c), default=None)
 
-def validate_with_rooms(fields, rooms):
+def validate_with_rooms(fields, rooms, *, fuzzy_threshold: float = FUZZY_THRESHOLD):
     bz_raw = fields["bz_raw"]
     room_raw = fields["room_raw"]
     matched_bz = None
     matched_room = None
 
     for bz in rooms:
-        if SequenceMatcher(None, bz_raw.lower(), bz.lower()).ratio() > 0.6:
+        if SequenceMatcher(None, bz_raw.lower(), bz.lower()).ratio() >= fuzzy_threshold:
             matched_bz = bz
             break
 
     if matched_bz:
         room_list = rooms[matched_bz]
-        matched_room = best_match(room_raw, room_list)
+        matched_room = _fuzzy_match(room_raw, room_list, fuzzy_threshold)
 
     logging.debug("[OCR] Final matched BZ: %s", matched_bz)
     logging.debug("[OCR] Final matched Room: %s", matched_room)
@@ -458,7 +509,7 @@ def on_clipboard_button_click(ctx: UIContext) -> None:
         print("[DEBUG] OCR lines:", lines)
         parsed = parse_fields(lines)
         print("[DEBUG] Parsed fields:", parsed)
-        validated = validate_with_rooms(parsed, rooms_by_bz)
+        validated = validate_with_rooms(parsed, rooms_by_bz, fuzzy_threshold=FUZZY_THRESHOLD)
         print("[DEBUG] Validated fields:", validated)
         return validated
 
@@ -491,8 +542,7 @@ def ocr_pipeline(ctx: UIContext) -> None:
         img = img.convert("RGB")
 
     def do_ocr():
-        ocr = _init_ocr()
-        return ocr.ocr(np.array(img), cls=True)
+        return run_ocr(img)
 
     def on_result(result_error):
         result, error = result_error
@@ -501,11 +551,11 @@ def ocr_pipeline(ctx: UIContext) -> None:
             QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось распознать изображение:\n{error}")
             return
         try:
-            texts = _extract_text_lines(result)
-            logging.debug("[OCR] Text lines: %s", texts)
-            fields = _parse_fields(texts)
-            _validate_room(fields)
-            _apply_fields(ctx, fields)
+            lines = result
+            logging.debug("[OCR] Lines: %s", lines)
+            parsed = parse_fields(lines)
+            validated = validate_with_rooms(parsed, rooms_by_bz)
+            update_gui_fields(validated, ctx)
         except Exception as e:
             logging.exception("[OCR] Parsing failed: %s", e)
             QMessageBox.critical(ctx.window, "Ошибка", f"Ошибка при разборе OCR-результата:\n{e}")
