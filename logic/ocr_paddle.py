@@ -375,11 +375,29 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
             for j in range(i + 1, i + 3):
                 if j >= len(lines):
                     break
+                jnorm = lines[j]["norm"]
+                if (
+                    is_label_like(jnorm, "участники")
+                    or "участник" in jnorm
+                    or is_any_label(jnorm, [
+                        "время",
+                        "время и дата",
+                        "дата",
+                        "дата и время",
+                        "переговорка",
+                        "место",
+                        "адрес",
+                        "бц",
+                    ])
+                ):
+                    break
                 parts.append(lines[j]["text"])
                 part_scores.append(lines[j]["score"])
             if parts:
-                fields["name"] = clean_name(" ".join(parts))
-                scores["name"] = min(part_scores) if part_scores else line["score"]
+                # Используем только первое слово для большей стабильности
+                first_word = parts[0].split()[0]
+                fields["name"] = clean_name(first_word)
+                scores["name"] = part_scores[0]
             continue
 
         if is_any_label(txt_norm, ["время", "время и дата", "дата и время"]):
@@ -431,13 +449,15 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
                 if j >= len(lines):
                     break
                 jnorm = lines[j]["norm"]
+                candidate_text = lines[j]["text"].strip()
                 if (
                     is_label_like(jnorm, "адрес")
                     or "выбрать" in jnorm
                     or "бц" in jnorm
+                    or len(candidate_text) <= 2
                 ):
                     continue
-                room_parts.append(lines[j]["text"])
+                room_parts.append(candidate_text)
                 room_scores.append(lines[j]["score"])
             if room_parts:
                 fields["room_raw"] = " ".join(room_parts)
