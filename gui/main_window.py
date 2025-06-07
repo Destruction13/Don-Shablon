@@ -147,7 +147,7 @@ class MainWindow(QMainWindow):
         self.ctx.ls_active = checked
 
     def handle_clipboard_ocr(self):
-        from logic.ocr_paddle import on_clipboard_button_click
-        on_clipboard_button_click(self.ctx)
+        from ocr_unified import recognize_from_clipboard
+        recognize_from_clipboard(self.ctx)
 
 
