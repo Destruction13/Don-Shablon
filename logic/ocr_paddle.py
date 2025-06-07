@@ -89,6 +89,15 @@ def normalize_generic(text: str) -> str:
     return text.lower().strip()
 
 
+def fix_ocr_time_garbage(text: str) -> str:
+    """Replace common OCR misreads in time strings."""
+    return (
+        text.replace("з", "3")
+        .replace("o", "0")
+        .replace("l", "1")
+    )
+
+
 def clean_name(text: str) -> str:
     """Remove duration suffixes from organizer name."""
     return re.sub(r"\s*(?:-?\d+ч|\(.*?ч\)|на \d+ч).*", "", text).strip()
