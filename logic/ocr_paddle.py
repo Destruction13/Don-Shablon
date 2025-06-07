@@ -28,7 +28,7 @@ SCORE_THRESHOLD = 0.82
 # Fuzzy matching acceptance level
 FUZZY_THRESHOLD = 0.72
 # How far in pixels two boxes may be on Y to be considered on one line
-BBOX_Y_TOLERANCE = 25
+BBOX_Y_TOLERANCE = 5
 # Maximum horizontal gap between splitted tokens
 SPLIT_TOKEN_MAX_GAP = 70
 # Force fuzzy matching even for low score items (debug)
@@ -399,9 +399,15 @@ def parse_fields(ocr_lines: list) -> dict:
             for cand in lines[i+1:i+4]:
                 if cand["score"] < 0.85:
                     continue
-                if abs(cand["top"] - base_y) > 30 or abs(cand["left"] - base_x) > 200:
+                if abs(cand["top"] - base_y) > 80 or abs(cand["left"] - base_x) > 200:
                     continue
-                if any(is_label_like(cand["label_norm"], w) for w in ["участник", "опционал", "дата", "время"]):
+                if (
+                    any(is_label_like(cand["label_norm"], w) for w in [
+                        "участник", "опционал", "дата", "время", "переговорка"
+                    ])
+                    or "бц" in cand["label_norm"]
+                    or re.search(r"\d", cand["label_norm"])
+                ):
                     continue
                 parts.append(cand["raw_text"])
                 cand["matched_field"] = "name"
@@ -417,7 +423,7 @@ def parse_fields(ocr_lines: list) -> dict:
 
         if is_label_like(txt, "дата"):
             for cand in lines[i+1:]:
-                if abs(cand["top"] - base_y) > 50 or abs(cand["left"] - base_x) > 200:
+                if abs(cand["top"] - base_y) > 80 or abs(cand["left"] - base_x) > 200:
                     continue
                 m = re.search(r"\d{2}\.\d{2}\.\d{2,4}", cand["raw_text"])
                 if m:
@@ -433,7 +439,7 @@ def parse_fields(ocr_lines: list) -> dict:
         if is_label_like(txt, "время"):
             times = []
             for cand in lines[i+1:]:
-                if abs(cand["top"] - base_y) > 50 or abs(cand["left"] - base_x) > 200:
+                if abs(cand["top"] - base_y) > 80 or abs(cand["left"] - base_x) > 200:
                     continue
                 val = fix_ocr_time_garbage(cand["raw_text"])
                 if re.match(r"\d{1,2}:\d{2}", val):
@@ -451,9 +457,17 @@ def parse_fields(ocr_lines: list) -> dict:
                     fields["start"], fields["end"], line["left"], line["top"], line["right"], line["bottom"],
                 )
 
-        if is_label_like(txt, "бц") and i + 1 < len(lines):
-            cand = lines[i + 1]
-            if abs(cand["top"] - base_y) <= 50 and abs(cand["left"] - base_x) <= 200:
+        if is_label_like(txt, "бц"):
+            room_candidate = None
+            for cand in lines[i+1:]:
+                if abs(cand["top"] - base_y) > 80 or abs(cand["left"] - base_x) > 200:
+                    break
+                cand_norm = cand["label_norm"]
+                if room_candidate is None and re.search(r"этаж|мест", cand_norm):
+                    room_candidate = cand
+                    continue
+                if "бц" in cand_norm:
+                    continue
                 fields["bz_raw"] = cand["raw_text"]
                 cand["matched_field"] = "bz"
                 line["matched_field"] = "label"
@@ -461,12 +475,10 @@ def parse_fields(ocr_lines: list) -> dict:
                     "[OCR] FIELD bz='%s' from bbox=(%d, %d, %d, %d)",
                     fields["bz_raw"], cand["left"], cand["top"], cand["right"], cand["bottom"],
                 )
-                if i + 2 < len(lines) and not fields["room_raw"]:
-                    next_room = lines[i + 2]
-                    match = fuzzy_best_match(next_room["raw_text"], all_rooms, FUZZY_THRESHOLD)
-                    if match:
-                        fields["room_raw"] = next_room["raw_text"]
-                        next_room["matched_field"] = "room"
+                if room_candidate and not fields["room_raw"]:
+                    fields["room_raw"] = room_candidate["raw_text"]
+                    room_candidate["matched_field"] = "room"
+                break
         elif "бц" in line["raw_text"].lower() or "морозов" in line["raw_text"].lower():
             fields["bz_raw"] = line["raw_text"]
             line["matched_field"] = "bz"
@@ -484,7 +496,7 @@ def parse_fields(ocr_lines: list) -> dict:
         if is_label_like(txt, "переговорка"):
             candidate_parts = []
             for cand in lines[i+1:]:
-                if abs(cand["top"] - base_y) > 50 or abs(cand["left"] - base_x) > 200:
+                if abs(cand["top"] - base_y) > 80 or abs(cand["left"] - base_x) > 200:
                     continue
                 if any(is_label_like(cand["label_norm"], w) for w in ["адрес", "параметр", "выбрать"]):
                     continue
