@@ -21,15 +21,15 @@ import logging
 # Threshold below which OCR results are ignored
 SCORE_IGNORE_THRESHOLD = 0.7
 # Threshold for accepting a value without fuzzy matching
-SCORE_THRESHOLD = 0.9
+SCORE_THRESHOLD = 0.82
 # Fuzzy matching acceptance level
 FUZZY_THRESHOLD = 0.75
 # How far in pixels two boxes may be on Y to be considered on one line
-BBOX_Y_TOLERANCE = 30
+BBOX_Y_TOLERANCE = 25
 # Maximum horizontal gap between splitted tokens
-SPLIT_TOKEN_MAX_GAP = 50
+SPLIT_TOKEN_MAX_GAP = 70
 # Force fuzzy matching even for low score items (debug)
-FORCE_FUZZY = False
+FORCE_FUZZY = True
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -93,54 +93,6 @@ def _extract_text_lines(result) -> List[str]:
         return [str(r) for r in result]
     return []
 
-
-def _parse_fields(texts: List[str]) -> Dict[str, str]:
-    fields = {"name": "", "date": "", "start": "", "end": "", "bz": "", "room": ""}
-
-    # Имя организатора
-    for i, t in enumerate(texts):
-        if "организатор" in t.lower():
-            after_colon = t.split(":", 1)
-            if len(after_colon) == 2 and after_colon[1].strip():
-                fields["name"] = after_colon[1].strip().split()[0]
-            elif i + 1 < len(texts):
-                fields["name"] = texts[i + 1].strip().split()[0]
-            break
-
-    # Время начала и конца
-    time_pattern = re.compile(r"\b\d{1,2}:\d{2}\b")
-    all_times = []
-    for t in texts:
-        all_times.extend(time_pattern.findall(t))
-    if len(all_times) >= 2:
-        fields["start"], fields["end"] = all_times[0], all_times[1]
-
-    # Дата
-    date_pattern = re.compile(r"\b(\d{2}\.\d{2}\.\d{2,4})\b")
-    for t in texts:
-        m = date_pattern.search(t)
-        if m:
-            fields["date"] = m.group(1)
-            break
-
-    # Бизнес-центр и переговорка
-    flat_rooms: List[Tuple[str, str, str]] = []
-    for bz, rooms in rooms_by_bz.items():
-        for room in rooms:
-            flat_rooms.append((bz, room, _normalize(room)))
-    for t in texts:
-        norm = _normalize(t)
-        for bz, room, room_norm in flat_rooms:
-            if room_norm and room_norm in norm:
-                fields["room"] = room
-                fields["bz"] = bz
-                break
-        if not fields["bz"]:
-            for bz in rooms_by_bz:
-                if _normalize(bz) in norm:
-                    fields["bz"] = bz
-                    break
-    return fields
 
 
 def _validate_room(fields: Dict[str, str]) -> None:
@@ -375,17 +327,20 @@ def parse_fields(ocr_lines: List[Dict]) -> Dict[str, str]:
     # 🧠 Имя после "Организатор"
     for i, line in enumerate(lines):
         if "организатор" in line["text"].lower():
-            base_x = min(x for x, _ in line["bbox"])  # left coordinate
+            base_x = min(x for x, _ in line["bbox"])  # left
             base_y = max(y for _, y in line["bbox"])  # bottom
-            for cand in lines[i+1:]:
+            name_parts = []
+            for cand in lines[i+1:i+4]:
                 cy = min(y for x, y in cand["bbox"])
                 cx = min(x for x, _ in cand["bbox"])
-                if 0 <= cy - base_y <= 100 and abs(cx - base_x) <= 100:
-                    tokens = cand["text"].split()
-                    if tokens:
-                        fields["name"] = " ".join(tokens)
-                        logging.debug("[OCR] → MATCHED_NAME='%s' score=%.3f bbox=%s", fields["name"], cand["score"], cand["bbox"])
-                        break
+                if 0 <= cy - base_y <= 100 and abs(cx - base_x) <= 150:
+                    name_parts.append(cand["text"])
+                else:
+                    break
+            if name_parts:
+                full_name = " ".join(name_parts)
+                fields["name"] = full_name
+                logging.debug("[OCR] Собрано имя: %s", full_name)
             break
 
     # 📅 Дата
@@ -419,13 +374,26 @@ def parse_fields(ocr_lines: List[Dict]) -> Dict[str, str]:
 
     # 🏢 БЦ
     if not fields["bz_raw"]:
-        all_bz = list(rooms_by_bz.keys())
-        for line in lines:
-            match = fuzzy_best_match(line["text"], all_bz, threshold=FUZZY_THRESHOLD)
-            if match:
-                logging.debug("[OCR] BZ: matched '%s' from '%s' (score=%.2f)", match, line["text"], line["score"])
-                fields["bz_raw"] = match
-                break
+        # Склей "БЦ" с последующим словом для лучшего совпадения
+        for i, line in enumerate(lines):
+            if "бц" in line["text"].lower():
+                if i + 1 < len(lines):
+                    combined = f"{line['text']} {lines[i+1]['text']}"
+                else:
+                    combined = line['text']
+                match = fuzzy_best_match(combined, rooms_by_bz.keys())
+                if match:
+                    fields["bz_raw"] = match
+                    break
+
+        if not fields["bz_raw"]:
+            all_bz = list(rooms_by_bz.keys())
+            for line in lines:
+                match = fuzzy_best_match(line["text"], all_bz, threshold=FUZZY_THRESHOLD)
+                if match:
+                    logging.debug("[OCR] BZ: matched '%s' from '%s' (score=%.2f)", match, line["text"], line["score"])
+                    fields["bz_raw"] = match
+                    break
 
     # 🚪 Переговорка
     if fields["bz_raw"] and not fields["room_raw"]:
@@ -583,8 +551,7 @@ def ocr_pipeline(ctx: UIContext) -> None:
         img = img.convert("RGB")
 
     def do_ocr():
-        ocr = _init_ocr()
-        return ocr.ocr(np.array(img), cls=True)
+        return run_ocr(img)
 
     def on_result(result_error):
         result, error = result_error
@@ -593,11 +560,11 @@ def ocr_pipeline(ctx: UIContext) -> None:
             QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось распознать изображение:\n{error}")
             return
         try:
-            texts = _extract_text_lines(result)
-            logging.debug("[OCR] Text lines: %s", texts)
-            fields = _parse_fields(texts)
-            _validate_room(fields)
-            _apply_fields(ctx, fields)
+            lines = result
+            logging.debug("[OCR] Lines: %s", lines)
+            parsed = parse_fields(lines)
+            validated = validate_with_rooms(parsed, rooms_by_bz)
+            update_gui_fields(validated, ctx)
         except Exception as e:
             logging.exception("[OCR] Parsing failed: %s", e)
             QMessageBox.critical(ctx.window, "Ошибка", f"Ошибка при разборе OCR-результата:\n{e}")
