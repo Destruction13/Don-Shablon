@@ -591,17 +591,22 @@ def validate_with_rooms(
         if best and best_score >= 0.4:
             matched_room = best
         else:
-            short = room_raw.split('.')[-1].split()[0].lower()
-            if len(short) > 3:
-                for cand in candidates:
-                    if short in cand.lower():
-                        matched_room = cand
-                        logging.warning(
-                            "[OCR] Room matched by short word '%s' despite low fuzzy score %.2f",
-                            short,
-                            best_score,
-                        )
-                        break
+            if room_raw:
+                parts = room_raw.split('.')
+                last_part = parts[-1] if parts else ""
+                words = last_part.split()
+                if words:
+                    short = words[0].lower()
+                    if len(short) > 3:
+                        for cand in candidates:
+                            if short in cand.lower():
+                                matched_room = cand
+                                logging.warning(
+                                    "[OCR] Room matched by short word '%s' despite low fuzzy score %.2f",
+                                    short,
+                                    best_score,
+                                )
+                                break
 
     if not matched_bz:
         logging.warning("[OCR] Failed to match business center for '%s'", bz_raw)
