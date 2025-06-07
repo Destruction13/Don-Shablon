@@ -75,3 +75,10 @@ def test_parse_and_validate():
     assert validated["bz"] == "БЦ Морозов"
     assert validated["room"] == "1.Кофе"
 
+
+def test_room_fuzzy_matching():
+    fields = {"bz_raw": "БЦ Аврора", "room_raw": "2В Гостиная дя ."}
+    rooms_map = {"БЦ Аврора": ["2B.Гостиная дядюшки Скруджа"]}
+    validated = validate_with_rooms(fields, rooms_map, fuzzy_threshold=0.6)
+    assert validated["room"] == "2B.Гостиная дядюшки Скруджа"
+

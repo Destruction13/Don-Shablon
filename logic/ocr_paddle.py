@@ -3,6 +3,7 @@ import re
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 from difflib import SequenceMatcher
+from rapidfuzz import fuzz, process
 
 import numpy as np
 from PIL import Image, ImageGrab, ImageQt, ImageDraw, ImageFont
@@ -550,6 +551,31 @@ def _room_token_ratio(room: str, candidate: str) -> float:
     return len(tokens_room & tokens_cand) / len(tokens_room)
 
 
+_CYR_TO_LAT = str.maketrans({
+    "а": "a", "А": "A",
+    "в": "b", "В": "B",
+    "е": "e", "Е": "E",
+    "к": "k", "К": "K",
+    "м": "m", "М": "M",
+    "н": "h", "Н": "H",
+    "о": "o", "О": "O",
+    "р": "p", "Р": "P",
+    "с": "c", "С": "C",
+    "т": "t", "Т": "T",
+    "у": "y", "У": "Y",
+    "х": "x", "Х": "X",
+    "ё": "e", "Ё": "E",
+})
+
+
+def _normalize_room(text: str) -> str:
+    """Prepare room text for fuzzy matching."""
+    text = text.translate(_CYR_TO_LAT)
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9]+", "", text)
+    return text
+
+
 from difflib import SequenceMatcher
 
 def best_match(target, candidates):
@@ -581,32 +607,65 @@ def validate_with_rooms(
     matched_room = None
     if matched_bz:
         candidates = rooms[matched_bz]
-        best = None
-        best_score = 0.0
-        for cand in candidates:
-            ratio = _room_token_ratio(room_raw, cand)
-            if ratio > best_score:
-                best_score = ratio
-                best = cand
-        if best and best_score >= 0.4:
-            matched_room = best
-        else:
-            if room_raw:
-                parts = room_raw.split('.')
-                last_part = parts[-1] if parts else ""
-                words = last_part.split()
-                if words:
-                    short = words[0].lower()
-                    if len(short) > 3:
-                        for cand in candidates:
-                            if short in cand.lower():
-                                matched_room = cand
-                                logging.warning(
-                                    "[OCR] Room matched by short word '%s' despite low fuzzy score %.2f",
-                                    short,
-                                    best_score,
-                                )
-                                break
+
+        if room_raw:
+            matches = process.extract(
+                room_raw,
+                candidates,
+                processor=_normalize_room,
+                scorer=fuzz.ratio,
+                limit=3,
+            )
+            top3 = [(m[0], round(m[1] / 100, 2)) for m in matches]
+            if matches:
+                best_candidate, best_score_raw, _ = matches[0]
+                best_score = best_score_raw / 100
+                log_msg = (
+                    "[OCR] Room fuzzy '%s' -> '%s' (%.2f), top3=%s"
+                )
+                logging.debug(log_msg, room_raw, best_candidate, best_score, top3)
+                if best_score >= fuzzy_threshold:
+                    matched_room = best_candidate
+                else:
+                    logging.warning(
+                        "[OCR] Room fuzzy score below threshold %.2f for '%s'; top3=%s",
+                        best_score,
+                        room_raw,
+                        top3,
+                    )
+            else:
+                logging.debug(
+                    "[OCR] Room fuzzy matching produced no candidates for '%s'",
+                    room_raw,
+                )
+
+        if not matched_room:
+            best = None
+            best_score = 0.0
+            for cand in candidates:
+                ratio = _room_token_ratio(room_raw, cand)
+                if ratio > best_score:
+                    best_score = ratio
+                    best = cand
+            if best and best_score >= 0.4:
+                matched_room = best
+            else:
+                if room_raw:
+                    parts = room_raw.split('.')
+                    last_part = parts[-1] if parts else ""
+                    words = last_part.split()
+                    if words:
+                        short = words[0].lower()
+                        if len(short) > 3:
+                            for cand in candidates:
+                                if short in cand.lower():
+                                    matched_room = cand
+                                    logging.warning(
+                                        "[OCR] Room matched by short word '%s' despite low fuzzy score %.2f",
+                                        short,
+                                        best_score,
+                                    )
+                                    break
 
     if not matched_bz:
         logging.warning("[OCR] Failed to match business center for '%s'", bz_raw)

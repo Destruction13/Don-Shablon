@@ -6,3 +6,4 @@ easyocr<1.8
 torch<2.0
 torchvision<0.18
 PySide6
+rapidfuzz
