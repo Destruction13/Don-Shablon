@@ -299,20 +299,34 @@ def save_debug_ocr_image(image: Image.Image, lines: List[Dict], path="ocr_debug_
         json.dump(debug_info, f, ensure_ascii=False, indent=2)
 
 
-def extract_bc_and_room(lines: List[Dict]) -> Tuple[str, str]:
+def extract_bc_and_room(lines: List[Dict], known_bz: List[str]) -> Tuple[str, str]:
     """Try to extract business center and room from OCR lines."""
     bz_raw = ""
     room_raw = ""
 
     for i, line in enumerate(lines):
         lower = line["text"].lower()
-        if "морозов" in lower or "бц" in lower or "мopозов" in lower:
-            bz_raw = "БЦ Морозов"
-            if i + 1 < len(lines):
-                room_raw = lines[i + 1]["text"].strip()
-            break
+
+        # Находим подходящий БЦ
+        matched_bz = None
+        for bz in known_bz:
+            if bz.lower() in lower:
+                matched_bz = bz
+                break
+
+        if matched_bz:
+            bz_raw = matched_bz
+
+            # Попробуем взять переговорку на следующих 1–3 строках
+            for j in range(i + 1, min(len(lines), i + 4)):
+                candidate = lines[j]["text"].strip()
+                if candidate:
+                    room_raw = candidate
+                    break
+            break  # Выход из цикла — нашли
 
     return bz_raw, room_raw
+
 
 
 
@@ -439,7 +453,8 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
         time_re = re.compile(r"\d{2}[:\.]\d{2}")
         found: list[tuple[str, float]] = []
         for line in ocr_lines:
-            if not re.fullmatch(r"\d{1,2}[:\.]\d{2}", line["text"].strip()):
+            text = line["text"].strip()
+            if not re.fullmatch(r"\d{1,2}[:\.]\d{2}", text):
                 continue
             t = normalize_time(line["text"].strip())
             if not t:
@@ -472,7 +487,8 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
                     break
 
     if not fields["bz_raw"] or not fields["room_raw"]:
-        bz_raw, room_raw = extract_bc_and_room(lines)
+        known_bz = list(rooms_by_bz.keys())
+        bz_raw, room_raw = extract_bc_and_room(lines, known_bz)
         if bz_raw and not fields["bz_raw"]:
             fields["bz_raw"] = bz_raw
         if room_raw and not fields["room_raw"]:
@@ -548,7 +564,7 @@ def validate_with_rooms(
             if ratio > best_score:
                 best_score = ratio
                 best = cand
-        if best and best_score >= 0.5:
+        if best and best_score >= 0.4:
             matched_room = best
 
     if not matched_bz:
