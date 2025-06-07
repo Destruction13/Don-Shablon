@@ -5,17 +5,15 @@ from typing import Dict, List, Tuple, Optional
 from difflib import SequenceMatcher
 
 import numpy as np
-from PIL import Image, ImageGrab, ImageQt
+from PIL import Image, ImageGrab, ImageQt, ImageDraw, ImageFont
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QMessageBox
 from PySide6.QtCore import QDate
-from paddleocr import PaddleOCR
 from pathlib import Path
 
 from constants import rooms_by_bz
 from logic.app_state import UIContext
 from logic.utils import run_in_thread
-import logging
 
 # --- OCR configuration ---
 # Threshold below which OCR results are ignored
@@ -38,44 +36,22 @@ logging.basicConfig(
 
 
 
-_ocr_instance: PaddleOCR | None = None
+from typing import Any
+
+_ocr_instance: Any = None
 
 
-def _init_ocr() -> PaddleOCR:
+def _init_ocr():
     global _ocr_instance
     if _ocr_instance is None:
-        logging.debug("[OCR] Initializing PaddleOCR")
-
-        models_dir = Path(__file__).resolve().parent.parent / "data" / "ocr_models"
-
-        det_path = models_dir / "det" / "Multilingual_PP-OCRv3_det_infer"
-        rec_path = models_dir / "rec" / "cyrillic_PP-OCRv3_rec_infer"
-        cls_path = models_dir / "cls" / "ch_ppocr_mobile_v2.0_cls_infer"
-
-        required_files = [
-            det_path / "inference.pdmodel",
-            det_path / "inference.pdiparams",
-            rec_path / "inference.pdmodel",
-            rec_path / "inference.pdiparams",
-            cls_path / "inference.pdmodel",
-            cls_path / "inference.pdiparams",
-        ]
-
-        for file in required_files:
-            if not file.exists():
-                raise FileNotFoundError(f"[OCR] ❌ Модель не найдена: {file}")
-
-        _ocr_instance = PaddleOCR(
-            use_angle_cls=True,
-            lang='ru',
-            ocr_version='PP-OCRv3',  # 🔥 Обязательно!
-            det_model_dir=str(det_path),
-            rec_model_dir=str(rec_path),
-            cls_model_dir=str(cls_path),
-            use_gpu=False     # ⬅️ убери, если запускаешь с GPU
-        )
-
-        logging.debug("[OCR] PaddleOCR успешно инициализирован")
+        logging.debug("[OCR] Initializing EasyOCR")
+        try:
+            import easyocr
+        except Exception as e:
+            logging.error("[OCR] Failed to import EasyOCR: %s", e)
+            raise
+        _ocr_instance = easyocr.Reader(['ru'], gpu=False)
+        logging.debug("[OCR] EasyOCR successfully initialized")
 
     return _ocr_instance
 
@@ -192,7 +168,7 @@ def get_image_from_clipboard() -> Optional[Image.Image]:
 
 
 def run_ocr(image: Image.Image, *, ignore_threshold: float = SCORE_IGNORE_THRESHOLD) -> List[Dict]:
-    """Recognize text lines from an image using PaddleOCR.
+    """Recognize text lines from an image using EasyOCR.
 
     Parameters
     ----------
@@ -207,17 +183,22 @@ def run_ocr(image: Image.Image, *, ignore_threshold: float = SCORE_IGNORE_THRESH
         Each dict contains ``text``, ``score`` and ``bbox``.
     """
 
-    ocr = _init_ocr()
+    reader = _init_ocr()
     image = image.resize((image.width * 2, image.height * 2), Image.LANCZOS)
-    result = ocr.ocr(np.array(image), cls=True)
-    logging.debug("[OCR] RAW PaddleOCR result: %s", result)
+    result = reader.readtext(np.array(image))
+    logging.debug("[OCR] RAW EasyOCR result: %s", result)
 
     lines: List[Dict] = []
-    if isinstance(result, list) and result:
-        for box, (txt, score) in result[0]:
-            if score < ignore_threshold:
-                continue
-            lines.append({"text": txt.strip(), "score": float(score), "bbox": box})
+    for bbox, text, score in result:
+        if score < ignore_threshold:
+            continue
+        bbox_int = [[int(x), int(y)] for x, y in bbox]
+        lines.append({
+            "text": text.strip(),
+            "score": float(score),
+            "bbox": bbox_int,
+            "raw_text": text.strip(),
+        })
 
     save_debug_ocr_image(image, lines)
     return lines
@@ -255,21 +236,29 @@ def is_label_like(text, label):
 
 def save_debug_ocr_image(image: Image.Image, lines: List[Dict], path="ocr_debug_output.jpg"):
     """Save OCR debugging overlay and JSON info."""
-    from paddleocr import draw_ocr
 
     if not lines:
         return
 
-    boxes = [l["bbox"] for l in lines]
-    txts = [l["text"] for l in lines]
-    scores = [l["score"] for l in lines]
+    img_copy = image.copy()
+    draw = ImageDraw.Draw(img_copy)
 
-    img_with_ocr = draw_ocr(np.array(image), boxes, txts, scores, font_path="C:/Windows/Fonts/arial.ttf")
-    Image.fromarray(img_with_ocr).save(path)
+    try:
+        font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 16)
+    except Exception:
+        font = ImageFont.load_default()
+
+    for line in lines:
+        bbox = [tuple(p) for p in line["bbox"]]
+        draw.polygon(bbox, outline="red", width=2)
+        text = f"{line['text']} {line['score']:.2f}"
+        draw.text((bbox[0][0], bbox[0][1] - 15), text, fill="red", font=font)
+
+    img_copy.save(path)
 
     debug_info = [
-        {"text": t, "score": s, "bbox": b}
-        for b, t, s in zip(boxes, txts, scores)
+        {"text": line["text"], "score": line["score"], "bbox": line["bbox"]}
+        for line in lines
     ]
     with open(Path(path).with_suffix(".json"), "w", encoding="utf-8") as f:
         import json
@@ -351,20 +340,19 @@ def parse_fields(ocr_lines: list) -> dict:
         if not raw:
             continue
         norm = normalize_generic(raw)
-        # Нормализация только по нужным словам
         if any(k in norm for k in ["организатор", "бц", "место", "дата", "время"]):
             norm = normalize_russian(norm)
-        lines.append({**l, "text": norm, "raw_text": raw})
+        lines.append({**l, "text": raw, "norm": norm, "raw_text": raw})
 
     fields = {"name": "", "bz_raw": "", "room_raw": "", "date": "", "start": "", "end": ""}
 
     for i, line in enumerate(lines):
-        txt = line["text"]
+        txt_norm = line["norm"]
 
         # Организатор
-        if is_label_like(txt, "организатор"):
+        if is_label_like(txt_norm, "организатор"):
             parts = []
-            for j in range(i+1, i+4):
+            for j in range(i+1, i+3):
                 if j >= len(lines): break
                 if lines[j]["score"] >= SCORE_THRESHOLD:
                     parts.append(lines[j]["text"])
@@ -372,7 +360,7 @@ def parse_fields(ocr_lines: list) -> dict:
                 fields["name"] = " ".join(parts)
 
         # Время и дата
-        if is_label_like(txt, "время"):
+        if is_label_like(txt_norm, "время"):
             for j in range(i+1, i+5):
                 if j >= len(lines): break
                 raw = fix_ocr_time_garbage(lines[j]["raw_text"])
@@ -380,25 +368,34 @@ def parse_fields(ocr_lines: list) -> dict:
                     fields["start"] = raw
                 elif re.match(r"\d{1,2}:\d{2}", raw):
                     fields["end"] = raw
-        if is_label_like(txt, "дата"):
+        if is_label_like(txt_norm, "дата"):
             for j in range(i+1, i+4):
                 if j >= len(lines): break
                 if re.match(r"\d{2}\.\d{2}\.\d{4}", lines[j]["raw_text"]):
                     fields["date"] = lines[j]["raw_text"]
 
         # БЦ
-        if is_label_like(txt, "бц") and i + 1 < len(lines):
-            candidate = f"{txt} {lines[i+1]['raw_text']}"
-            fields["bz_raw"] = candidate
+        if is_label_like(txt_norm, "бц") or txt_norm.startswith("бц"):
+            if len(txt_norm.split()) > 1:
+                fields["bz_raw"] = line["text"]
+            elif i + 1 < len(lines):
+                fields["bz_raw"] = f"{line['text']} {lines[i+1]['text']}"
 
         # Переговорка
-        if is_label_like(txt, "переговорка"):
+        if is_label_like(txt_norm, "переговорка"):
             room_parts = []
             for j in range(i+1, i+4):
                 if j >= len(lines): break
                 if lines[j]["score"] >= 0.75:
                     room_parts.append(lines[j]["raw_text"])
             fields["room_raw"] = " ".join(room_parts)
+
+    if not fields["bz_raw"] or not fields["room_raw"]:
+        bz_raw, room_raw = extract_bc_and_room(lines)
+        if bz_raw and not fields["bz_raw"]:
+            fields["bz_raw"] = bz_raw
+        if room_raw and not fields["room_raw"]:
+            fields["room_raw"] = room_raw
 
     logging.debug("[OCR] Parsed fields: %s", fields)
     return fields

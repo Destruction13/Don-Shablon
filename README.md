@@ -18,8 +18,9 @@
    ```bash
    pip install -r requirements.txt
    ```
-   > OCR теперь использует библиотеку **PaddleOCR** 3.0.1. Модели уже находятся
-   > в каталоге `data/ocr_models`, поэтому скачивание не требуется.
+   > OCR теперь использует библиотеку **EasyOCR**. Дополнительные модели не нужны.
+   > При Python 3.10 потребуется ставить более старые версии зависимостей:
+   > `pip install "easyocr<1.8 torch<2 torchvision<0.18"`.
 3. **(Необязательно) подключите DeepL для перевода**
    * Получите API‑ключ на [deepl.com](https://www.deepl.com/account/summary).
    * Создайте рядом с `main.py` файл `.env` и впишите:
