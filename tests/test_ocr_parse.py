@@ -11,9 +11,31 @@ qt_gui.QGuiApplication = object
 sys.modules.setdefault('PySide6.QtGui', qt_gui)
 qt_widgets = types.ModuleType('PySide6.QtWidgets')
 qt_widgets.QMessageBox = object
+qt_widgets.QApplication = object
+qt_widgets.QDialog = object
+qt_widgets.QVBoxLayout = object
+qt_widgets.QTextEdit = object
+qt_widgets.QPushButton = object
 sys.modules.setdefault('PySide6.QtWidgets', qt_widgets)
 qt_core = types.ModuleType('PySide6.QtCore')
 qt_core.QDate = object
+qt_core.QRunnable = object
+class _Pool:
+    @staticmethod
+    def globalInstance():
+        class Dummy:
+            def start(self, *args, **kwargs):
+                pass
+        return Dummy()
+qt_core.QThreadPool = _Pool
+qt_core.QObject = object
+class _Signal:
+    def __init__(self, *args, **kwargs):
+        pass
+    def connect(self, *args, **kwargs):
+        pass
+qt_core.Signal = _Signal
+qt_core.Slot = lambda *args, **kwargs: (lambda func: func)
 sys.modules.setdefault('PySide6.QtCore', qt_core)
 
 from logic.ocr_paddle import parse_fields, validate_with_rooms
