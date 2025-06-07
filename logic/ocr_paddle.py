@@ -15,6 +15,13 @@ from pathlib import Path
 from constants import rooms_by_bz
 from logic.app_state import UIContext
 from logic.utils import run_in_thread
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
+
 
 
 _ocr_instance: PaddleOCR | None = None
@@ -51,7 +58,6 @@ def _init_ocr() -> PaddleOCR:
             det_model_dir=str(det_path),
             rec_model_dir=str(rec_path),
             cls_model_dir=str(cls_path),
-            drop_score=0.5,  # ⬅️ помогает отсеивать мусор
             use_gpu=False     # ⬅️ убери, если запускаешь с GPU
         )
 
@@ -187,12 +193,84 @@ def get_image_from_clipboard() -> Optional[Image.Image]:
 def run_ocr(image: Image.Image) -> List[str]:
     """Recognize text lines from an image using PaddleOCR."""
     ocr = _init_ocr()
+    image = image.resize((image.width * 2, image.height * 2), Image.LANCZOS)
     result = ocr.ocr(np.array(image), cls=True)
+    save_debug_ocr_image(image, result)
+    logging.debug("[OCR] RAW PaddleOCR result: %s", result)
     return _extract_text_lines(result)
+
+def save_debug_ocr_image(image: Image.Image, ocr_result, path="ocr_debug_output.jpg"):
+    from paddleocr import draw_ocr
+    import matplotlib.pyplot as plt
+
+    boxes = [line[0] for line in ocr_result[0]]
+    txts = [line[1][0] for line in ocr_result[0]]
+    scores = [line[1][1] for line in ocr_result[0]]
+
+    img_with_ocr = draw_ocr(np.array(image), boxes, txts, scores, font_path='path/to/arial.ttf')
+    Image.fromarray(img_with_ocr).save(path)
+
+
+def extract_bc_and_room(lines: List[str]) -> Tuple[str, str]:
+    bz_raw = ""
+    room_raw = ""
+
+    for i, line in enumerate(lines):
+        lower = line.lower()
+        if "морозов" in lower or "бц" in lower or "мopозов" in lower:
+            bz_raw = "БЦ Морозов"
+            # Пробуем взять соседнюю строку как переговорку
+            if i + 1 < len(lines):
+                room_raw = lines[i + 1].strip()
+            break
+
+    return bz_raw, room_raw
 
 
 def parse_fields(ocr_lines: List[str]) -> Dict[str, str]:
-    """Extract fields from OCR text lines."""
+    from constants import rooms_by_bz
+    from difflib import SequenceMatcher
+
+    def normalize_cyrillic(text: str) -> str:
+        return (
+            text.replace("A", "А")
+                .replace("B", "В")
+                .replace("E", "Е")
+                .replace("K", "К")
+                .replace("M", "М")
+                .replace("H", "Н")
+                .replace("O", "О")
+                .replace("P", "Р")
+                .replace("C", "С")
+                .replace("T", "Т")
+                .replace("Y", "У")
+                .replace("X", "Х")
+                .replace("a", "а")
+                .replace("e", "е")
+                .replace("o", "о")
+                .replace("p", "р")
+                .replace("c", "с")
+                .replace("x", "х")
+        )
+    def fix_ocr_time(s):
+        return (
+            s.replace("о", "0")
+            .replace("O", "0")
+            .replace("l", "1")
+            .replace("I", "1")
+        )
+
+
+    def fuzzy_best_match(text, choices, threshold=0.6):
+        best = ""
+        best_score = 0
+        for c in choices:
+            score = SequenceMatcher(None, normalize_cyrillic(text.lower()), normalize_cyrillic(c.lower())).ratio()
+            if score > best_score:
+                best = c
+                best_score = score
+        return best if best_score >= threshold else ""
+
     fields = {
         "name": "",
         "date": "",
@@ -203,46 +281,78 @@ def parse_fields(ocr_lines: List[str]) -> Dict[str, str]:
     }
 
     lines = [l.strip() for l in ocr_lines if l.strip()]
+    lines = [normalize_cyrillic(l) for l in lines]
+    
+    bz_raw, room_raw = extract_bc_and_room(lines)
+    fields["bz_raw"] = bz_raw
+    fields["room_raw"] = room_raw
 
+    # 🧠 Имя после "Организатор"
     for i, line in enumerate(lines):
-        lower = line.lower()
-        if "организатор" in lower:
-            parts = line.split(":", 1)
-            if len(parts) == 2 and parts[1].strip():
-                fields["name"] = parts[1].strip().split()[0]
-            elif i + 1 < len(lines):
-                fields["name"] = lines[i + 1].strip().split()[0]
+        if "организатор" in line.lower():
+            for j in range(1, 3):
+                if i + j < len(lines):
+                    maybe_name = lines[i + j].strip().split()
+                    if maybe_name:
+                        fields["name"] = maybe_name[0]
+                        break
             break
 
-    date_pattern = re.compile(r"\b(\d{2}\.\d{2}\.\d{2,4})\b")
+    # 📅 Дата
     for line in lines:
-        m = date_pattern.search(line)
+        m = re.search(r"\d{2}\.\d{2}\.\d{4}", line)
         if m:
-            fields["date"] = m.group(1)
+            fields["date"] = m.group(0)
             break
 
-    time_pattern = re.compile(r"\b\d{1,2}:\d{2}\b")
-    times: List[str] = []
+    # ⏰ Время (ищем 2 первых)
+    time_pattern = re.compile(r"\d{1,2}[:.]\d{2}")
+    def fix_ocr_time_garbage(text: str) -> str:
+        return (
+            text.replace('о', '0')
+                .replace('O', '0')
+                .replace('l', '1')
+                .replace('I', '1')
+                .replace('i', '1')
+        )
+
     for line in lines:
-        times.extend(time_pattern.findall(line))
-    if times:
-        fields["start"] = times[0]
-    if len(times) > 1:
-        fields["end"] = times[1]
-
-    bc_pattern = re.compile(r"б[цc]\s*[\"«]?([^\"»]+)[\"»]?(.*)", re.IGNORECASE)
-    for idx, line in enumerate(lines):
-        m = bc_pattern.search(line)
-        if m:
-            fields["bz_raw"] = m.group(1).strip()
-            rest = m.group(2).strip(" ,")
-            if rest:
-                fields["room_raw"] = rest
-            elif idx + 1 < len(lines):
-                fields["room_raw"] = lines[idx + 1].strip()
+        fixed_line = fix_ocr_time_garbage(line)
+        found = time_pattern.findall(fixed_line)
+        if len(found) >= 2:
+            fields["start"], fields["end"] = found[:2]
             break
+        elif len(found) == 1 and not fields["start"]:
+            fields["start"] = found[0]
+
+
+
+    # 🏢 БЦ
+    if not fields["bz_raw"]:
+        all_bz = list(rooms_by_bz.keys())
+        for line in lines:
+            match = fuzzy_best_match(line, all_bz, threshold=0.6)
+            if match:
+                fields["bz_raw"] = match
+                break
+
+    # 🚪 Переговорка
+    if fields["bz_raw"] and not fields["room_raw"]:
+        candidates = rooms_by_bz[fields["bz_raw"]]
+        for line in lines:
+            match = fuzzy_best_match(line, candidates, threshold=0.5)
+            if match:
+                fields["room_raw"] = match
+                break
+
+
+    logging.debug("[OCR] Parsed name: %s", fields['name'])
+    logging.debug("[OCR] Parsed date: %s", fields['date'])
+    logging.debug("[OCR] Parsed start: %s, end: %s", fields['start'], fields['end'])
+    logging.debug("[OCR] Raw BZ: %s, raw room: %s", fields['bz_raw'], fields['room_raw'])
 
     return fields
+
 
 
 def _fuzzy_match(value: str, choices: List[str], threshold: float) -> Optional[str]:
@@ -268,44 +378,40 @@ def _room_token_ratio(room: str, candidate: str) -> float:
     return len(tokens_room & tokens_cand) / len(tokens_room)
 
 
-def validate_with_rooms(fields: Dict[str, str], rooms: Dict[str, List[str]]) -> Dict[str, str]:
-    """Validate and normalize BC and room using rooms dictionary."""
-    result = {
-        "name": fields.get("name", ""),
-        "date": fields.get("date", ""),
-        "start": fields.get("start", ""),
-        "end": fields.get("end", ""),
-        "bz": "",
-        "room": "",
+from difflib import SequenceMatcher
+
+def best_match(target, candidates):
+    def score(a, b):
+        return SequenceMatcher(None, a.lower(), b.lower()).ratio()
+    return max(candidates, key=lambda c: score(target, c), default=None)
+
+def validate_with_rooms(fields, rooms):
+    bz_raw = fields["bz_raw"]
+    room_raw = fields["room_raw"]
+    matched_bz = None
+    matched_room = None
+
+    for bz in rooms:
+        if SequenceMatcher(None, bz_raw.lower(), bz.lower()).ratio() > 0.6:
+            matched_bz = bz
+            break
+
+    if matched_bz:
+        room_list = rooms[matched_bz]
+        matched_room = best_match(room_raw, room_list)
+
+    logging.debug("[OCR] Final matched BZ: %s", matched_bz)
+    logging.debug("[OCR] Final matched Room: %s", matched_room)
+
+    return {
+        "name": fields["name"],
+        "date": fields["date"],
+        "start": fields["start"],
+        "end": fields["end"],
+        "bz": matched_bz or "",
+        "room": matched_room or ""
     }
 
-    raw_bz = fields.get("bz_raw", "")
-    if raw_bz:
-        match = _fuzzy_match(raw_bz, list(rooms.keys()), 0.8)
-        if match:
-            result["bz"] = match
-    if not result["bz"]:
-        logging.warning("[OCR] Business center not matched: %s", raw_bz)
-
-    raw_room = fields.get("room_raw", "")
-    if result["bz"] and raw_room:
-        best_room = None
-        best_ratio = 0.0
-        for cand in rooms[result["bz"]]:
-            ratio = _room_token_ratio(raw_room, cand)
-            if ratio > best_ratio:
-                best_ratio = ratio
-                best_room = cand
-        if best_room and best_ratio >= 0.5:
-            logging.debug(
-                "[OCR] Fuzzy room match '%s' -> '%s' (%.2f)", raw_room, best_room, best_ratio
-            )
-            result["room"] = best_room
-        else:
-            logging.warning(
-                "[OCR] Room '%s' not matched in BZ '%s'", raw_room, result["bz"]
-            )
-    return result
 
 
 def update_gui_fields(data: Dict[str, str], ctx: UIContext) -> None:
@@ -349,12 +455,15 @@ def on_clipboard_button_click(ctx: UIContext) -> None:
 
     def worker():
         lines = run_ocr(img)
-        logging.debug("[OCR] Lines: %s", lines)
+        print("[DEBUG] OCR lines:", lines)
         parsed = parse_fields(lines)
+        print("[DEBUG] Parsed fields:", parsed)
         validated = validate_with_rooms(parsed, rooms_by_bz)
+        print("[DEBUG] Validated fields:", validated)
         return validated
 
     def on_finish(result_error):
+        print("[DEBUG] on_finish called with:", result_error)
         result, error = result_error
         if error:
             logging.error("[OCR] Pipeline failed: %s", error)
