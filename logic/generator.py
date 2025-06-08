@@ -13,9 +13,10 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QMessageBox,
     QToolButton,
-    QCompleter,
 )
-from PySide6.QtCore import QDate, QStringListModel
+from PySide6.QtCore import QDate, Qt
+
+from logic.room_filter import FilteringComboBox
 
 from logic.app_state import UIContext
 from constants import rooms_by_bz
@@ -56,6 +57,7 @@ def add_field(label: str, name: str, ctx: UIContext, clear: bool = False):
     if clear:
         btn = QToolButton()
         btn.setText("✖")
+        btn.setFocusPolicy(Qt.NoFocus)
         btn.clicked.connect(edit.clear)
         hl.addWidget(btn)
     ctx.fields[name] = edit
@@ -80,19 +82,12 @@ def add_room_field(label: str, name: str, bz_name: str, ctx: UIContext):
     container = QWidget()
     hl = QHBoxLayout(container)
     lbl = QLabel(label)
-    combo = QComboBox()
-    combo.setEditable(True)
-    completer = QCompleter()
-    combo.setCompleter(completer)
-    model = QStringListModel()
-    completer.setModel(model)
+    combo = FilteringComboBox()
 
     def update_rooms():
         bz = ctx.fields.get(bz_name).currentText() if bz_name in ctx.fields else ''
         rooms = rooms_by_bz.get(bz, [])
-        model.setStringList(rooms)
-        combo.clear()
-        combo.addItems(rooms)
+        combo.set_items(rooms)
 
     if bz_name in ctx.fields:
         ctx.fields[bz_name].currentTextChanged.connect(update_rooms)
@@ -102,6 +97,7 @@ def add_room_field(label: str, name: str, bz_name: str, ctx: UIContext):
     hl.addWidget(combo)
     btn = QToolButton()
     btn.setText("✖")
+    btn.setFocusPolicy(Qt.NoFocus)
     btn.clicked.connect(lambda: combo.setEditText(""))
     hl.addWidget(btn)
     ctx.fields[name] = combo
@@ -138,12 +134,14 @@ def add_time_range(start_name: str, end_name: str, ctx: UIContext):
     hl.addWidget(start_combo)
     btn_clear_start = QToolButton()
     btn_clear_start.setText("✖")
+    btn_clear_start.setFocusPolicy(Qt.NoFocus)
     btn_clear_start.clicked.connect(lambda: start_combo.setCurrentIndex(-1))
     hl.addWidget(btn_clear_start)
     hl.addWidget(QLabel("Конец:"))
     hl.addWidget(end_combo)
     btn_clear_end = QToolButton()
     btn_clear_end.setText("✖")
+    btn_clear_end.setFocusPolicy(Qt.NoFocus)
     btn_clear_end.clicked.connect(lambda: end_combo.setCurrentIndex(-1))
     hl.addWidget(btn_clear_end)
     ctx.fields[start_name] = start_combo
