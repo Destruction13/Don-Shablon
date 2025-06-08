@@ -63,12 +63,13 @@ class MainWindow(QMainWindow):
         for w in [
             generate_btn,
             self.asya_btn,
-            self.asya_mode_btn,
+        buttons = [
             music_btn,
             trans_btn,
             cv_btn,
-        ]:
-        self.main_layout.addWidget(copy_btn)
+        ]
+        for btn in buttons:
+            action_row.addWidget(btn)
     def on_theme_changed(self, name):
         self.ctx.current_theme_name = name
         self.update_background()
