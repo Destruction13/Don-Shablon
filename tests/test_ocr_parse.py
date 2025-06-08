@@ -21,6 +21,8 @@ qt_core = types.ModuleType('PySide6.QtCore')
 qt_core.QDate = object
 qt_core.QRunnable = object
 qt_core.QObject = object
+qt_core.QMetaObject = types.SimpleNamespace(invokeMethod=lambda obj, fn, type=None: fn())
+qt_core.Qt = types.SimpleNamespace(QueuedConnection=0)
 
 class Signal:
     def __init__(self, *args, **kwargs):
