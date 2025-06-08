@@ -60,10 +60,12 @@ class FilteringComboBox(QComboBox):
         self._completer.setFilterMode(Qt.MatchContains)
         self._completer.setCompletionMode(QCompleter.PopupCompletion)
         self.setCompleter(self._completer)
+        self._popup = self._completer.popup()
         self.lineEdit().textEdited.connect(self._on_text_edited)
         self.lineEdit().installEventFilter(self)
-        # listen on the combo box itself so Tab from the popup is handled
+        # listen on the combo box and popup so Tab from any focus widget is handled
         self.installEventFilter(self)
+        self._popup.installEventFilter(self)
 
     def set_items(self, items: list[str]):
         """Populate the combo box with a new list of rooms."""
@@ -79,6 +81,7 @@ class FilteringComboBox(QComboBox):
         self._model.setStringList(filtered)
         if text and filtered:
             self._completer.complete()
+            self.lineEdit().setFocus()
 
     def accept_first(self):
         """Fill the edit with the first filtered item if available."""
@@ -93,7 +96,7 @@ class FilteringComboBox(QComboBox):
 
     def eventFilter(self, obj, event):
         target = self.lineEdit()
-        if obj in (self, target) and event.type() == QEvent.KeyPress:
+        if obj in (self, target, getattr(self, "_popup", None)) and event.type() == QEvent.KeyPress:
             if event.key() in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Tab):
                 self.accept_first()
                 return True
