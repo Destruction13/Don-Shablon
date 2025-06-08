@@ -56,6 +56,7 @@ easyocr_stub = types.ModuleType('easyocr')
 easyocr_stub.Reader = object
 sys.modules.setdefault('easyocr', easyocr_stub)
 
+import logging
 from logic.ocr_paddle import parse_fields, validate_with_rooms
 
 rooms = {"БЦ Морозов": ["1.Кофе", "1.Чай"]}
@@ -81,4 +82,17 @@ def test_room_fuzzy_matching():
     rooms_map = {"БЦ Аврора": ["2B.Гостиная дядюшки Скруджа"]}
     validated = validate_with_rooms(fields, rooms_map, fuzzy_threshold=0.6)
     assert validated["room"] == "2B.Гостиная дядюшки Скруджа"
+
+
+def test_prefix_strip_logging(caplog):
+    fields = {"bz_raw": "БЦ Морозов", "room_raw": "6.Гекзаметр"}
+    rooms_map = {"БЦ Морозов": ["6.Гекзаметр", "5.Точка"]}
+    with caplog.at_level(logging.DEBUG):
+        validated = validate_with_rooms(fields, rooms_map, fuzzy_threshold=0.6)
+    assert validated["room"] == "6.Гекзаметр"
+    logs = "\n".join(caplog.messages)
+    assert "Raw room value: '6.Гекзаметр'" in logs
+    assert "Room value after prefix strip: 'Гекзаметр'" in logs
+    assert "top3=" in logs
+    assert "Final matched Room: 6.Гекзаметр" in logs
 

@@ -570,10 +570,17 @@ _CYR_TO_LAT = str.maketrans({
 
 def _normalize_room(text: str) -> str:
     """Prepare room text for fuzzy matching."""
-    text = text.translate(_CYR_TO_LAT)
+    # convert look-alike latin characters to cyrillic for better matching
+    text = normalize_russian(text)
     text = text.lower()
-    text = re.sub(r"[^a-z0-9]+", "", text)
+    # keep both latin and cyrillic letters as well as digits
+    text = re.sub(r"[^a-zа-я0-9]+", "", text)
     return text
+
+
+def _strip_prefix_for_match(text: str) -> str:
+    """Remove leading "<digit>[letter]." prefixes used for floor indexes."""
+    return re.sub(r"^[1-9][A-ZА-Яа-я]?\.", "", text).strip()
 
 
 from difflib import SequenceMatcher
@@ -595,6 +602,10 @@ def validate_with_rooms(
     bz_raw = fields.get("bz_raw", "")
     room_raw = fields.get("room_raw", "")
 
+    logging.debug("[OCR] Raw room value: '%s'", room_raw)
+    room_for_match = _strip_prefix_for_match(room_raw)
+    logging.debug("[OCR] Room value after prefix strip: '%s'", room_for_match)
+
     matched_bz = None
     for bz in rooms:
         if SequenceMatcher(None, bz_raw.lower(), bz.lower()).ratio() >= fuzzy_threshold:
@@ -610,7 +621,7 @@ def validate_with_rooms(
 
         if room_raw:
             matches = process.extract(
-                room_raw,
+                room_for_match,
                 candidates,
                 processor=_normalize_room,
                 scorer=fuzz.ratio,
@@ -643,7 +654,7 @@ def validate_with_rooms(
             best = None
             best_score = 0.0
             for cand in candidates:
-                ratio = _room_token_ratio(room_raw, cand)
+                ratio = _room_token_ratio(room_for_match, cand)
                 if ratio > best_score:
                     best_score = ratio
                     best = cand
@@ -651,7 +662,7 @@ def validate_with_rooms(
                 matched_room = best
             else:
                 if room_raw:
-                    parts = room_raw.split('.')
+                    parts = room_for_match.split('.')
                     last_part = parts[-1] if parts else ""
                     words = last_part.split()
                     if words:
