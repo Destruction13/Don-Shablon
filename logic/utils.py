@@ -6,7 +6,7 @@ import logging
 import pygame
 from PySide6.QtWidgets import QMessageBox, QApplication
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtCore import QRunnable, QThreadPool, Slot, QMetaObject, Qt
+from PySide6.QtCore import QRunnable, QThreadPool, Slot, QTimer
 import logging
 
 from logic.app_state import UIContext
@@ -47,10 +47,10 @@ class _Task(QRunnable):
         except Exception as e:
             error = e
         logging.debug("[POOL] Task done")
-        QMetaObject.invokeMethod(
+        QTimer.singleShot(
+            0,
             QApplication.instance(),
             lambda r=result, e=error: self.callback((r, e)),
-            Qt.QueuedConnection,
         )
 
 
