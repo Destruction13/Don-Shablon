@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QMessageBox,
     QToolButton,
+    QGroupBox,
 )
 from PySide6.QtCore import QDate, Qt
 
@@ -55,11 +56,7 @@ def add_field(label: str, name: str, ctx: UIContext, clear: bool = False):
     hl.addWidget(lbl)
     hl.addWidget(edit)
     if clear:
-        btn = QToolButton()
-        btn.setText("✖")
-        btn.setFocusPolicy(Qt.NoFocus)
-        btn.clicked.connect(edit.clear)
-        hl.addWidget(btn)
+        edit.setClearButtonEnabled(True)
     ctx.fields[name] = edit
     ctx.fields_layout.addWidget(container)
     if name == "link":
@@ -95,11 +92,7 @@ def add_room_field(label: str, name: str, bz_name: str, ctx: UIContext):
 
     hl.addWidget(lbl)
     hl.addWidget(combo)
-    btn = QToolButton()
-    btn.setText("✖")
-    btn.setFocusPolicy(Qt.NoFocus)
-    btn.clicked.connect(lambda: combo.setEditText(""))
-    hl.addWidget(btn)
+    combo.lineEdit().setClearButtonEnabled(True)
     ctx.fields[name] = combo
     ctx.fields_layout.addWidget(container)
 
@@ -107,7 +100,7 @@ def add_room_field(label: str, name: str, bz_name: str, ctx: UIContext):
 def add_date(name: str, ctx: UIContext):
     container = QWidget()
     hl = QHBoxLayout(container)
-    lbl = QLabel("Дата:")
+    lbl = QLabel("📅 Дата:")
     date_edit = ClickableDateEdit()
     date_edit.setCalendarPopup(True)
     date_edit.setDisplayFormat("dd.MM.yyyy")
@@ -119,7 +112,8 @@ def add_date(name: str, ctx: UIContext):
 
 
 def add_time_range(start_name: str, end_name: str, ctx: UIContext):
-    container = QWidget()
+    box = QGroupBox("🕒 Время")
+    container = QWidget(box)
     hl = QHBoxLayout(container)
     start_combo = QComboBox()
     end_combo = QComboBox()
@@ -132,21 +126,14 @@ def add_time_range(start_name: str, end_name: str, ctx: UIContext):
     )
     hl.addWidget(QLabel("Начало:"))
     hl.addWidget(start_combo)
-    btn_clear_start = QToolButton()
-    btn_clear_start.setText("✖")
-    btn_clear_start.setFocusPolicy(Qt.NoFocus)
-    btn_clear_start.clicked.connect(lambda: start_combo.setCurrentIndex(-1))
-    hl.addWidget(btn_clear_start)
+    start_combo.lineEdit().setClearButtonEnabled(True)
     hl.addWidget(QLabel("Конец:"))
     hl.addWidget(end_combo)
-    btn_clear_end = QToolButton()
-    btn_clear_end.setText("✖")
-    btn_clear_end.setFocusPolicy(Qt.NoFocus)
-    btn_clear_end.clicked.connect(lambda: end_combo.setCurrentIndex(-1))
-    hl.addWidget(btn_clear_end)
+    end_combo.lineEdit().setClearButtonEnabled(True)
     ctx.fields[start_name] = start_combo
     ctx.fields[end_name] = end_combo
-    ctx.fields_layout.addWidget(container)
+    box.setLayout(hl)
+    ctx.fields_layout.addWidget(box)
 
 
 def update_end_times(start: str, end_combo: QComboBox, all_slots: list[str]):
@@ -162,33 +149,33 @@ def update_fields(ctx: UIContext):
     typ = ctx.type_combo.currentText()
 
     if typ == "Актуализация":
-        add_field("Имя:", "name", ctx)
-        add_field("Ссылка:", "link", ctx, clear=True)
+        add_field("👨 Имя:", "name", ctx)
+        add_field("🔗 Ссылка:", "link", ctx, clear=True)
         add_date("datetime", ctx)
         add_time_range("start_time", "end_time", ctx)
-        add_combo("БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
-        add_room_field("Переговорка:", "room", "bz", ctx)
+        add_combo("🏢 БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
+        add_room_field("📍 Переговорка:", "room", "bz", ctx)
         add_combo("Тип встречи:", "regular", ["Обычная", "Регулярная"], ctx)
     elif typ == "Обмен":
-        add_field("Имя:", "name", ctx)
-        add_field("Ссылка:", "link", ctx, clear=True)
+        add_field("👨 Имя:", "name", ctx)
+        add_field("🔗 Ссылка:", "link", ctx, clear=True)
         add_date("datetime", ctx)
         add_time_range("start_time", "end_time", ctx)
-        add_combo("БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
-        add_room_field("Его переговорка:", "his_room", "bz", ctx)
-        add_room_field("Твоя переговорка:", "my_room", "bz", ctx)
+        add_combo("🏢 БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
+        add_room_field("📍 Его переговорка:", "his_room", "bz", ctx)
+        add_room_field("📍 Твоя переговорка:", "my_room", "bz", ctx)
         add_combo("Тип встречи:", "regular", ["Обычная", "Регулярная"], ctx)
     elif typ == "Разовая встреча":
-        add_field("Имя:", "name", ctx)
-        add_field("Ссылка:", "link", ctx, clear=True)
-        add_field("Название встречи:", "meeting_name", ctx)
-        add_field("Продолжительность:", "duration", ctx)
+        add_field("👨 Имя:", "name", ctx)
+        add_field("🔗 Ссылка:", "link", ctx, clear=True)
+        add_field("🏷 Название встречи:", "meeting_name", ctx)
+        add_field("⏱ Продолжительность:", "duration", ctx)
         add_date("datetime", ctx)
         add_time_range("start_time", "end_time", ctx)
         add_field("Ссылка пересечения 1:", "conflict1", ctx)
         add_field("Ссылка пересечения 2:", "conflict2", ctx)
         add_field("Ссылка пересечения 3:", "conflict3", ctx)
-        add_field("Имя заказчика:", "client_name", ctx)
+        add_field("👤 Имя заказчика:", "client_name", ctx)
 
 
 def on_link_change(ctx: UIContext):

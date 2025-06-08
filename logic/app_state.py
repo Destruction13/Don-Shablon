@@ -27,6 +27,7 @@ class UIContext:
         self.current_theme_name = list(THEMES.keys())[0]
         self.theme = None  # type: Theme | None
         self.hover_buttons: list = []
+        self.button_effect = "glow"
         self.bg_pixmap = None
         self.bg_path = None
         # OCR settings
@@ -42,6 +43,7 @@ class UIContext:
         for btn in self.hover_buttons:
             try:
                 btn.setup_theme(theme.button_base_style(), theme.button_bg)
+                btn.set_effect_mode(self.button_effect)
             except Exception:
                 pass
 
@@ -50,4 +52,14 @@ class UIContext:
         self.hover_buttons.append(btn)
         if self.theme:
             btn.setup_theme(self.theme.button_base_style(), self.theme.button_bg)
+            btn.set_effect_mode(self.button_effect)
+
+    def apply_button_effect(self, effect: str) -> None:
+        """Set hover animation effect and update all buttons."""
+        self.button_effect = effect
+        for btn in self.hover_buttons:
+            try:
+                btn.set_effect_mode(effect)
+            except Exception:
+                pass
 

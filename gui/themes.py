@@ -38,6 +38,10 @@ class Theme:
             border-radius: 6px;
             padding: 5px;
         }}
+        QPushButton:checked {{
+            background-color: {self.accent};
+            color: {self.button_text};
+        }}
         QPushButton:pressed {{
             border-color: {self.accent_hover};
         }}
