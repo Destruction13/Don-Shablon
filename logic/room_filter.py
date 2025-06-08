@@ -50,7 +50,9 @@ class FilteringComboBox(QComboBox):
         super().__init__(parent)
         self.setEditable(True)
         # Keep focus in the line edit so Tab doesn't jump to the next widget
-        self.lineEdit().setTabChangesFocus(False)
+        line_edit = self.lineEdit()
+        if hasattr(line_edit, "setTabChangesFocus"):
+            line_edit.setTabChangesFocus(False)
         self._all_items: list[str] = []
         self._model = QStringListModel()
         self._completer = QCompleter(self._model, self)
