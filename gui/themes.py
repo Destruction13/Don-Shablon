@@ -42,6 +42,10 @@ class Theme:
             background-color: {self.accent};
             color: {self.button_text};
         }}
+        QPushButton:checked {{
+            background-color: {self.accent};
+            color: {self.button_text};
+        }}
         QPushButton:pressed {{
             border-color: {self.accent_hover};
         }}

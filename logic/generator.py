@@ -14,43 +14,30 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QToolButton,
     QGroupBox,
-)
-from PySide6.QtCore import QDate, Qt
+        edit.setClearButtonEnabled(True)
 
-from logic.room_filter import FilteringComboBox
-
-from logic.app_state import UIContext
-from constants import rooms_by_bz
-from logic.utils import format_date_ru, parse_yandex_calendar_url
-
-
-class ClickableDateEdit(QDateEdit):
-    """Date edit that opens the calendar when focused or clicked."""
-
-    def mousePressEvent(self, event):
-        super().mousePressEvent(event)
-        self.setCalendarPopup(True)
-        if self.calendarWidget():
-            self.calendarWidget().show()
-
-    def focusInEvent(self, event):
-        super().focusInEvent(event)
-        self.setCalendarPopup(True)
-        if self.calendarWidget():
-            self.calendarWidget().show()
-
-
-def clear_layout(layout: QVBoxLayout):
-    while layout.count():
-        item = layout.takeAt(0)
-        widget = item.widget()
-        if widget:
-            widget.deleteLater()
-
-
-def add_field(label: str, name: str, ctx: UIContext, clear: bool = False):
-    container = QWidget()
-    hl = QHBoxLayout(container)
+    combo.lineEdit().setClearButtonEnabled(True)
+    lbl = QLabel("📅 Дата:")
+    box = QGroupBox("🕒 Время")
+    container = QWidget(box)
+    start_combo.lineEdit().setClearButtonEnabled(True)
+    end_combo.lineEdit().setClearButtonEnabled(True)
+    box.setLayout(hl)
+    ctx.fields_layout.addWidget(box)
+        add_field("👨 Имя:", "name", ctx)
+        add_field("🔗 Ссылка:", "link", ctx, clear=True)
+        add_combo("🏢 БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
+        add_room_field("📍 Переговорка:", "room", "bz", ctx)
+        add_field("👨 Имя:", "name", ctx)
+        add_field("🔗 Ссылка:", "link", ctx, clear=True)
+        add_combo("🏢 БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
+        add_room_field("📍 Его переговорка:", "his_room", "bz", ctx)
+        add_room_field("📍 Твоя переговорка:", "my_room", "bz", ctx)
+        add_field("👨 Имя:", "name", ctx)
+        add_field("🔗 Ссылка:", "link", ctx, clear=True)
+        add_field("🏷 Название встречи:", "meeting_name", ctx)
+        add_field("⏱ Продолжительность:", "duration", ctx)
+        add_field("👤 Имя заказчика:", "client_name", ctx)
     lbl = QLabel(label)
     edit = QLineEdit()
     hl.addWidget(lbl)

@@ -43,9 +43,17 @@ class MainWindow(QMainWindow):
         music_btn.clicked.connect(lambda: toggle_music(music_btn, ctx))
         ctx.register_button(music_btn)
         header.addWidget(music_btn)
-        self.settings_btn = QToolButton()
-        self.settings_btn.setText("⚙")
-        self.settings_btn.clicked.connect(self.show_settings_dialog)
+        copy_btn = HoverButton("📄 Скопировать")
+        trans_btn = HoverButton("🌏 Перевести")
+        cv_btn.setToolTip("Распознать текст из буфера")
+        for w in [generate_btn, self.asya_btn, self.asya_mode_btn]:
+        self.main_layout.addWidget(cv_btn)
+
+        text_controls = QHBoxLayout()
+        text_controls.addStretch()
+        text_controls.addWidget(trans_btn)
+        text_controls.addWidget(copy_btn)
+        self.main_layout.addLayout(text_controls)
         header.addWidget(self.settings_btn)
         self.main_layout.addLayout(header)
 

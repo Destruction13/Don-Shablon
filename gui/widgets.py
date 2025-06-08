@@ -16,7 +16,39 @@ class HoverButton(QPushButton):
         self._ripple_timer = QTimer(self)
         self._ripple_timer.setSingleShot(True)
         self._ripple_pos = QPoint(0, 0)
-        self.setMouseTracking(True)
+    def set_effect_mode(self, mode: str) -> None:
+        self._effect_mode = mode
+
+    def mousePressEvent(self, event):
+        if self._effect_mode == "ripple":
+            self._update_gradient(event.pos())
+            try:
+                self._ripple_timer.timeout.disconnect()
+            except Exception:
+                pass
+            self._ripple_timer.timeout.connect(
+                lambda: self.setStyleSheet(f"{self._base_style}background-color: {self._base_color};")
+            )
+            self._ripple_timer.start(300)
+        super().mousePressEvent(event)
+
+        if self._effect_mode == "glow":
+            cx = pos.x() / max(1, self.width())
+            cy = pos.y() / max(1, self.height())
+            grad = (
+                f"qradialgradient(cx:{cx:.2f}, cy:{cy:.2f}, radius:1, stop:0 {self._highlight}, stop:1 {self._base_color})"
+            )
+        elif self._effect_mode == "slide":
+            x = pos.x() / max(1, self.width())
+            grad = (
+                f"qlineargradient(x1:{x:.2f}, y1:0, x2:{x+0.001:.2f}, y2:1, stop:0 {self._highlight}, stop:1 {self._base_color})"
+            )
+        else:
+            cx = pos.x() / max(1, self.width())
+            cy = pos.y() / max(1, self.height())
+            grad = (
+                f"qradialgradient(cx:{cx:.2f}, cy:{cy:.2f}, radius:1, stop:0 {self._highlight}, stop:1 {self._base_color})"
+            )
 
     def setup_theme(self, base_style: str, base_color: str, highlight: str = "rgba(255,255,255,0.3)") -> None:
         """Apply base style from theme."""
