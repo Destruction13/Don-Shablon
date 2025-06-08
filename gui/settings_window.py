@@ -1,8 +1,12 @@
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QComboBox, QWidget
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QComboBox,
+    QWidget,
 )
-from gui.widgets import HoverButton
+from PySide6.QtWidgets import QPushButton
 from gui.themes import THEMES
 
 from logic.app_state import UIContext
@@ -41,21 +45,7 @@ class SettingsDialog(QDialog):
         theme_row.addWidget(self.theme_combo)
         self.settings_layout.addLayout(theme_row)
 
-        # hover effect selector
-        effect_row = QHBoxLayout()
-        effect_row.addWidget(QLabel("Анимация кнопок:"))
-        self.effect_combo = QComboBox()
-        self.effect_combo.addItems(["glow", "slide", "ripple"])
-        self.effect_combo.setCurrentText(ctx.button_effect)
-        self.effect_combo.currentTextChanged.connect(self._on_effect_changed)
-        effect_row.addWidget(self.effect_combo)
-        self.settings_layout.addLayout(effect_row)
-
-
-    def _on_effect_changed(self, name: str) -> None:
-        self.ctx.apply_button_effect(name)
-        # hover effect selector
-        effect_row = QHBoxLayout()
+        ok_btn = QPushButton("OK")
         effect_row.addWidget(QLabel("Анимация кнопок:"))
         self.effect_combo = QComboBox()
         self.effect_combo.addItems(["glow", "slide", "ripple"])

@@ -32,29 +32,10 @@ class UIContext:
         }
         self.current_theme_name = list(THEMES.keys())[0]
         self.theme: "Theme | None" = None
-        self.hover_buttons: list = []
-        self.button_effect = "glow"
-                btn.set_effect_mode(self.button_effect)
-            btn.setup_theme(
-                self.theme.button_base_style(),
-                self.theme.button_bg,
-            )
-
-    def apply_button_effect(self, effect: str) -> None:
-        """Set hover animation effect and update all buttons."""
-        self.button_effect = effect
-        for btn in self.hover_buttons:
-            try:
-                btn.set_effect_mode(effect)
-            except Exception:
-                pass
-        self.bg_pixmap = None
-        self.bg_path = None
-        # OCR settings
-        self.ocr_mode = "CPU"  # or "GPU"
-
-    def apply_theme(self) -> None:
-        """Apply current theme to the QApplication and registered buttons."""
+        """Compatibility stub when hover effects are disabled."""
+        return
+        """Compatibility stub when hover effects are disabled."""
+        return
         if not self.app:
             return
         qss, theme = build_styles(self.current_theme_name)

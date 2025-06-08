@@ -1,6 +1,13 @@
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QTextEdit,
-    QComboBox, QMessageBox, QToolButton
+    QMainWindow,
+    QWidget,
+    QLabel,
+    QVBoxLayout,
+    QHBoxLayout,
+    QTextEdit,
+    QComboBox,
+    QMessageBox,
+    QToolButton,
 )
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
@@ -8,7 +15,7 @@ import os
 import pygame
 
 from logic.app_state import UIContext
-from gui.widgets import HoverButton
+from PySide6.QtWidgets import QPushButton
 from logic.generator import update_fields, generate_message, on_link_change
 from logic.utils import toggle_music, copy_generated_text, translate_to_english
 
@@ -39,30 +46,32 @@ class MainWindow(QMainWindow):
 
         header = QHBoxLayout()
         header.addStretch()
-        music_btn = HoverButton("🎵")
+        music_btn = QPushButton("🎵")
         music_btn.clicked.connect(lambda: toggle_music(music_btn, ctx))
-        ctx.register_button(music_btn)
         header.addWidget(music_btn)
-        copy_btn = HoverButton("📄 Скопировать")
-        trans_btn = HoverButton("🌏 Перевести")
-        cv_btn.setToolTip("Распознать текст из буфера")
-        for w in [generate_btn, self.asya_btn, self.asya_mode_btn]:
-        self.main_layout.addWidget(cv_btn)
+        generate_btn = QPushButton("Сгенерировать")
+        self.asya_btn = QPushButton("ЛС")
+        self.asya_mode_btn = QPushButton("Ася +")
+        self.asya_mode_btn.toggled.connect(lambda val: setattr(ctx, "asya_mode", val))
+        copy_btn = QPushButton("📄 Скопировать")
+        trans_btn = QPushButton("🌏 Перевести")
+        cv_btn = QPushButton("📋 Из буфера")
 
-        text_controls = QHBoxLayout()
-        text_controls.addStretch()
-        text_controls.addWidget(trans_btn)
-        text_controls.addWidget(copy_btn)
-        self.main_layout.addLayout(text_controls)
-        header.addWidget(self.settings_btn)
-        self.main_layout.addLayout(header)
+            self.bg_label.setPixmap(
+                pix.scaled(
+                    self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation
+                )
+            )
+            QDialog,
+            QVBoxLayout,
+            QHBoxLayout,
+            QLabel,
+            QLineEdit,
+            QRadioButton,
 
-        # meeting type selector
-        self.type_combo = QComboBox()
-        self.type_combo.addItems(["Актуализация", "Обмен", "Разовая встреча"])
-        self.main_layout.addWidget(self.type_combo)
-        ctx.type_combo = self.type_combo
-        self.type_combo.currentTextChanged.connect(lambda _: update_fields(ctx))
+        ok_btn = QPushButton("OK")
+
+
 
         # fields frame
         self.fields_widget = QWidget()

@@ -1,7 +1,8 @@
 """Пример переключения тем с динамическим эффектом на кнопках."""
+
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QLabel, QWidget, QComboBox
 
-from gui.widgets import HoverButton
+from PySide6.QtWidgets import QPushButton
 from gui.themes import THEMES
 from logic.app_state import UIContext
 
@@ -20,10 +21,8 @@ def main():
     combo.addItems(THEMES.keys())
     layout.addWidget(combo)
 
-    btn = HoverButton("Кнопка")
+    btn = QPushButton("Кнопка")
     layout.addWidget(btn)
-
-    ctx.register_button(btn)
 
     def change(name):
         ctx.current_theme_name = name
