@@ -86,7 +86,10 @@ class MainWindow(QMainWindow):
         ctx.register_button(generate_btn)
         self.asya_btn = HoverButton("ЛС")
         self.asya_btn.setCheckable(True)
-        self.asya_btn.toggled.connect(self.toggle_ls)
+
+                    self.size(),
+                    Qt.KeepAspectRatioByExpanding,
+                    Qt.SmoothTransformation,
         ctx.register_button(self.asya_btn)
         self.asya_mode_btn = HoverButton("Ася +")
         self.asya_mode_btn.setCheckable(True)
