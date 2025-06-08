@@ -25,4 +25,6 @@ class UIContext:
         self.current_theme_name = "Светлая"
         self.bg_pixmap = None
         self.bg_path = None
+        # OCR settings
+        self.ocr_mode = "CPU"  # or "GPU"
 

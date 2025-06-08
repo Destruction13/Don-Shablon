@@ -4,6 +4,15 @@ import logging
 from logic.app_state import UIContext
 from gui.main_window import MainWindow
 import logging
+import torch
+import platform
+import sys
+
+print("Python:", sys.version)
+print("CUDA доступен:", torch.cuda.is_available())
+print("PyTorch:", torch.__version__)
+print("OS:", platform.system())
+
 
 logging.getLogger().setLevel(logging.DEBUG)
 logging.basicConfig(

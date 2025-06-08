@@ -23,7 +23,7 @@ def recognize_from_clipboard(ctx: UIContext) -> None:
         QMessageBox.critical(ctx.window, "Ошибка", "Буфер обмена не содержит изображение.")
         return
 
-    lines = run_ocr(img)
+    lines = run_ocr(img, use_gpu=ctx.ocr_mode == "GPU")
     parsed, scores = parse_fields(lines, return_scores=True)
 
     need_fallback = not parsed.get("name") or scores.get("name", 1.0) < 0.5
