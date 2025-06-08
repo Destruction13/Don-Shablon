@@ -141,6 +141,7 @@ def translate_to_english(ctx: UIContext):
             raise Exception(f"HTTP {response.status_code}: {response.text}")
         return response.json()["translations"][0]["text"]
 
+    @Slot(object)
     def show_result(result_error):
         result, error = result_error
         logging.debug("[DEEPL] show_result error=%s", error)
