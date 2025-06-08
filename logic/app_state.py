@@ -1,5 +1,7 @@
 from PySide6.QtWidgets import QApplication
 
+from gui.themes import build_styles, THEMES, Theme
+
 class UIContext:
     """Centralized storage for UI state and widgets."""
     def __init__(self):
@@ -22,9 +24,30 @@ class UIContext:
             "playing": False,
             "paused": False,
         }
-        self.current_theme_name = "Светлая"
+        self.current_theme_name = list(THEMES.keys())[0]
+        self.theme = None  # type: Theme | None
+        self.hover_buttons: list = []
         self.bg_pixmap = None
         self.bg_path = None
         # OCR settings
         self.ocr_mode = "CPU"  # or "GPU"
+
+    def apply_theme(self) -> None:
+        """Apply current theme to the QApplication and registered buttons."""
+        if not self.app:
+            return
+        qss, theme = build_styles(self.current_theme_name)
+        self.theme = theme
+        self.app.setStyleSheet(qss)
+        for btn in self.hover_buttons:
+            try:
+                btn.setup_theme(theme.button_base_style(), theme.button_bg)
+            except Exception:
+                pass
+
+    def register_button(self, btn) -> None:
+        """Register a HoverButton for theme updates."""
+        self.hover_buttons.append(btn)
+        if self.theme:
+            btn.setup_theme(self.theme.button_base_style(), self.theme.button_bg)
 

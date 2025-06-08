@@ -1,7 +1,9 @@
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QComboBox, QPushButton, QWidget
+    QComboBox, QWidget
 )
+from gui.widgets import HoverButton
+from gui.themes import THEMES
 
 from logic.app_state import UIContext
 
@@ -29,9 +31,24 @@ class SettingsDialog(QDialog):
         row.addWidget(self.ocr_mode_combo)
         self.settings_layout.addLayout(row)
 
-        ok_btn = QPushButton("OK")
+        # theme selector
+        theme_row = QHBoxLayout()
+        theme_row.addWidget(QLabel("Тема:"))
+        self.theme_combo = QComboBox()
+        self.theme_combo.addItems(THEMES.keys())
+        self.theme_combo.setCurrentText(ctx.current_theme_name)
+        self.theme_combo.currentTextChanged.connect(self._on_theme_changed)
+        theme_row.addWidget(self.theme_combo)
+        self.settings_layout.addLayout(theme_row)
+
+        ok_btn = HoverButton("OK")
+        ctx.register_button(ok_btn)
         ok_btn.clicked.connect(self.accept)
         main_layout.addWidget(ok_btn)
 
     def _on_mode_changed(self, mode: str) -> None:
         self.ctx.ocr_mode = mode
+
+    def _on_theme_changed(self, name: str) -> None:
+        self.ctx.current_theme_name = name
+        self.ctx.apply_theme()

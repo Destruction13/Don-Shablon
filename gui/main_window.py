@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton,
-    QTextEdit, QComboBox, QMessageBox, QToolButton
+    QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QTextEdit,
+    QComboBox, QMessageBox, QToolButton
 )
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
@@ -8,6 +8,7 @@ import os
 import pygame
 
 from logic.app_state import UIContext
+from gui.widgets import HoverButton
 from logic.generator import update_fields, generate_message, on_link_change
 from logic.utils import toggle_music, copy_generated_text, translate_to_english
 
@@ -37,11 +38,6 @@ class MainWindow(QMainWindow):
         self.main_layout = QVBoxLayout(central)
 
         header = QHBoxLayout()
-        # theme selector (placeholder)
-        self.theme_combo = QComboBox()
-        self.theme_combo.addItems(["Светлая", "Тёмная"])
-        self.theme_combo.currentTextChanged.connect(self.on_theme_changed)
-        header.addWidget(self.theme_combo)
         header.addStretch()
         self.settings_btn = QToolButton()
         self.settings_btn.setText("⚙")
@@ -64,22 +60,29 @@ class MainWindow(QMainWindow):
 
         # buttons
         action_row = QHBoxLayout()
-        generate_btn = QPushButton("Сгенерировать")
+        generate_btn = HoverButton("Сгенерировать")
         generate_btn.clicked.connect(lambda: generate_message(ctx))
-        self.asya_btn = QPushButton("ЛС")
+        ctx.register_button(generate_btn)
+        self.asya_btn = HoverButton("ЛС")
         self.asya_btn.setCheckable(True)
         self.asya_btn.toggled.connect(self.toggle_ls)
-        self.asya_mode_btn = QPushButton("Ася +")
+        ctx.register_button(self.asya_btn)
+        self.asya_mode_btn = HoverButton("Ася +")
         self.asya_mode_btn.setCheckable(True)
         self.asya_mode_btn.toggled.connect(lambda val: setattr(ctx, 'asya_mode', val))
-        copy_btn = QPushButton("Скопировать текст")
+        ctx.register_button(self.asya_mode_btn)
+        copy_btn = HoverButton("Скопировать текст")
         copy_btn.clicked.connect(lambda: copy_generated_text(ctx))
-        music_btn = QPushButton("🎵")
+        ctx.register_button(copy_btn)
+        music_btn = HoverButton("🎵")
         music_btn.clicked.connect(lambda: toggle_music(music_btn, ctx))
-        trans_btn = QPushButton("EN")
+        ctx.register_button(music_btn)
+        trans_btn = HoverButton("EN")
         trans_btn.clicked.connect(lambda: translate_to_english(ctx))
-        cv_btn = QPushButton("📋 Из буфера")
+        ctx.register_button(trans_btn)
+        cv_btn = HoverButton("📋 Из буфера")
         cv_btn.clicked.connect(self.handle_clipboard_ocr)
+        ctx.register_button(cv_btn)
         for w in [generate_btn, self.asya_btn, self.asya_mode_btn, music_btn, trans_btn, cv_btn]:
             action_row.addWidget(w)
         self.main_layout.addLayout(action_row)
@@ -91,10 +94,7 @@ class MainWindow(QMainWindow):
         ctx.output_text = self.output_text
 
         update_fields(ctx)
-
-    def on_theme_changed(self, name):
-        self.ctx.current_theme_name = name
-        self.update_background()
+        ctx.apply_theme()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -111,7 +111,7 @@ class MainWindow(QMainWindow):
 
     def show_ls_dialog(self):
         from PySide6.QtWidgets import (
-            QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QRadioButton, QPushButton
+            QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QRadioButton
         )
         dlg = QDialog(self)
         dlg.setWindowTitle("Личный ассистент")
@@ -126,7 +126,8 @@ class MainWindow(QMainWindow):
         h.addWidget(male)
         h.addWidget(female)
         v.addLayout(h)
-        ok_btn = QPushButton("OK")
+        ok_btn = HoverButton("OK")
+        self.ctx.register_button(ok_btn)
         v.addWidget(ok_btn)
 
         result = {"accepted": False}
