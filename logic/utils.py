@@ -141,28 +141,15 @@ def translate_to_english(ctx: UIContext):
             raise Exception(f"HTTP {response.status_code}: {response.text}")
         return response.json()["translations"][0]["text"]
 
-    def show_result(result, error):
+    def show_result(result_error):
+        result, error = result_error
         logging.debug("[DEEPL] show_result error=%s", error)
         if error:
             QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось перевести текст:\n{error}")
             return
         translated = result
         logging.debug("[DEEPL] Translation completed")
-        dlg = QDialog(ctx.window)
-        dlg.setWindowTitle("Перевод")
-        v = QVBoxLayout(dlg)
-        edit = QTextEdit()
-        edit.setPlainText(translated)
-        v.addWidget(edit)
-        copy_btn = QPushButton("Скопировать")
-        v.addWidget(copy_btn)
-
-        def copy_text():
-            QGuiApplication.clipboard().setText(edit.toPlainText())
-
-        copy_btn.clicked.connect(copy_text)
-
-        dlg.exec()
+        ctx.output_text.setPlainText(translated)
 
     run_in_thread(do_translate, show_result)
 
