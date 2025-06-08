@@ -64,5 +64,7 @@ class FilteringComboBox(QComboBox):
         self.clear()
         self.addItems(filtered)
         self.setEditText(text)
+        if filtered:
+            self.showPopup()
         self.blockSignals(False)
 
