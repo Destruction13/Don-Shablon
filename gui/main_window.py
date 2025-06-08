@@ -9,13 +9,12 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QToolButton,
 )
-from PySide6.QtCore import Qt
 import os
 import pygame
 
 from logic.app_state import UIContext
 from PySide6.QtWidgets import QPushButton
-from logic.generator import update_fields, generate_message, on_link_change
+from logic.generator import update_fields, generate_message
 from logic.utils import toggle_music, copy_generated_text, translate_to_english
 
 
