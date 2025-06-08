@@ -53,6 +53,8 @@ class FilteringComboBox(QComboBox):
         self._model = QStringListModel()
         self._completer = QCompleter(self._model, self)
         self._completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self._completer.setFilterMode(Qt.MatchContains)
+        self._completer.setCompletionMode(QCompleter.PopupCompletion)
         self.setCompleter(self._completer)
         self.lineEdit().textEdited.connect(self._on_text_edited)
 

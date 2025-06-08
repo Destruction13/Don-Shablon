@@ -27,5 +27,9 @@ def test_substring_filter():
     assert filter_rooms(rooms, "Бли") == ["2.Близнецы"]
 
 
+def test_contains_filter_middle():
+    assert filter_rooms(rooms, "лиз") == ["2.Близнецы"]
+
+
 def test_layout_correction():
     assert filter_rooms(rooms, "<kb") == ["2.Близнецы"]
