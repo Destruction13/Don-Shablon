@@ -4,15 +4,9 @@ from datetime import datetime, timedelta
 import requests
 import logging
 import pygame
-from PySide6.QtWidgets import (
-    QMessageBox,
-    QDialog,
-    QVBoxLayout,
-    QTextEdit,
-    QPushButton,
-)
+from PySide6.QtWidgets import QMessageBox, QApplication
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtCore import QRunnable, QThreadPool, QObject, Signal, Slot
+from PySide6.QtCore import QRunnable, QThreadPool, Slot, QMetaObject, Qt
 import logging
 
 from logic.app_state import UIContext
@@ -35,28 +29,11 @@ DEEPL_URL = "https://api-free.deepl.com/v2/translate"
 DEEPL_API_KEY = "69999737-95c3-440e-84bc-96fb8550f83a:fx"
 
 
-class _TaskSignals(QObject):
-    finished = Signal(object)
-
-class _CallbackWrapper(QObject):
-    """Ensure callbacks run in the GUI thread."""
-
-    def __init__(self, callback):
-        super().__init__()
-        self._callback = callback
-
-    @Slot(object)
-    def handle(self, arg):
-        self._callback(arg)
-
-
 class _Task(QRunnable):
     def __init__(self, func, callback):
         super().__init__()
         self.func = func
-        self.signals = _TaskSignals()
-        self._wrapper = _CallbackWrapper(callback)
-        self.signals.finished.connect(self._wrapper.handle)
+        self.callback = callback
 
     @Slot()
     def run(self):
@@ -68,7 +45,13 @@ class _Task(QRunnable):
         except Exception as e:
             error = e
         logging.debug("[POOL] Task done")
-        self.signals.finished.emit((result, error))
+        # Ensure callback runs on the GUI thread
+        QMetaObject.invokeMethod(
+            QApplication.instance(),
+            lambda r=result, e=error: self.callback((r, e)),
+            Qt.QueuedConnection,
+        )
+
 
 def run_in_thread(func, callback):
     logging.debug("[POOL] Submitting task to thread pool")
