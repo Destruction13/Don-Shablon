@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton,
-    QTextEdit, QComboBox, QMessageBox, QToolButton
+    QTextEdit, QComboBox, QMessageBox, QToolButton, QFormLayout
 )
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
@@ -10,6 +10,8 @@ import pygame
 from logic.app_state import UIContext
 from logic.generator import update_fields, generate_message, on_link_change
 from logic.utils import toggle_music, copy_generated_text, translate_to_english
+from gui.themes import apply_theme
+from gui.music_dialog import MusicDialog
 
 
 class MainWindow(QMainWindow):
@@ -27,6 +29,8 @@ class MainWindow(QMainWindow):
             print(f"[ERROR] Failed to init mixer: {e}")
         self.setWindowTitle("Генератор шаблонов встреч")
         self.resize(800, 600)
+        if ctx.app:
+            apply_theme(ctx.app, ctx.current_theme_name)
 
         self.bg_label = QLabel(self)
         self.bg_label.setScaledContents(True)
@@ -37,15 +41,14 @@ class MainWindow(QMainWindow):
         self.main_layout = QVBoxLayout(central)
 
         header = QHBoxLayout()
-        # theme selector (placeholder)
-        self.theme_combo = QComboBox()
-        self.theme_combo.addItems(["Светлая", "Тёмная"])
-        self.theme_combo.currentTextChanged.connect(self.on_theme_changed)
-        header.addWidget(self.theme_combo)
         header.addStretch()
         self.settings_btn = QToolButton()
         self.settings_btn.setText("⚙")
         self.settings_btn.clicked.connect(self.show_settings_dialog)
+        self.music_btn = QToolButton()
+        self.music_btn.setText("🎵")
+        self.music_btn.clicked.connect(self.show_music_dialog)
+        header.addWidget(self.music_btn)
         header.addWidget(self.settings_btn)
         self.main_layout.addLayout(header)
 
@@ -58,7 +61,7 @@ class MainWindow(QMainWindow):
 
         # fields frame
         self.fields_widget = QWidget()
-        self.fields_layout = QVBoxLayout(self.fields_widget)
+        self.fields_layout = QFormLayout(self.fields_widget)
         self.main_layout.addWidget(self.fields_widget)
         ctx.fields_layout = self.fields_layout
 
@@ -66,28 +69,43 @@ class MainWindow(QMainWindow):
         action_row = QHBoxLayout()
         generate_btn = QPushButton("Сгенерировать")
         generate_btn.clicked.connect(lambda: generate_message(ctx))
+        action_row.addWidget(generate_btn)
+        self.main_layout.addLayout(action_row)
+
+        clipboard_row = QHBoxLayout()
+        cv_btn = QPushButton("📥 Из буфера")
+        cv_btn.clicked.connect(self.handle_clipboard_ocr)
+        clipboard_row.addWidget(cv_btn)
+        clipboard_row.addStretch()
+        self.main_layout.addLayout(clipboard_row)
+
         self.asya_btn = QPushButton("ЛС")
+        self.asya_btn.setObjectName("lsButton")
         self.asya_btn.setCheckable(True)
         self.asya_btn.toggled.connect(self.toggle_ls)
-        self.asya_mode_btn = QPushButton("Ася +")
+        self.asya_mode_btn = QPushButton("Ася+")
+        self.asya_mode_btn.setObjectName("asyaButton")
         self.asya_mode_btn.setCheckable(True)
         self.asya_mode_btn.toggled.connect(lambda val: setattr(ctx, 'asya_mode', val))
-        copy_btn = QPushButton("Скопировать текст")
-        copy_btn.clicked.connect(lambda: copy_generated_text(ctx))
-        music_btn = QPushButton("🎵")
-        music_btn.clicked.connect(lambda: toggle_music(music_btn, ctx))
-        trans_btn = QPushButton("EN")
-        trans_btn.clicked.connect(lambda: translate_to_english(ctx))
-        cv_btn = QPushButton("📋 Из буфера")
-        cv_btn.clicked.connect(self.handle_clipboard_ocr)
-        for w in [generate_btn, self.asya_btn, self.asya_mode_btn, music_btn, trans_btn, cv_btn]:
-            action_row.addWidget(w)
-        self.main_layout.addLayout(action_row)
-        self.main_layout.addWidget(copy_btn)
+        ctx.btn_ls = self.asya_btn
+        ctx.btn_asya_plus = self.asya_mode_btn
 
-        # output
+        self.copy_btn = QToolButton()
+        self.copy_btn.setText("📋")
+        self.copy_btn.setToolTip("Скопировать текст")
+        self.copy_btn.clicked.connect(lambda: copy_generated_text(ctx))
+        self.trans_btn = QPushButton("🌐 EN")
+        self.trans_btn.clicked.connect(lambda: translate_to_english(ctx))
+
+        output_container = QVBoxLayout()
+        top_controls = QHBoxLayout()
+        top_controls.addStretch()
+        top_controls.addWidget(self.copy_btn)
+        top_controls.addWidget(self.trans_btn)
+        output_container.addLayout(top_controls)
         self.output_text = QTextEdit()
-        self.main_layout.addWidget(self.output_text)
+        output_container.addWidget(self.output_text)
+        self.main_layout.addLayout(output_container)
         ctx.output_text = self.output_text
 
         update_fields(ctx)
@@ -160,6 +178,10 @@ class MainWindow(QMainWindow):
     def show_settings_dialog(self):
         from gui.settings_window import SettingsDialog
         dlg = SettingsDialog(self.ctx, self)
+        dlg.exec()
+
+    def show_music_dialog(self):
+        dlg = MusicDialog(self.ctx, self)
         dlg.exec()
 
 
