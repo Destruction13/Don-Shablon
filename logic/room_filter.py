@@ -1,5 +1,6 @@
 # Filtering utilities and combo box widget for meeting rooms
-from PySide6.QtWidgets import QComboBox
+from PySide6.QtWidgets import QComboBox, QCompleter
+from PySide6.QtCore import QStringListModel, Qt
 
 
 # Mapping from English keyboard layout to Russian
@@ -43,32 +44,30 @@ def filter_rooms(all_rooms: list[str], query: str) -> list[str]:
 
 
 class FilteringComboBox(QComboBox):
-    """QComboBox with custom filtering logic for meeting rooms."""
+    """QComboBox with non-blocking autocompletion based on custom filtering."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setEditable(True)
         self._all_items: list[str] = []
+        self._model = QStringListModel()
+        self._completer = QCompleter(self._model, self)
+        self._completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.setCompleter(self._completer)
         self.lineEdit().textEdited.connect(self._on_text_edited)
 
     def set_items(self, items: list[str]):
+        """Populate the combo box with a new list of rooms."""
         self._all_items = list(items)
-        text = self.lineEdit().text()
-        self._apply_filter(text, show_popup=False)
-        if not text and self._all_items:
+        self.clear()
+        self.addItems(self._all_items)
+        self._model.setStringList(self._all_items)
+        if self._all_items:
             self.setCurrentIndex(0)
 
     def _on_text_edited(self, text: str):
-        self._apply_filter(text)
-
-    def _apply_filter(self, text: str, show_popup: bool = True):
         filtered = filter_rooms(self._all_items, text)
-        self.blockSignals(True)
-        self.clear()
-        self.addItems(filtered)
-        self.setEditText(text)
-        if show_popup and text and filtered:
-            self.showPopup()
-            self.lineEdit().setFocus()
-        self.blockSignals(False)
+        self._model.setStringList(filtered)
+        if text and filtered:
+            self._completer.complete()
 
