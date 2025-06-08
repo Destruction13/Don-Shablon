@@ -217,7 +217,7 @@ def run_ocr(image: Image.Image, *, ignore_threshold: float = SCORE_IGNORE_THRESH
     reader = _init_ocr()
     image = image.resize((image.width * 2, image.height * 2), Image.LANCZOS)
     result = reader.readtext(np.array(image))
-    logging.debug("[OCR] RAW EasyOCR result: %s", result)
+    # logging.debug("[OCR] RAW EasyOCR result: %s", result)
 
     lines: List[Dict] = []
     for bbox, text, score in result:
@@ -573,6 +573,10 @@ _OCR_ROOM_FIX = str.maketrans({
     "Ц": "L", "ц": "l",
 })
 
+def clean_room_for_matching(text: str) -> str:
+    text = re.sub(r"\s*\d+\s*этаж.*", "", text, flags=re.IGNORECASE)  # Убираем этаж и мест
+    return text.strip()
+
 
 def _normalize_room(text: str) -> str:
     """Prepare room text for fuzzy matching."""
@@ -605,6 +609,7 @@ def best_match(target, candidates):
         return SequenceMatcher(None, a.lower(), b.lower()).ratio()
     return max(candidates, key=lambda c: score(target, c), default=None)
 
+
 def validate_with_rooms(
     fields: Dict[str, str],
     rooms: Dict[str, List[str]],
@@ -618,7 +623,7 @@ def validate_with_rooms(
     room_raw = fields.get("room_raw", "")
 
     logging.debug("[OCR] Raw room value: '%s'", room_raw)
-    room_for_match = _strip_prefix_for_match(room_raw)
+    room_for_match = clean_room_for_matching(_strip_prefix_for_match(room_raw))
     logging.debug("[OCR] Room value after prefix strip: '%s'", room_for_match)
 
     matched_bz = None
