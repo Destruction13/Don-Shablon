@@ -9,7 +9,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QToolButton,
 )
-from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 import os
 import pygame
@@ -36,9 +35,6 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Генератор шаблонов встреч")
         self.resize(800, 600)
 
-        self.bg_label = QLabel(self)
-        self.bg_label.setScaledContents(True)
-        self.bg_label.lower()
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -79,25 +75,6 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.fields_widget)
         ctx.fields_layout = self.fields_layout
 
-        # buttons
-        action_row = QHBoxLayout()
-        generate_btn = HoverButton("Сгенерировать")
-        generate_btn.clicked.connect(lambda: generate_message(ctx))
-        ctx.register_button(generate_btn)
-        self.asya_btn = HoverButton("ЛС")
-        self.asya_btn.setCheckable(True)
-
-                    self.size(),
-                    Qt.KeepAspectRatioByExpanding,
-                    Qt.SmoothTransformation,
-        ctx.register_button(self.asya_btn)
-        self.asya_mode_btn = HoverButton("Ася +")
-        self.asya_mode_btn.setCheckable(True)
-        self.asya_mode_btn.toggled.connect(lambda val: setattr(ctx, 'asya_mode', val))
-        ctx.register_button(self.asya_mode_btn)
-        copy_btn = HoverButton("📄 Скопировать")
-        copy_btn.clicked.connect(lambda: copy_generated_text(ctx))
-        ctx.register_button(copy_btn)
         trans_btn = HoverButton("🌏 Перевести")
         trans_btn.clicked.connect(lambda: translate_to_english(ctx))
         ctx.register_button(trans_btn)

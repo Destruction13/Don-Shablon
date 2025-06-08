@@ -34,8 +34,6 @@ class UIContext:
         self.theme: "Theme | None" = None
         """Compatibility stub when hover effects are disabled."""
         return
-        """Compatibility stub when hover effects are disabled."""
-        return
         if not self.app:
             return
         qss, theme = build_styles(self.current_theme_name)
