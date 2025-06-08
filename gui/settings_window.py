@@ -4,6 +4,7 @@ from PySide6.QtWidgets import (
 )
 
 from logic.app_state import UIContext
+from gui.themes import THEME_QSS, apply_theme
 
 
 class SettingsDialog(QDialog):
@@ -29,9 +30,25 @@ class SettingsDialog(QDialog):
         row.addWidget(self.ocr_mode_combo)
         self.settings_layout.addLayout(row)
 
+        # theme selector
+        row_theme = QHBoxLayout()
+        row_theme.addWidget(QLabel("Тема:"))
+        self.theme_combo = QComboBox()
+        self.theme_combo.addItem("Стандартная")
+        self.theme_combo.addItems(list(THEME_QSS.keys()))
+        self.theme_combo.setCurrentText(ctx.current_theme_name)
+        self.theme_combo.currentTextChanged.connect(self._on_theme_changed)
+        row_theme.addWidget(self.theme_combo)
+        self.settings_layout.addLayout(row_theme)
+
         ok_btn = QPushButton("OK")
         ok_btn.clicked.connect(self.accept)
         main_layout.addWidget(ok_btn)
 
     def _on_mode_changed(self, mode: str) -> None:
         self.ctx.ocr_mode = mode
+
+    def _on_theme_changed(self, name: str) -> None:
+        self.ctx.current_theme_name = name
+        if self.ctx.app:
+            apply_theme(self.ctx.app, name)
