@@ -1,6 +1,6 @@
 # Filtering utilities and combo box widget for meeting rooms
 from PySide6.QtWidgets import QComboBox, QCompleter
-from PySide6.QtCore import QStringListModel, Qt
+from PySide6.QtCore import QStringListModel, Qt, QEvent
 
 
 # Mapping from English keyboard layout to Russian
@@ -57,6 +57,7 @@ class FilteringComboBox(QComboBox):
         self._completer.setCompletionMode(QCompleter.PopupCompletion)
         self.setCompleter(self._completer)
         self.lineEdit().textEdited.connect(self._on_text_edited)
+        self.lineEdit().installEventFilter(self)
 
     def set_items(self, items: list[str]):
         """Populate the combo box with a new list of rooms."""
@@ -72,4 +73,22 @@ class FilteringComboBox(QComboBox):
         self._model.setStringList(filtered)
         if text and filtered:
             self._completer.complete()
+
+    def accept_first(self):
+        """Fill the edit with the first filtered item if available."""
+        filtered = self._model.stringList()
+        if not filtered:
+            return
+        text = filtered[0]
+        self.setEditText(text)
+        idx = self.findText(text)
+        if idx >= 0:
+            self.setCurrentIndex(idx)
+
+    def eventFilter(self, obj, event):
+        if obj is self.lineEdit() and event.type() == QEvent.KeyPress:
+            if event.key() in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Tab):
+                self.accept_first()
+                return True
+        return super().eventFilter(obj, event)
 

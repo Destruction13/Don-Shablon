@@ -12,6 +12,7 @@ sys.modules['PySide6.QtWidgets'] = qt_widgets
 qt_core = types.ModuleType('PySide6.QtCore')
 qt_core.QStringListModel = object
 qt_core.Qt = types.SimpleNamespace(CaseInsensitive=0)
+qt_core.QEvent = object
 sys.modules['PySide6.QtCore'] = qt_core
 
 from logic.room_filter import filter_rooms
