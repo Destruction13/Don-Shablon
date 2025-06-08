@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Генератор шаблонов встреч</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="mainLayout">
+    <item>
+     <layout class="QHBoxLayout" name="headerLayout">
+      <item>
+       <widget class="QComboBox" name="themeComboBox"/>
+      </item>
+      <item>
+       <spacer name="headerSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QToolButton" name="settingsButton">
+        <property name="text">
+         <string>⚙</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QComboBox" name="typeComboBox">
+      <item>
+       <property name="text">
+        <string>Актуализация</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Обмен</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Разовая встреча</string>
+       </property>
+      </item>
+     </widget>
+    </item>
+    <item>
+     <widget class="QWidget" name="fieldsWidget">
+      <layout class="QVBoxLayout" name="fieldsLayout"/>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="actionLayout">
+      <item>
+       <widget class="QPushButton" name="generateButton">
+        <property name="text">
+         <string>Сгенерировать</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="asyaButton">
+        <property name="text">
+         <string>ЛС</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="asyaModeButton">
+        <property name="text">
+         <string>Ася +</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="musicButton">
+        <property name="text">
+         <string>🎵</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="translateButton">
+        <property name="text">
+         <string>EN</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="clipboardButton">
+        <property name="text">
+         <string>📋 Из буфера</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QPushButton" name="copyButton">
+      <property name="text">
+       <string>Скопировать текст</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTextEdit" name="outputText"/>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QLabel" name="bgLabel">
+   <property name="scaledContents">
+    <bool>true</bool>
+   </property>
+  </widget>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <resources/>
+ <connections/>
+</ui>

@@ -56,6 +56,11 @@ easyocr_stub = types.ModuleType('easyocr')
 easyocr_stub.Reader = object
 sys.modules.setdefault('easyocr', easyocr_stub)
 
+# Stub torch to avoid heavy dependency during tests
+torch_stub = types.ModuleType('torch')
+torch_stub.cuda = types.SimpleNamespace(is_available=lambda: False)
+sys.modules.setdefault('torch', torch_stub)
+
 import logging
 from logic.ocr_paddle import parse_fields, validate_with_rooms
 
