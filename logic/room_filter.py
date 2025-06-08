@@ -53,18 +53,22 @@ class FilteringComboBox(QComboBox):
 
     def set_items(self, items: list[str]):
         self._all_items = list(items)
-        self._apply_filter(self.lineEdit().text())
+        text = self.lineEdit().text()
+        self._apply_filter(text, show_popup=False)
+        if not text and self._all_items:
+            self.setCurrentIndex(0)
 
     def _on_text_edited(self, text: str):
         self._apply_filter(text)
 
-    def _apply_filter(self, text: str):
+    def _apply_filter(self, text: str, show_popup: bool = True):
         filtered = filter_rooms(self._all_items, text)
         self.blockSignals(True)
         self.clear()
         self.addItems(filtered)
         self.setEditText(text)
-        if filtered:
+        if show_popup and text and filtered:
             self.showPopup()
+            self.lineEdit().setFocus()
         self.blockSignals(False)
 
