@@ -1,12 +1,5 @@
 from PySide6.QtWidgets import QApplication
 
-from gui.themes import build_styles, THEMES
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from gui.themes import Theme
-
-
 class UIContext:
     """Centralized storage for UI state and widgets."""
 
@@ -30,14 +23,10 @@ class UIContext:
             "playing": False,
             "paused": False,
         }
-        self.current_theme_name = list(THEMES.keys())[0]
-        self.theme: "Theme | None" = None
-        """Compatibility stub when hover effects are disabled."""
+        self.current_theme_name = "default"
+        self.theme = None
+        """Compatibility stub when theming is disabled."""
         return
-        if not self.app:
-            return
-        qss, theme = build_styles(self.current_theme_name)
-        self.theme = theme
         self.app.setStyleSheet(qss)
         for btn in self.hover_buttons:
             try:

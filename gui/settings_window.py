@@ -5,9 +5,8 @@ from PySide6.QtWidgets import (
     QLabel,
     QComboBox,
     QWidget,
+    QPushButton,
 )
-from PySide6.QtWidgets import QPushButton
-from gui.themes import THEMES
 
 from logic.app_state import UIContext
 
@@ -35,20 +34,9 @@ class SettingsDialog(QDialog):
         row.addWidget(self.ocr_mode_combo)
         self.settings_layout.addLayout(row)
 
-        # theme selector
-        theme_row = QHBoxLayout()
-        theme_row.addWidget(QLabel("Тема:"))
-        self.theme_combo = QComboBox()
-        self.theme_combo.addItems(THEMES.keys())
-        self.theme_combo.setCurrentText(ctx.current_theme_name)
-        self.theme_combo.currentTextChanged.connect(self._on_theme_changed)
-        theme_row.addWidget(self.theme_combo)
-        self.settings_layout.addLayout(theme_row)
+
 
         ok_btn = QPushButton("OK")
-        effect_row.addWidget(QLabel("Анимация кнопок:"))
-        self.effect_combo = QComboBox()
-        self.effect_combo.addItems(["glow", "slide", "ripple"])
         self.effect_combo.setCurrentText(ctx.button_effect)
         self.effect_combo.currentTextChanged.connect(self._on_effect_changed)
         effect_row.addWidget(self.effect_combo)

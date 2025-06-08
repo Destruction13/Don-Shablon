@@ -71,7 +71,6 @@ class MainWindow(QMainWindow):
         self.fields_widget = QWidget()
         self.fields_layout = QVBoxLayout(self.fields_widget)
         self.main_layout.addWidget(self.fields_widget)
-        ctx.fields_layout = self.fields_layout
 
         trans_btn.clicked.connect(lambda: translate_to_english(ctx))
         ctx.register_button(trans_btn)
