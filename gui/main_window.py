@@ -1,19 +1,18 @@
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
-    QLabel,
     QVBoxLayout,
     QHBoxLayout,
     QTextEdit,
     QComboBox,
     QMessageBox,
     QToolButton,
+    QPushButton,
 )
 import os
 import pygame
 
 from logic.app_state import UIContext
-from PySide6.QtWidgets import QPushButton
 from logic.generator import update_fields, generate_message
 from logic.utils import toggle_music, copy_generated_text, translate_to_english
 
@@ -43,10 +42,14 @@ class MainWindow(QMainWindow):
         music_btn = QPushButton("🎵")
         music_btn.clicked.connect(lambda: toggle_music(music_btn, ctx))
         header.addWidget(music_btn)
-        generate_btn = QPushButton("Сгенерировать")
+        self.type_combo.currentTextChanged.connect(
+            lambda _unused: update_fields(ctx)
+        )
         self.asya_btn = QPushButton("ЛС")
         self.asya_mode_btn = QPushButton("Ася +")
-        self.asya_mode_btn.toggled.connect(lambda val: setattr(ctx, "asya_mode", val))
+        self.asya_mode_btn.toggled.connect(
+            lambda val: setattr(ctx, "asya_mode", val)
+        )
         copy_btn = QPushButton("📄 Скопировать")
         trans_btn = QPushButton("🌏 Перевести")
         cv_btn = QPushButton("📋 Из буфера")
