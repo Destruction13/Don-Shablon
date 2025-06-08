@@ -97,8 +97,13 @@ class FilteringComboBox(QComboBox):
     def eventFilter(self, obj, event):
         target = self.lineEdit()
         if obj in (self, target, getattr(self, "_popup", None)) and event.type() == QEvent.KeyPress:
-            if event.key() in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Tab):
+            if event.key() == Qt.Key_Tab:
                 self.accept_first()
+                return True
+            if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+                self.accept_first()
+                if getattr(self, "_popup", None).isVisible():
+                    getattr(self, "_popup", None).hide()
                 return True
         return super().eventFilter(obj, event)
 
