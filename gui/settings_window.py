@@ -1,11 +1,6 @@
 from PySide6.QtWidgets import (
-    QDialog,
-    QVBoxLayout,
-    QHBoxLayout,
-    QLabel,
-    QComboBox,
-    QWidget,
-    QPushButton,
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
+    QComboBox, QPushButton, QWidget
 )
 
 from logic.app_state import UIContext
@@ -34,10 +29,7 @@ class SettingsDialog(QDialog):
         row.addWidget(self.ocr_mode_combo)
         self.settings_layout.addLayout(row)
 
-
-
         ok_btn = QPushButton("OK")
-        self.effect_combo.setCurrentText(ctx.button_effect)
         self.effect_combo.currentTextChanged.connect(self._on_effect_changed)
         effect_row.addWidget(self.effect_combo)
         self.settings_layout.addLayout(effect_row)

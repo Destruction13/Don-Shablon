@@ -1,19 +1,22 @@
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
+    QLabel,
     QVBoxLayout,
     QHBoxLayout,
+    QPushButton,
     QTextEdit,
     QComboBox,
     QMessageBox,
     QToolButton,
-    QPushButton,
 )
+from PySide6.QtGui import QPixmap
+from PySide6.QtCore import Qt
 import os
 import pygame
 
 from logic.app_state import UIContext
-from logic.generator import update_fields, generate_message
+from logic.generator import update_fields, generate_message, on_link_change
 from logic.utils import toggle_music, copy_generated_text, translate_to_english
 
 
@@ -33,38 +36,64 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Генератор шаблонов встреч")
         self.resize(800, 600)
 
+        self.bg_label = QLabel(self)
+        self.bg_label.setScaledContents(True)
+        self.bg_label.lower()
+
         central = QWidget()
         self.setCentralWidget(central)
         self.main_layout = QVBoxLayout(central)
 
         header = QHBoxLayout()
+        # theme selector (placeholder)
+        self.theme_combo = QComboBox()
+        self.theme_combo.addItems(["Светлая", "Тёмная"])
+        self.theme_combo.currentTextChanged.connect(self.on_theme_changed)
+        header.addWidget(self.theme_combo)
         header.addStretch()
-        music_btn = QPushButton("🎵")
-        music_btn.clicked.connect(lambda: toggle_music(music_btn, ctx))
-        header.addWidget(music_btn)
-        self.type_combo.currentTextChanged.connect(
-            lambda _unused: update_fields(ctx)
-        )
+        self.type_combo.currentTextChanged.connect(lambda _: update_fields(ctx))
         self.asya_btn = QPushButton("ЛС")
         self.asya_mode_btn = QPushButton("Ася +")
-        self.asya_mode_btn.toggled.connect(
-            lambda val: setattr(ctx, "asya_mode", val)
-        )
-        copy_btn = QPushButton("📄 Скопировать")
-        trans_btn = QPushButton("🌏 Перевести")
+        self.asya_mode_btn.toggled.connect(lambda val: setattr(ctx, "asya_mode", val))
+        copy_btn = QPushButton("Скопировать текст")
+        music_btn = QPushButton("🎵")
+        music_btn.clicked.connect(lambda: toggle_music(music_btn, ctx))
+        trans_btn = QPushButton("EN")
         cv_btn = QPushButton("📋 Из буфера")
+        for w in [
+            generate_btn,
+            self.asya_btn,
+            self.asya_mode_btn,
+            music_btn,
+            trans_btn,
+            cv_btn,
+        ]:
+        self.main_layout.addWidget(copy_btn)
+    def on_theme_changed(self, name):
+        self.ctx.current_theme_name = name
+        self.update_background()
 
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.update_background()
+
+    def update_background(self):
+        if not self.ctx.bg_path:
+            return
+        pix = QPixmap(self.ctx.bg_path)
+        if not pix.isNull():
+            self.bg_label.setGeometry(self.rect())
             self.bg_label.setPixmap(
                 pix.scaled(
                     self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation
                 )
             )
-            QDialog,
-            QVBoxLayout,
-            QHBoxLayout,
+            self.bg_label.lower()
+
             QLabel,
             QLineEdit,
             QRadioButton,
+            QPushButton,
 
         ok_btn = QPushButton("OK")
 

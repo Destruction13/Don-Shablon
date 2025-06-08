@@ -13,67 +13,55 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QMessageBox,
     QToolButton,
-    QGroupBox,
-        edit.setClearButtonEnabled(True)
+        btn = QToolButton()
+        btn.setText("✖")
+        btn.setFocusPolicy(Qt.NoFocus)
+        btn.clicked.connect(edit.clear)
+        hl.addWidget(btn)
 
-    combo.lineEdit().setClearButtonEnabled(True)
-    lbl = QLabel("📅 Дата:")
-    box = QGroupBox("🕒 Время")
-    container = QWidget(box)
-    start_combo.lineEdit().setClearButtonEnabled(True)
-    end_combo.lineEdit().setClearButtonEnabled(True)
-    box.setLayout(hl)
-    ctx.fields_layout.addWidget(box)
-        add_field("👨 Имя:", "name", ctx)
-        add_field("🔗 Ссылка:", "link", ctx, clear=True)
-        add_combo("🏢 БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
-        add_room_field("📍 Переговорка:", "room", "bz", ctx)
-        add_field("👨 Имя:", "name", ctx)
-        add_field("🔗 Ссылка:", "link", ctx, clear=True)
-        add_combo("🏢 БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
-        add_room_field("📍 Его переговорка:", "his_room", "bz", ctx)
-        add_room_field("📍 Твоя переговорка:", "my_room", "bz", ctx)
-        add_field("👨 Имя:", "name", ctx)
-        add_field("🔗 Ссылка:", "link", ctx, clear=True)
-        add_field("🏷 Название встречи:", "meeting_name", ctx)
-        add_field("⏱ Продолжительность:", "duration", ctx)
-        add_field("👤 Имя заказчика:", "client_name", ctx)
-    lbl = QLabel(label)
-    edit = QLineEdit()
-    hl.addWidget(lbl)
-    hl.addWidget(edit)
-    if clear:
-        edit.setClearButtonEnabled(True)
-    ctx.fields[name] = edit
-    ctx.fields_layout.addWidget(container)
-    if name == "link":
-        edit.textChanged.connect(lambda _: on_link_change(ctx))
-
-
-def add_combo(label: str, name: str, values: list[str], ctx: UIContext):
+        bz = ctx.fields.get(bz_name).currentText() if bz_name in ctx.fields else ''
+    btn = QToolButton()
+    btn.setText("✖")
+    btn.setFocusPolicy(Qt.NoFocus)
+    btn.clicked.connect(lambda: combo.setEditText(""))
+    hl.addWidget(btn)
+    lbl = QLabel("Дата:")
     container = QWidget()
-    hl = QHBoxLayout(container)
-    lbl = QLabel(label)
-    combo = QComboBox()
-    combo.addItems(values)
-    hl.addWidget(lbl)
-    hl.addWidget(combo)
-    ctx.fields[name] = combo
+    btn_clear_start = QToolButton()
+    btn_clear_start.setText("✖")
+    btn_clear_start.setFocusPolicy(Qt.NoFocus)
+    btn_clear_start.clicked.connect(lambda: start_combo.setCurrentIndex(-1))
+    hl.addWidget(btn_clear_start)
+    btn_clear_end = QToolButton()
+    btn_clear_end.setText("✖")
+    btn_clear_end.setFocusPolicy(Qt.NoFocus)
+    btn_clear_end.clicked.connect(lambda: end_combo.setCurrentIndex(-1))
+    hl.addWidget(btn_clear_end)
     ctx.fields_layout.addWidget(container)
-
-
-def add_room_field(label: str, name: str, bz_name: str, ctx: UIContext):
-    container = QWidget()
-    hl = QHBoxLayout(container)
-    lbl = QLabel(label)
-    combo = FilteringComboBox()
-
-    def update_rooms():
-        bz = ctx.fields.get(bz_name).currentText() if bz_name in ctx.fields else ""
-        rooms = rooms_by_bz.get(bz, [])
-        combo.set_items(rooms)
-
-    if bz_name in ctx.fields:
+        end_combo.addItems(all_slots[idx + 1:])
+        add_field("Имя:", "name", ctx)
+        add_field("Ссылка:", "link", ctx, clear=True)
+        add_combo("БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
+        add_room_field("Переговорка:", "room", "bz", ctx)
+        add_field("Имя:", "name", ctx)
+        add_field("Ссылка:", "link", ctx, clear=True)
+        add_combo("БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
+        add_room_field("Его переговорка:", "his_room", "bz", ctx)
+        add_room_field("Твоя переговорка:", "my_room", "bz", ctx)
+        add_field("Имя:", "name", ctx)
+        add_field("Ссылка:", "link", ctx, clear=True)
+        add_field("Название встречи:", "meeting_name", ctx)
+        add_field("Продолжительность:", "duration", ctx)
+        add_field("Имя заказчика:", "client_name", ctx)
+    get = lambda name: ctx.fields.get(name).text() if isinstance(ctx.fields.get(name), QLineEdit) else ctx.fields.get(name).currentText() if isinstance(ctx.fields.get(name), QComboBox) else ''
+    if not name or ((typ == "Актуализация" and not get("room")) or (typ == "Обмен" and (not get("his_room") or not get("my_room")))):
+        greeting = f"Привет, {name}! Я {ctx.user_name}, ассистент. Приятно познакомиться!"
+        is_regular = "регулярная встреча" if regular.lower() == "регулярная" else "встреча"
+        share_word = "разово поделиться" if regular.lower() == "регулярная" else "поделиться"
+        is_regular = "регулярная встреча" if regular.lower() == "регулярная" else "встреча"
+        share_word = "разово обменяться" if regular.lower() == "регулярная" else "обменяться"
+            conflict_text = f"У тебя образуется пересечение с этой встречей: {conflict_links[0]}"
+            conflict_text = "У тебя образуются пересечения с несколькими встречами:\n" + lines
         ctx.fields[bz_name].currentTextChanged.connect(update_rooms)
     update_rooms()
 
