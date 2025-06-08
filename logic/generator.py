@@ -13,9 +13,10 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QMessageBox,
     QToolButton,
-    QCompleter,
 )
-from PySide6.QtCore import QDate, QStringListModel
+from PySide6.QtCore import QDate
+
+from logic.room_filter import FilteringComboBox
 
 from logic.app_state import UIContext
 from constants import rooms_by_bz
@@ -80,19 +81,12 @@ def add_room_field(label: str, name: str, bz_name: str, ctx: UIContext):
     container = QWidget()
     hl = QHBoxLayout(container)
     lbl = QLabel(label)
-    combo = QComboBox()
-    combo.setEditable(True)
-    completer = QCompleter()
-    combo.setCompleter(completer)
-    model = QStringListModel()
-    completer.setModel(model)
+    combo = FilteringComboBox()
 
     def update_rooms():
         bz = ctx.fields.get(bz_name).currentText() if bz_name in ctx.fields else ''
         rooms = rooms_by_bz.get(bz, [])
-        model.setStringList(rooms)
-        combo.clear()
-        combo.addItems(rooms)
+        combo.set_items(rooms)
 
     if bz_name in ctx.fields:
         ctx.fields[bz_name].currentTextChanged.connect(update_rooms)
