@@ -1,6 +1,11 @@
 from PySide6.QtWidgets import QApplication
 
-from gui.themes import build_styles, THEMES, Theme
+from gui.themes import build_styles, THEMES
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from gui.themes import Theme
+
 
 class UIContext:
     """Centralized storage for UI state and widgets."""
@@ -25,11 +30,14 @@ class UIContext:
             "paused": False,
         }
         self.current_theme_name = list(THEMES.keys())[0]
-        self.theme = None  # type: Theme | None
+        self.theme: "Theme | None" = None
         self.hover_buttons: list = []
         self.button_effect = "glow"
                 btn.set_effect_mode(self.button_effect)
-            btn.set_effect_mode(self.button_effect)
+            btn.setup_theme(
+                self.theme.button_base_style(),
+                self.theme.button_bg,
+            )
 
     def apply_button_effect(self, effect: str) -> None:
         """Set hover animation effect and update all buttons."""
@@ -39,7 +47,6 @@ class UIContext:
                 btn.set_effect_mode(effect)
             except Exception:
                 pass
-        self.button_effect = "glow"
         self.bg_pixmap = None
         self.bg_path = None
         # OCR settings
