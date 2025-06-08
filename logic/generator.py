@@ -127,6 +127,8 @@ def add_time_range(start_name: str, end_name: str, ctx: UIContext):
     hl = QHBoxLayout(container)
     start_combo = QComboBox()
     end_combo = QComboBox()
+    start_combo.setEditable(True)
+    end_combo.setEditable(True)
     times = [f"{h:02d}:{m:02d}" for h in range(8, 22) for m in (0, 30)]
     start_combo.addItems(times)
     start_combo.currentTextChanged.connect(

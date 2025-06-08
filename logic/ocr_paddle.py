@@ -16,6 +16,9 @@ from pathlib import Path
 from constants import rooms_by_bz
 from logic.app_state import UIContext
 from logic.utils import run_in_thread
+import torch
+print(torch.cuda.is_available())
+
 
 # --- OCR configuration ---
 # Threshold below which OCR results are ignored
