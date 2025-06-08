@@ -43,16 +43,20 @@ from typing import Any
 _ocr_instance: Any = None
 
 
-def _init_ocr():
-    global _ocr_instance
-    if _ocr_instance is None:
-        logging.debug("[OCR] Initializing EasyOCR")
+_ocr_gpu = False
+
+
+def _init_ocr(use_gpu: bool = False):
+    global _ocr_instance, _ocr_gpu
+    if _ocr_instance is None or _ocr_gpu != use_gpu:
+        logging.debug("[OCR] Initializing EasyOCR (GPU=%s)", use_gpu)
         try:
             import easyocr
         except Exception as e:
             logging.error("[OCR] Failed to import EasyOCR: %s", e)
             raise
-        _ocr_instance = easyocr.Reader(['ru'], gpu=False)
+        _ocr_instance = easyocr.Reader(['ru'], gpu=use_gpu)
+        _ocr_gpu = use_gpu
         logging.debug("[OCR] EasyOCR successfully initialized")
 
     return _ocr_instance
@@ -197,7 +201,12 @@ def get_image_from_clipboard() -> Optional[Image.Image]:
     return None
 
 
-def run_ocr(image: Image.Image, *, ignore_threshold: float = SCORE_IGNORE_THRESHOLD) -> List[Dict]:
+def run_ocr(
+    image: Image.Image,
+    *,
+    ignore_threshold: float = SCORE_IGNORE_THRESHOLD,
+    use_gpu: bool = False,
+) -> List[Dict]:
     """Recognize text lines from an image using EasyOCR.
 
     Parameters
@@ -206,6 +215,8 @@ def run_ocr(image: Image.Image, *, ignore_threshold: float = SCORE_IGNORE_THRESH
         Image to process.
     ignore_threshold: float
         Lines with score below this value will be kept but marked as low score.
+    use_gpu: bool
+        Initialize OCR engine with GPU support if True.
 
     Returns
     -------
@@ -214,7 +225,7 @@ def run_ocr(image: Image.Image, *, ignore_threshold: float = SCORE_IGNORE_THRESH
         entries have ``low_score`` set to ``True``.
     """
 
-    reader = _init_ocr()
+    reader = _init_ocr(use_gpu)
     image = image.resize((image.width * 2, image.height * 2), Image.LANCZOS)
     result = reader.readtext(np.array(image))
     # logging.debug("[OCR] RAW EasyOCR result: %s", result)
@@ -797,7 +808,7 @@ def on_clipboard_button_click(ctx: UIContext) -> None:
         return
 
     def worker():
-        lines = run_ocr(img)
+        lines = run_ocr(img, use_gpu=ctx.ocr_mode == "GPU")
         print("[DEBUG] OCR lines:", lines)
         parsed, scores = parse_fields(lines, return_scores=True)
         print("[DEBUG] Parsed fields:", parsed)
@@ -838,7 +849,7 @@ def ocr_pipeline(ctx: UIContext) -> None:
         img = img.convert("RGB")
 
     def do_ocr():
-        return run_ocr(img)
+        return run_ocr(img, use_gpu=ctx.ocr_mode == "GPU")
 
     def on_result(result_error):
         result_tuple, error = result_error

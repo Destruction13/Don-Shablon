@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton,
-    QTextEdit, QComboBox, QMessageBox
+    QTextEdit, QComboBox, QMessageBox, QToolButton
 )
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
@@ -36,11 +36,18 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
         self.main_layout = QVBoxLayout(central)
 
+        header = QHBoxLayout()
         # theme selector (placeholder)
         self.theme_combo = QComboBox()
         self.theme_combo.addItems(["Светлая", "Тёмная"])
         self.theme_combo.currentTextChanged.connect(self.on_theme_changed)
-        self.main_layout.addWidget(self.theme_combo)
+        header.addWidget(self.theme_combo)
+        header.addStretch()
+        self.settings_btn = QToolButton()
+        self.settings_btn.setText("⚙")
+        self.settings_btn.clicked.connect(self.show_settings_dialog)
+        header.addWidget(self.settings_btn)
+        self.main_layout.addLayout(header)
 
         # meeting type selector
         self.type_combo = QComboBox()
@@ -149,5 +156,10 @@ class MainWindow(QMainWindow):
     def handle_clipboard_ocr(self):
         from ocr_unified import recognize_from_clipboard
         recognize_from_clipboard(self.ctx)
+
+    def show_settings_dialog(self):
+        from gui.settings_window import SettingsDialog
+        dlg = SettingsDialog(self.ctx, self)
+        dlg.exec()
 
 
