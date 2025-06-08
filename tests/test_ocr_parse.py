@@ -96,3 +96,15 @@ def test_prefix_strip_logging(caplog):
     assert "top3=" in logs
     assert "Final matched Room: 6.Гекзаметр" in logs
 
+
+def test_ocr_fix_second_pass(caplog):
+    fields = {"bz_raw": "БЦ Морозов", "room_raw": "5.ХМЦ"}
+    rooms_map = {"БЦ Морозов": ["5.XML"]}
+    with caplog.at_level(logging.DEBUG):
+        validated = validate_with_rooms(fields, rooms_map, fuzzy_threshold=0.75)
+    assert validated["room"] == "5.XML"
+    logs = "\n".join(caplog.messages)
+    assert "Room fuzzy pass1" in logs
+    assert "Room fuzzy pass2" in logs
+    assert "Final matched Room: 5.XML" in logs
+

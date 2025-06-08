@@ -567,6 +567,12 @@ _CYR_TO_LAT = str.maketrans({
     "ё": "e", "Ё": "E",
 })
 
+_OCR_ROOM_FIX = str.maketrans({
+    "Х": "X", "х": "x",
+    "М": "M", "м": "m",
+    "Ц": "L", "ц": "l",
+})
+
 
 def _normalize_room(text: str) -> str:
     """Prepare room text for fuzzy matching."""
@@ -576,6 +582,15 @@ def _normalize_room(text: str) -> str:
     # keep both latin and cyrillic letters as well as digits
     text = re.sub(r"[^a-zа-я0-9]+", "", text)
     return text
+
+
+def _fix_ocr_room_chars(text: str) -> str:
+    """Replace common OCR misreads of latin letters as cyrillic."""
+    return text.translate(_OCR_ROOM_FIX)
+
+
+def _normalize_room_with_ocr_fixes(text: str) -> str:
+    return _normalize_room(_fix_ocr_room_chars(text))
 
 
 def _strip_prefix_for_match(text: str) -> str:
@@ -631,22 +646,51 @@ def validate_with_rooms(
             if matches:
                 best_candidate, best_score_raw, _ = matches[0]
                 best_score = best_score_raw / 100
-                log_msg = (
-                    "[OCR] Room fuzzy '%s' -> '%s' (%.2f), top3=%s"
+                logging.debug(
+                    "[OCR] Room fuzzy pass1 '%s' -> '%s' (%.2f), top3=%s",
+                    room_raw,
+                    best_candidate,
+                    best_score,
+                    top3,
                 )
-                logging.debug(log_msg, room_raw, best_candidate, best_score, top3)
                 if best_score >= fuzzy_threshold:
                     matched_room = best_candidate
-                else:
-                    logging.warning(
-                        "[OCR] Room fuzzy score below threshold %.2f for '%s'; top3=%s",
-                        best_score,
-                        room_raw,
-                        top3,
-                    )
             else:
                 logging.debug(
                     "[OCR] Room fuzzy matching produced no candidates for '%s'",
+                    room_raw,
+                )
+
+        if room_raw and not matched_room:
+            matches2 = process.extract(
+                room_for_match,
+                candidates,
+                processor=_normalize_room_with_ocr_fixes,
+                scorer=fuzz.ratio,
+                limit=3,
+            )
+            top3_2 = [(m[0], round(m[1] / 100, 2)) for m in matches2]
+            if matches2:
+                cand2, score_raw2, _ = matches2[0]
+                score2 = score_raw2 / 100
+                logging.debug(
+                    "[OCR] Room fuzzy pass2 '%s' -> '%s' (%.2f), top3=%s",
+                    room_raw,
+                    cand2,
+                    score2,
+                    top3_2,
+                )
+                if score2 >= fuzzy_threshold:
+                    matched_room = cand2
+                else:
+                    logging.warning(
+                        "[OCR] Room fuzzy score below threshold %.2f after OCR fixes; top3=%s",
+                        score2,
+                        top3_2,
+                    )
+            else:
+                logging.debug(
+                    "[OCR] Room fuzzy (OCR fixes) produced no candidates for '%s'",
                     room_raw,
                 )
 
