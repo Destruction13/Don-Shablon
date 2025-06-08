@@ -35,7 +35,6 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Генератор шаблонов встреч")
         self.resize(800, 600)
 
-
         central = QWidget()
         self.setCentralWidget(central)
         self.main_layout = QVBoxLayout(central)
@@ -75,7 +74,6 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.fields_widget)
         ctx.fields_layout = self.fields_layout
 
-        trans_btn = HoverButton("🌏 Перевести")
         trans_btn.clicked.connect(lambda: translate_to_english(ctx))
         ctx.register_button(trans_btn)
         cv_btn = HoverButton("📋 Из буфера")

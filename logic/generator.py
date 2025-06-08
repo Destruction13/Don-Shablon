@@ -69,7 +69,7 @@ def add_room_field(label: str, name: str, bz_name: str, ctx: UIContext):
     combo = FilteringComboBox()
 
     def update_rooms():
-        bz = ctx.fields.get(bz_name).currentText() if bz_name in ctx.fields else ''
+        bz = ctx.fields.get(bz_name).currentText() if bz_name in ctx.fields else ""
         rooms = rooms_by_bz.get(bz, [])
         combo.set_items(rooms)
 
@@ -127,7 +127,7 @@ def update_end_times(start: str, end_combo: QComboBox, all_slots: list[str]):
     if start in all_slots:
         idx = all_slots.index(start)
         end_combo.clear()
-        end_combo.addItems(all_slots[idx + 1:])
+        end_combo.addItems(all_slots[idx + 1 :])
 
 
 def update_fields(ctx: UIContext):
@@ -188,7 +188,15 @@ def on_link_change(ctx: UIContext):
 
 def generate_message(ctx: UIContext):
     typ = ctx.type_combo.currentText()
-    get = lambda name: ctx.fields.get(name).text() if isinstance(ctx.fields.get(name), QLineEdit) else ctx.fields.get(name).currentText() if isinstance(ctx.fields.get(name), QComboBox) else ''
+    get = lambda name: (
+        ctx.fields.get(name).text()
+        if isinstance(ctx.fields.get(name), QLineEdit)
+        else (
+            ctx.fields.get(name).currentText()
+            if isinstance(ctx.fields.get(name), QComboBox)
+            else ""
+        )
+    )
     start = get("start_time")
     end = get("end_time")
     if start and end:
@@ -198,7 +206,10 @@ def generate_message(ctx: UIContext):
     else:
         time_part = ""
     name = get("name")
-    if not name or ((typ == "Актуализация" and not get("room")) or (typ == "Обмен" and (not get("his_room") or not get("my_room")))):
+    if not name or (
+        (typ == "Актуализация" and not get("room"))
+        or (typ == "Обмен" and (not get("his_room") or not get("my_room")))
+    ):
         QMessageBox.warning(ctx.window, "Предупреждение", "Заполните имя и переговорку")
         return
     if "datetime" not in ctx.fields:
@@ -210,7 +221,9 @@ def generate_message(ctx: UIContext):
     link_part = f" ({link})" if link else ""
     greeting = f"Привет, {name}!"
     if ctx.ls_active and ctx.ls_saved:
-        greeting = f"Привет, {name}! Я {ctx.user_name}, ассистент. Приятно познакомиться!"
+        greeting = (
+            f"Привет, {name}! Я {ctx.user_name}, ассистент. Приятно познакомиться!"
+        )
         gender = ctx.user_gender
     elif ctx.asya_mode:
         greeting = f"Привет, {name}! Я Ася, ассистент. Приятно познакомиться!"
@@ -222,8 +235,12 @@ def generate_message(ctx: UIContext):
     if typ == "Актуализация":
         room = get("room")
         regular = get("regular")
-        is_regular = "регулярная встреча" if regular.lower() == "регулярная" else "встреча"
-        share_word = "разово поделиться" if regular.lower() == "регулярная" else "поделиться"
+        is_regular = (
+            "регулярная встреча" if regular.lower() == "регулярная" else "встреча"
+        )
+        share_word = (
+            "разово поделиться" if regular.lower() == "регулярная" else "поделиться"
+        )
         msg = f"""{greeting}
 
 У тебя {formatted}{time_part} состоится {is_regular}{link_part} в переговорной {room}.
@@ -236,8 +253,12 @@ def generate_message(ctx: UIContext):
         his_room = get("his_room")
         my_room = get("my_room")
         regular = get("regular")
-        is_regular = "регулярная встреча" if regular.lower() == "регулярная" else "встреча"
-        share_word = "разово обменяться" if regular.lower() == "регулярная" else "обменяться"
+        is_regular = (
+            "регулярная встреча" if regular.lower() == "регулярная" else "встреча"
+        )
+        share_word = (
+            "разово обменяться" if regular.lower() == "регулярная" else "обменяться"
+        )
         msg = f"""{greeting}
 
 У тебя {formatted}{time_part} состоится {is_regular}{link_part} в переговорной {his_room}.
@@ -257,11 +278,15 @@ def generate_message(ctx: UIContext):
             conflict_text = ""
             plural = False
         elif len(conflict_links) == 1:
-            conflict_text = f"У тебя образуется пересечение с этой встречей: {conflict_links[0]}"
+            conflict_text = (
+                f"У тебя образуется пересечение с этой встречей: {conflict_links[0]}"
+            )
             plural = False
         else:
             lines = "\n".join(f"{i+1}) {c}" for i, c in enumerate(conflict_links))
-            conflict_text = "У тебя образуются пересечения с несколькими встречами:\n" + lines
+            conflict_text = (
+                "У тебя образуются пересечения с несколькими встречами:\n" + lines
+            )
             plural = True
         single_variants = [
             f"Уточни, пожалуйста, получится ли перенести свою встречу и быть на встрече {first_name} в это время?",
