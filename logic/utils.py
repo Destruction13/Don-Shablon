@@ -38,12 +38,25 @@ DEEPL_API_KEY = "69999737-95c3-440e-84bc-96fb8550f83a:fx"
 class _TaskSignals(QObject):
     finished = Signal(object)
 
+class _CallbackWrapper(QObject):
+    """Ensure callbacks run in the GUI thread."""
+
+    def __init__(self, callback):
+        super().__init__()
+        self._callback = callback
+
+    @Slot(object)
+    def handle(self, arg):
+        self._callback(arg)
+
+
 class _Task(QRunnable):
     def __init__(self, func, callback):
         super().__init__()
         self.func = func
         self.signals = _TaskSignals()
-        self.signals.finished.connect(callback)
+        self._wrapper = _CallbackWrapper(callback)
+        self.signals.finished.connect(self._wrapper.handle)
 
     @Slot()
     def run(self):
