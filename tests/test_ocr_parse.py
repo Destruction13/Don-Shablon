@@ -21,6 +21,7 @@ qt_core = types.ModuleType('PySide6.QtCore')
 qt_core.QDate = object
 qt_core.QRunnable = object
 qt_core.QObject = object
+qt_core.QTimer = types.SimpleNamespace(singleShot=lambda ms, obj, fn=None: (fn or obj)())
 
 class Signal:
     def __init__(self, *args, **kwargs):
@@ -50,6 +51,11 @@ class _DummyQThreadPool:
 
 qt_core.QThreadPool = _DummyQThreadPool
 sys.modules.setdefault('PySide6.QtCore', qt_core)
+
+# Stub torch to avoid heavy dependency
+torch_stub = types.ModuleType('torch')
+torch_stub.cuda = types.SimpleNamespace(is_available=lambda: False)
+sys.modules.setdefault('torch', torch_stub)
 
 # Stub easyocr so importing logic.ocr_paddle doesn't try to load heavy packages
 easyocr_stub = types.ModuleType('easyocr')

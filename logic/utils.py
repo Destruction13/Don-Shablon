@@ -4,15 +4,9 @@ from datetime import datetime, timedelta
 import requests
 import logging
 import pygame
-from PySide6.QtWidgets import (
-    QMessageBox,
-    QDialog,
-    QVBoxLayout,
-    QTextEdit,
-    QPushButton,
-)
+from PySide6.QtWidgets import QMessageBox, QApplication
 from PySide6.QtGui import QGuiApplication
-from PySide6.QtCore import QRunnable, QThreadPool, QObject, Signal, Slot
+from PySide6.QtCore import QRunnable, QThreadPool, Slot, QTimer
 import logging
 
 from logic.app_state import UIContext
@@ -35,15 +29,13 @@ DEEPL_URL = "https://api-free.deepl.com/v2/translate"
 DEEPL_API_KEY = "69999737-95c3-440e-84bc-96fb8550f83a:fx"
 
 
-class _TaskSignals(QObject):
-    finished = Signal(object)
-
 class _Task(QRunnable):
+    """Simple QRunnable that executes a function in a worker thread."""
+
     def __init__(self, func, callback):
         super().__init__()
         self.func = func
-        self.signals = _TaskSignals()
-        self.signals.finished.connect(callback)
+        self.callback = callback
 
     @Slot()
     def run(self):
@@ -55,12 +47,16 @@ class _Task(QRunnable):
         except Exception as e:
             error = e
         logging.debug("[POOL] Task done")
-        self.signals.finished.emit((result, error))
+        QTimer.singleShot(
+            0,
+            QApplication.instance(),
+            lambda r=result, e=error: self.callback((r, e)),
+        )
+
 
 def run_in_thread(func, callback):
     logging.debug("[POOL] Submitting task to thread pool")
-    task = _Task(func, callback)
-    _threadpool.start(task)
+    _threadpool.start(_Task(func, callback))
 
 
 def toggle_music(button, ctx: UIContext):
@@ -141,28 +137,16 @@ def translate_to_english(ctx: UIContext):
             raise Exception(f"HTTP {response.status_code}: {response.text}")
         return response.json()["translations"][0]["text"]
 
-    def show_result(result, error):
+    @Slot(object)
+    def show_result(result_error):
+        result, error = result_error
         logging.debug("[DEEPL] show_result error=%s", error)
         if error:
             QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось перевести текст:\n{error}")
             return
         translated = result
         logging.debug("[DEEPL] Translation completed")
-        dlg = QDialog(ctx.window)
-        dlg.setWindowTitle("Перевод")
-        v = QVBoxLayout(dlg)
-        edit = QTextEdit()
-        edit.setPlainText(translated)
-        v.addWidget(edit)
-        copy_btn = QPushButton("Скопировать")
-        v.addWidget(copy_btn)
-
-        def copy_text():
-            QGuiApplication.clipboard().setText(edit.toPlainText())
-
-        copy_btn.clicked.connect(copy_text)
-
-        dlg.exec()
+        ctx.output_text.setPlainText(translated)
 
     run_in_thread(do_translate, show_result)
 
