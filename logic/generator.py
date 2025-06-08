@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QToolButton,
 )
-from PySide6.QtCore import QDate
+from PySide6.QtCore import QDate, Qt
 
 from logic.room_filter import FilteringComboBox
 
@@ -57,6 +57,7 @@ def add_field(label: str, name: str, ctx: UIContext, clear: bool = False):
     if clear:
         btn = QToolButton()
         btn.setText("✖")
+        btn.setFocusPolicy(Qt.NoFocus)
         btn.clicked.connect(edit.clear)
         hl.addWidget(btn)
     ctx.fields[name] = edit
@@ -96,6 +97,7 @@ def add_room_field(label: str, name: str, bz_name: str, ctx: UIContext):
     hl.addWidget(combo)
     btn = QToolButton()
     btn.setText("✖")
+    btn.setFocusPolicy(Qt.NoFocus)
     btn.clicked.connect(lambda: combo.setEditText(""))
     hl.addWidget(btn)
     ctx.fields[name] = combo
@@ -132,12 +134,14 @@ def add_time_range(start_name: str, end_name: str, ctx: UIContext):
     hl.addWidget(start_combo)
     btn_clear_start = QToolButton()
     btn_clear_start.setText("✖")
+    btn_clear_start.setFocusPolicy(Qt.NoFocus)
     btn_clear_start.clicked.connect(lambda: start_combo.setCurrentIndex(-1))
     hl.addWidget(btn_clear_start)
     hl.addWidget(QLabel("Конец:"))
     hl.addWidget(end_combo)
     btn_clear_end = QToolButton()
     btn_clear_end.setText("✖")
+    btn_clear_end.setFocusPolicy(Qt.NoFocus)
     btn_clear_end.clicked.connect(lambda: end_combo.setCurrentIndex(-1))
     hl.addWidget(btn_clear_end)
     ctx.fields[start_name] = start_combo

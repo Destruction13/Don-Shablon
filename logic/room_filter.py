@@ -62,6 +62,8 @@ class FilteringComboBox(QComboBox):
         self.setCompleter(self._completer)
         self.lineEdit().textEdited.connect(self._on_text_edited)
         self.lineEdit().installEventFilter(self)
+        # listen on the combo box itself so Tab from the popup is handled
+        self.installEventFilter(self)
 
     def set_items(self, items: list[str]):
         """Populate the combo box with a new list of rooms."""
@@ -90,7 +92,8 @@ class FilteringComboBox(QComboBox):
             self.setCurrentIndex(idx)
 
     def eventFilter(self, obj, event):
-        if obj is self.lineEdit() and event.type() == QEvent.KeyPress:
+        target = self.lineEdit()
+        if obj in (self, target) and event.type() == QEvent.KeyPress:
             if event.key() in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Tab):
                 self.accept_first()
                 return True
