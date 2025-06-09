@@ -32,7 +32,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Генератор шаблонов встреч")
         self.resize(1100, 1000)
         if ctx.app:
-            apply_theme(ctx.app, ctx.current_theme_name)
+            apply_theme(ctx.app, ctx.current_theme_name, ctx)
 
         self.bg_label = QLabel(self)
         self.bg_label.setScaledContents(True)

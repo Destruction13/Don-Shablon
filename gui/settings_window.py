@@ -99,7 +99,7 @@ class SettingsDialog(QDialog):
     def _on_theme_changed(self, name: str) -> None:
         self.ctx.current_theme_name = name
         if self.ctx.app:
-            apply_theme(self.ctx.app, name)
+            apply_theme(self.ctx.app, name, self.ctx)
 
     def _on_effect_changed(self, name: str) -> None:
         self.ctx.animation_effect = name
