@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
 )
 try:
-    from PySide6.QtCore import QDate, Qt, QTime
+    from PySide6.QtCore import QDate, Qt, QTime, QTimer
 except Exception:  # test fallback
     class QDate:
         def __init__(self, *args, **kwargs):
@@ -66,17 +66,25 @@ def label_with_icon(text: str) -> QLabel:
 class ClickableDateEdit(QDateEdit):
     """Date edit that opens the calendar when focused or clicked."""
 
+    def _open_calendar(self):
+        """Open the calendar popup reliably across Qt versions."""
+        self.setCalendarPopup(True)
+
+        def show():
+            cal = self.calendarWidget()
+            if cal:
+                cal.show()
+                cal.setFocus()
+
+        QTimer.singleShot(100, show)
+
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
-        self.setCalendarPopup(True)
-        if self.calendarWidget():
-            self.calendarWidget().show()
+        self._open_calendar()
 
     def focusInEvent(self, event):
         super().focusInEvent(event)
-        self.setCalendarPopup(True)
-        if self.calendarWidget():
-            self.calendarWidget().show()
+        self._open_calendar()
 
 
 class TimeInput(QLineEdit):

@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton,
     QTextEdit, QComboBox, QMessageBox, QToolButton, QFormLayout, QCheckBox,
-    QScrollArea, QSpinBox, QGroupBox
+    QScrollArea, QSpinBox, QGroupBox, QSizePolicy
 )
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
@@ -30,7 +30,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"[ERROR] Failed to init mixer: {e}")
         self.setWindowTitle("Генератор шаблонов встреч")
-        self.resize(800, 600)
+        self.resize(1100, 1000)
         if ctx.app:
             apply_theme(ctx.app, ctx.current_theme_name)
 
@@ -84,11 +84,9 @@ class MainWindow(QMainWindow):
         self.reg_day_combo.addItems([
             "понедельник",
             "вторник",
-            "среду",
+            "среда",
             "четверг",
-            "пятницу",
-            "субботу",
-            "воскресенье",
+            "пятница"
         ])
         self.regular_layout.addRow(QLabel("Количество:"), self.reg_spin)
         self.regular_layout.addRow(QLabel("Период:"), self.reg_period_combo)
@@ -114,22 +112,26 @@ class MainWindow(QMainWindow):
         ctx.fields_layout = self.fields_layout
 
         # buttons
+        clipboard_row = QHBoxLayout()
+        from gui.rainbow_button import RainbowButton
+        cv_btn = RainbowButton("Автозаполнение полей")
+        cv_btn.setObjectName("pasteButton")
+        cv_btn.clicked.connect(self.handle_clipboard_ocr)
+        cv_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        clipboard_row.addWidget(cv_btn)
+        clipboard_row.setContentsMargins(0, 0, 0, 10)
+        self.main_layout.addLayout(clipboard_row)
+        setup_animation(cv_btn, ctx)
+
         action_row = QHBoxLayout()
         generate_btn = QPushButton("Сгенерировать")
         generate_btn.clicked.connect(lambda: generate_message(ctx))
+        generate_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         action_row.addWidget(generate_btn)
         self.main_layout.addLayout(action_row)
         setup_animation(generate_btn, ctx)
 
-        clipboard_row = QHBoxLayout()
-        cv_btn = QPushButton("📥 Из буфера")
-        cv_btn.setObjectName("pasteButton")
-        cv_btn.setFixedHeight(60)
-        cv_btn.clicked.connect(self.handle_clipboard_ocr)
-        clipboard_row.addWidget(cv_btn)
-        clipboard_row.addStretch()
-        self.main_layout.addLayout(clipboard_row)
-        setup_animation(cv_btn, ctx)
+        cv_btn.setFixedHeight(int(generate_btn.sizeHint().height() * 1.5))
 
         self.asya_btn = QPushButton("ЛС")
         self.asya_btn.setObjectName("lsButton")
