@@ -85,7 +85,12 @@ class MainWindow(QMainWindow):
 
         # meeting type selector
         self.type_combo = QComboBox()
-        self.type_combo.addItems(["Актуализация", "Обмен", "Организация встречи"])
+        self.type_combo.addItems([
+            "Актуализация",
+            "Обмен",
+            "Организация встречи",
+            "Другое",
+        ])
         self.main_layout.addWidget(self.type_combo)
         ctx.type_combo = self.type_combo
         self.type_combo.currentTextChanged.connect(lambda _: update_fields(ctx))
@@ -146,6 +151,7 @@ class MainWindow(QMainWindow):
         cv_btn.clicked.connect(self.handle_clipboard_ocr)
         cv_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         clipboard_row.addWidget(cv_btn)
+        self.cv_btn = cv_btn
         clipboard_row.setContentsMargins(0, 0, 0, 10)
         self.main_layout.addLayout(clipboard_row)
         setup_animation(cv_btn, ctx)
@@ -155,6 +161,7 @@ class MainWindow(QMainWindow):
         generate_btn.clicked.connect(lambda: generate_message(ctx))
         generate_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         action_row.addWidget(generate_btn)
+        self.generate_btn = generate_btn
         self.main_layout.addLayout(action_row)
         setup_animation(generate_btn, ctx)
 
@@ -210,6 +217,10 @@ class MainWindow(QMainWindow):
         if not is_org:
             self.regular_group.setVisible(False)
             self.regular_cb.setChecked(False)
+        if hasattr(self, "cv_btn"):
+            self.cv_btn.setVisible(typ != "Другое")
+        if hasattr(self, "generate_btn"):
+            self.generate_btn.setVisible(typ != "Другое")
         lab = self.ctx.labels.get("client_name")
         if lab:
             if is_org:
