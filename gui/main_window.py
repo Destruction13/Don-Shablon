@@ -29,14 +29,14 @@ class MainWindow(QMainWindow):
                 pygame.mixer.music.load(music_path)
         except Exception as e:
             print(f"[ERROR] Failed to init mixer: {e}")
+        self.bg_label = QLabel(self)
+        self.bg_label.setScaledContents(True)
+        self.bg_label.lower()
+
         self.setWindowTitle("Генератор шаблонов встреч")
         self.resize(1100, 1000)
         if ctx.app:
             apply_theme(ctx.app, ctx.current_theme_name, ctx)
-
-        self.bg_label = QLabel(self)
-        self.bg_label.setScaledContents(True)
-        self.bg_label.lower()
 
         central = QWidget()
         self.setCentralWidget(central)
