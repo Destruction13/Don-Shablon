@@ -124,7 +124,7 @@ class MainWindow(QMainWindow):
         clipboard_row = QHBoxLayout()
         cv_btn = QPushButton("📥 Из буфера")
         cv_btn.setObjectName("pasteButton")
-        cv_btn.setFixedHeight(40)
+        cv_btn.setFixedHeight(60)
         cv_btn.clicked.connect(self.handle_clipboard_ocr)
         clipboard_row.addWidget(cv_btn)
         clipboard_row.addStretch()
@@ -168,6 +168,7 @@ class MainWindow(QMainWindow):
         ctx.output_text = self.output_text
 
         update_fields(ctx)
+        self.on_type_changed()
 
     def on_theme_changed(self, name):
         self.ctx.current_theme_name = name

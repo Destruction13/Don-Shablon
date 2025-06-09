@@ -14,8 +14,6 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QMessageBox,
     QCheckBox,
-    QTimeEdit,
-    QAbstractSpinBox,
 )
 try:
     from PySide6.QtCore import QDate, Qt, QTime
@@ -71,27 +69,33 @@ class ClickableDateEdit(QDateEdit):
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
         self.setCalendarPopup(True)
-        self.showCalendarPopup()
+        if self.calendarWidget():
+            self.calendarWidget().show()
 
     def focusInEvent(self, event):
         super().focusInEvent(event)
         self.setCalendarPopup(True)
-        self.showCalendarPopup()
+        if self.calendarWidget():
+            self.calendarWidget().show()
 
 
-class TimeInput(QTimeEdit):
-    """Time input with minute precision and simple text editing."""
+class TimeInput(QLineEdit):
+    """Simple line edit for time with HH:mm format."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setDisplayFormat("HH:mm")
-        self.setTime(QTime(8, 0))
-        self.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        self.setInputMask("00:00")
+        self.setText("08:00")
+
+    def time(self) -> QTime:
+        return QTime.fromString(self.text(), "HH:mm")
+
+    def setTime(self, t: QTime):
+        self.setText(t.toString("HH:mm"))
 
     def focusInEvent(self, event):
         super().focusInEvent(event)
-        if self.lineEdit():
-            self.lineEdit().selectAll()
+        self.selectAll()
 
 
 def clear_layout(layout):
@@ -240,8 +244,8 @@ def add_time_range(start_name: str, end_name: str, ctx: UIContext):
         if et <= st:
             end_edit.setTime(st.addSecs(30 * 60))
 
-    start_edit.timeChanged.connect(lambda *_: on_start_changed())
-    end_edit.timeChanged.connect(lambda *_: on_end_changed())
+    start_edit.editingFinished.connect(on_start_changed)
+    end_edit.editingFinished.connect(on_end_changed)
 
 
 def number_to_words(n: int) -> str:
