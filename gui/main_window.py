@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton,
-    QTextEdit, QComboBox, QMessageBox, QToolButton, QFormLayout
+    QTextEdit, QComboBox, QMessageBox, QToolButton, QFormLayout, QCheckBox,
+    QScrollArea, QSpinBox
 )
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
@@ -61,12 +62,48 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.type_combo)
         ctx.type_combo = self.type_combo
         self.type_combo.currentTextChanged.connect(lambda _: update_fields(ctx))
+        self.type_combo.currentTextChanged.connect(self.on_type_changed)
         setup_animation(self.type_combo, ctx)
 
-        # fields frame
+        # button to add regular meeting block
+        self.regular_btn = QPushButton("Организация регулярной встречи")
+        self.regular_btn.setCheckable(True)
+        self.regular_btn.toggled.connect(self.toggle_regular_fields)
+        setup_animation(self.regular_btn, ctx)
+        self.main_layout.addWidget(self.regular_btn)
+
+        self.regular_widget = QWidget()
+        self.regular_layout = QFormLayout(self.regular_widget)
+        self.reg_spin = QSpinBox()
+        self.reg_spin.setRange(1, 10)
+        self.reg_period_combo = QComboBox()
+        self.reg_period_combo.addItems(["неделю", "месяц"])
+        self.reg_day_combo = QComboBox()
+        self.reg_day_combo.addItems([
+            "понедельник",
+            "вторник",
+            "среду",
+            "четверг",
+            "пятницу",
+            "субботу",
+            "воскресенье",
+        ])
+        self.regular_layout.addRow(QLabel("Количество:"), self.reg_spin)
+        self.regular_layout.addRow(QLabel("Период:"), self.reg_period_combo)
+        self.regular_layout.addRow(QLabel("День недели:"), self.reg_day_combo)
+        self.regular_widget.setVisible(False)
+        self.main_layout.addWidget(self.regular_widget)
+        ctx.regular_count = self.reg_spin
+        ctx.regular_period = self.reg_period_combo
+        ctx.regular_day = self.reg_day_combo
+
+        # fields frame inside scroll area
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
         self.fields_widget = QWidget()
         self.fields_layout = QFormLayout(self.fields_widget)
-        self.main_layout.addWidget(self.fields_widget)
+        self.scroll_area.setWidget(self.fields_widget)
+        self.main_layout.addWidget(self.scroll_area)
         ctx.fields_layout = self.fields_layout
 
         # buttons
@@ -108,6 +145,9 @@ class MainWindow(QMainWindow):
         setup_animation(self.trans_btn, ctx)
 
         output_container = QVBoxLayout()
+        self.auto_copy_cb = QCheckBox("📋 Авто-копирование")
+        self.auto_copy_cb.stateChanged.connect(lambda val: setattr(ctx, "auto_copy_enabled", bool(val)))
+        output_container.addWidget(self.auto_copy_cb)
         top_controls = QHBoxLayout()
         top_controls.addStretch()
         top_controls.addWidget(self.copy_btn)
@@ -123,6 +163,21 @@ class MainWindow(QMainWindow):
     def on_theme_changed(self, name):
         self.ctx.current_theme_name = name
         self.update_background()
+
+    def on_type_changed(self, *_):
+        typ = self.type_combo.currentText()
+        lab = self.ctx.labels.get("client_name")
+        if lab:
+            if typ == "Разовая встреча":
+                lab.setText("🧑\u200d💼 Имя заказчика (в родительном падеже)")
+            else:
+                lab.setText("🧑\u200d💼 Имя заказчика:")
+        lab2 = self.ctx.labels.get("meeting_name")
+        if lab2:
+            if typ == "Разовая встреча":
+                lab2.setText("📝 Встреча:")
+            else:
+                lab2.setText("📝 Название встречи:")
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -193,5 +248,9 @@ class MainWindow(QMainWindow):
     def show_music_dialog(self):
         dlg = MusicDialog(self.ctx, self)
         dlg.exec()
+
+    def toggle_regular_fields(self, checked: bool):
+        self.regular_widget.setVisible(checked)
+        self.ctx.regular_meeting_enabled = checked
 
 

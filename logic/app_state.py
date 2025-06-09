@@ -31,6 +31,14 @@ class UIContext:
         # OCR settings
         self.ocr_mode = "CPU"  # or "GPU"
 
+        # generation helpers
+        self.auto_copy_enabled = False
+        self.labels: dict[str, object] = {}
+        self.regular_meeting_enabled = False
+        self.regular_count = None
+        self.regular_period = None
+        self.regular_day = None
+
         # animation settings
         self.animations_enabled = True
         self.animation_effect = "Glow"
