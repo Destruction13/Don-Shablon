@@ -11,6 +11,7 @@ from logic.app_state import UIContext
 from logic.generator import update_fields, generate_message, on_link_change
 from logic.utils import toggle_music, copy_generated_text, translate_to_english
 from gui.themes import apply_theme
+from gui.animations import setup_animation
 from gui.music_dialog import MusicDialog
 
 
@@ -48,6 +49,8 @@ class MainWindow(QMainWindow):
         self.music_btn = QToolButton()
         self.music_btn.setText("🎵")
         self.music_btn.clicked.connect(self.show_music_dialog)
+        setup_animation(self.settings_btn, ctx)
+        setup_animation(self.music_btn, ctx)
         header.addWidget(self.music_btn)
         header.addWidget(self.settings_btn)
         self.main_layout.addLayout(header)
@@ -58,6 +61,7 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.type_combo)
         ctx.type_combo = self.type_combo
         self.type_combo.currentTextChanged.connect(lambda _: update_fields(ctx))
+        setup_animation(self.type_combo, ctx)
 
         # fields frame
         self.fields_widget = QWidget()
@@ -71,6 +75,7 @@ class MainWindow(QMainWindow):
         generate_btn.clicked.connect(lambda: generate_message(ctx))
         action_row.addWidget(generate_btn)
         self.main_layout.addLayout(action_row)
+        setup_animation(generate_btn, ctx)
 
         clipboard_row = QHBoxLayout()
         cv_btn = QPushButton("📥 Из буфера")
@@ -78,15 +83,18 @@ class MainWindow(QMainWindow):
         clipboard_row.addWidget(cv_btn)
         clipboard_row.addStretch()
         self.main_layout.addLayout(clipboard_row)
+        setup_animation(cv_btn, ctx)
 
         self.asya_btn = QPushButton("ЛС")
         self.asya_btn.setObjectName("lsButton")
         self.asya_btn.setCheckable(True)
         self.asya_btn.toggled.connect(self.toggle_ls)
+        setup_animation(self.asya_btn, ctx)
         self.asya_mode_btn = QPushButton("Ася+")
         self.asya_mode_btn.setObjectName("asyaButton")
         self.asya_mode_btn.setCheckable(True)
         self.asya_mode_btn.toggled.connect(lambda val: setattr(ctx, 'asya_mode', val))
+        setup_animation(self.asya_mode_btn, ctx)
         ctx.btn_ls = self.asya_btn
         ctx.btn_asya_plus = self.asya_mode_btn
 
@@ -96,6 +104,8 @@ class MainWindow(QMainWindow):
         self.copy_btn.clicked.connect(lambda: copy_generated_text(ctx))
         self.trans_btn = QPushButton("🌐 EN")
         self.trans_btn.clicked.connect(lambda: translate_to_english(ctx))
+        setup_animation(self.copy_btn, ctx)
+        setup_animation(self.trans_btn, ctx)
 
         output_container = QVBoxLayout()
         top_controls = QHBoxLayout()

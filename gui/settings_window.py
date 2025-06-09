@@ -1,7 +1,8 @@
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QComboBox, QPushButton, QWidget
+    QComboBox, QPushButton, QWidget, QCheckBox, QSlider
 )
+from PySide6.QtCore import Qt
 
 from logic.app_state import UIContext
 from gui.themes import THEME_QSS, apply_theme
@@ -40,6 +41,32 @@ class SettingsDialog(QDialog):
         self.theme_combo.currentTextChanged.connect(self._on_theme_changed)
         row_theme.addWidget(self.theme_combo)
         self.settings_layout.addLayout(row_theme)
+
+        # animations
+        row_anim_enable = QHBoxLayout()
+        self.anim_checkbox = QCheckBox("Включить анимации")
+        self.anim_checkbox.setChecked(ctx.animations_enabled)
+        self.anim_checkbox.stateChanged.connect(lambda val: setattr(ctx, "animations_enabled", bool(val)))
+        row_anim_enable.addWidget(self.anim_checkbox)
+        self.settings_layout.addLayout(row_anim_enable)
+
+        row_anim_effect = QHBoxLayout()
+        row_anim_effect.addWidget(QLabel("Эффект:"))
+        self.anim_effect_combo = QComboBox()
+        self.anim_effect_combo.addItems(["Glow", "Scale", "Pulse"])
+        self.anim_effect_combo.setCurrentText(ctx.animation_effect)
+        self.anim_effect_combo.currentTextChanged.connect(lambda val: setattr(ctx, "animation_effect", val))
+        row_anim_effect.addWidget(self.anim_effect_combo)
+        self.settings_layout.addLayout(row_anim_effect)
+
+        row_intensity = QHBoxLayout()
+        row_intensity.addWidget(QLabel("Интенсивность:"))
+        self.anim_slider = QSlider(Qt.Horizontal)
+        self.anim_slider.setRange(0, 100)
+        self.anim_slider.setValue(ctx.animation_intensity)
+        self.anim_slider.valueChanged.connect(lambda val: setattr(ctx, "animation_intensity", val))
+        row_intensity.addWidget(self.anim_slider)
+        self.settings_layout.addLayout(row_intensity)
 
         ok_btn = QPushButton("OK")
         ok_btn.clicked.connect(self.accept)
