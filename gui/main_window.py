@@ -84,11 +84,9 @@ class MainWindow(QMainWindow):
         self.reg_day_combo.addItems([
             "понедельник",
             "вторник",
-            "среду",
+            "среда",
             "четверг",
-            "пятницу",
-            "субботу",
-            "воскресенье",
+            "пятница"
         ])
         self.regular_layout.addRow(QLabel("Количество:"), self.reg_spin)
         self.regular_layout.addRow(QLabel("Период:"), self.reg_period_combo)
