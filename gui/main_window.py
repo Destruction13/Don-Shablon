@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton,
     QTextEdit, QComboBox, QMessageBox, QToolButton, QFormLayout, QCheckBox,
-    QScrollArea, QSpinBox
+    QScrollArea, QSpinBox, QGroupBox
 )
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
@@ -58,22 +58,21 @@ class MainWindow(QMainWindow):
 
         # meeting type selector
         self.type_combo = QComboBox()
-        self.type_combo.addItems(["Актуализация", "Обмен", "Разовая встреча"])
+        self.type_combo.addItems(["Актуализация", "Обмен", "Организация встречи"])
         self.main_layout.addWidget(self.type_combo)
         ctx.type_combo = self.type_combo
         self.type_combo.currentTextChanged.connect(lambda _: update_fields(ctx))
         self.type_combo.currentTextChanged.connect(self.on_type_changed)
         setup_animation(self.type_combo, ctx)
 
-        # button to add regular meeting block
-        self.regular_btn = QPushButton("Организация регулярной встречи")
-        self.regular_btn.setCheckable(True)
-        self.regular_btn.toggled.connect(self.toggle_regular_fields)
-        setup_animation(self.regular_btn, ctx)
-        self.main_layout.addWidget(self.regular_btn)
+        # group for regular meeting configuration
+        self.regular_group = QGroupBox("Организация регулярной встречи")
+        self.regular_group.setCheckable(True)
+        self.regular_group.setChecked(False)
+        self.regular_group.toggled.connect(self.toggle_regular_fields)
+        setup_animation(self.regular_group, ctx)
 
-        self.regular_widget = QWidget()
-        self.regular_layout = QFormLayout(self.regular_widget)
+        self.regular_layout = QFormLayout(self.regular_group)
         self.reg_spin = QSpinBox()
         self.reg_spin.setRange(1, 10)
         self.reg_period_combo = QComboBox()
@@ -91,8 +90,8 @@ class MainWindow(QMainWindow):
         self.regular_layout.addRow(QLabel("Количество:"), self.reg_spin)
         self.regular_layout.addRow(QLabel("Период:"), self.reg_period_combo)
         self.regular_layout.addRow(QLabel("День недели:"), self.reg_day_combo)
-        self.regular_widget.setVisible(False)
-        self.main_layout.addWidget(self.regular_widget)
+        self.regular_group.setVisible(False)
+        self.main_layout.addWidget(self.regular_group)
         ctx.regular_count = self.reg_spin
         ctx.regular_period = self.reg_period_combo
         ctx.regular_day = self.reg_day_combo
@@ -166,15 +165,18 @@ class MainWindow(QMainWindow):
 
     def on_type_changed(self, *_):
         typ = self.type_combo.currentText()
+        self.regular_group.setVisible(typ == "Организация встречи")
+        if typ != "Организация встречи":
+            self.regular_group.setChecked(False)
         lab = self.ctx.labels.get("client_name")
         if lab:
-            if typ == "Разовая встреча":
-                lab.setText("🧑\u200d💼 Имя заказчика (в родительном падеже)")
+            if typ == "Организация встречи":
+                lab.setText("🧑\u200d💼 Имя и фамилия заказчика (в род. падеже):")
             else:
                 lab.setText("🧑\u200d💼 Имя заказчика:")
         lab2 = self.ctx.labels.get("meeting_name")
         if lab2:
-            if typ == "Разовая встреча":
+            if typ == "Организация встречи":
                 lab2.setText("📝 Встреча:")
             else:
                 lab2.setText("📝 Название встречи:")
@@ -250,7 +252,6 @@ class MainWindow(QMainWindow):
         dlg.exec()
 
     def toggle_regular_fields(self, checked: bool):
-        self.regular_widget.setVisible(checked)
         self.ctx.regular_meeting_enabled = checked
 
 

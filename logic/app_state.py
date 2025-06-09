@@ -6,6 +6,7 @@ class UIContext:
         self.app: QApplication | None = None
         self.window = None
         self.fields: dict[str, object] = {}
+        self.field_containers: dict[str, object] = {}
         self.input_fields: list[object] = []
         self.asya_mode = False
         self.custom_asya_saved = False

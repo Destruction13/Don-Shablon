@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QToolButton,
     QFormLayout,
     QMessageBox,
+    QCheckBox,
 )
 try:
     from PySide6.QtCore import QDate, Qt, QTime
@@ -170,10 +171,20 @@ def add_name_field(ctx: UIContext):
         hl.addWidget(ctx.btn_asya_plus)
         ctx.btn_asya_plus.setParent(container)
     ctx.fields["name"] = edit
+    ctx.field_containers["name"] = container
     lab = label_with_icon("Имя:")
     ctx.labels["name"] = lab
     ctx.fields_layout.addRow(lab, container)
     setup_animation(edit, ctx)
+
+
+def add_checkbox(label: str, name: str, ctx: UIContext):
+    cb = QCheckBox(label)
+    ctx.fields[name] = cb
+    ctx.field_containers[name] = cb
+    ctx.fields_layout.addRow(cb)
+    setup_animation(cb, ctx)
+    return cb
 
 
 def add_combo(label: str, name: str, values: list[str], ctx: UIContext):
@@ -266,6 +277,38 @@ def add_time_range(start_name: str, end_name: str, ctx: UIContext):
     end_edit.currentTextChanged.connect(lambda _: on_end_changed())
 
 
+def number_to_words(n: int) -> str:
+    return {
+        1: "один",
+        2: "два",
+        3: "три",
+        4: "четыре",
+        5: "пять",
+    }.get(n, str(n))
+
+
+def plural_raz(n: int) -> str:
+    if n == 1:
+        return "раз"
+    elif 2 <= n <= 4:
+        return "раза"
+    else:
+        return "раз"
+
+
+def weekday_to_plural(word: str) -> str:
+    mapping = {
+        "понедельник": "понедельникам",
+        "вторник": "вторникам",
+        "среда": "средам",
+        "четверг": "четвергам",
+        "пятница": "пятницам",
+        "суббота": "субботам",
+        "воскресенье": "воскресеньям",
+    }
+    return mapping.get(word.lower(), word)
+
+
 
 
 
@@ -295,30 +338,54 @@ def update_fields(ctx: UIContext):
         add_room_field("Его переговорка:", "his_room", "bz", ctx)
         add_room_field("Твоя переговорка:", "my_room", "bz", ctx)
         add_combo("Тип встречи:", "regular", ["Обычная", "Регулярная"], ctx)
-    elif typ == "Разовая встреча":
+    elif typ == "Организация встречи":
         add_name_field(ctx)
         add_field("Ссылка:", "link", ctx, clear=True)
         add_field("Название встречи:", "meeting_name", ctx)
-        add_field("Продолжительность:", "duration", ctx)
+        add_combo(
+            "Продолжительность встречи:",
+            "duration",
+            ["30 минут", "1 час", "1.5 часа", "2 часа"],
+            ctx,
+        )
         add_date("datetime", ctx)
         add_time_range("start_time", "end_time", ctx)
-        add_field("Ссылка пересечения 1:", "conflict1", ctx, builtin_clear=True)
-        add_field("Ссылка пересечения 2:", "conflict2", ctx, builtin_clear=True)
-        add_field("Ссылка пересечения 3:", "conflict3", ctx, builtin_clear=True)
-        add_field("Имя заказчика:", "client_name", ctx)
+        add_field("Ссылка на пересечение №1:", "conflict1", ctx, builtin_clear=True)
+        cb = add_checkbox("Несколько пересечений", "multi_conflicts", ctx)
+        add_field("Ссылка на пересечение №2:", "conflict2", ctx, builtin_clear=True)
+        add_field("Ссылка на пересечение №3:", "conflict3", ctx, builtin_clear=True)
+        add_field(
+            "Имя и фамилия заказчика (в род. падеже):",
+            "client_name",
+            ctx,
+        )
+        # hide extra conflict links until checkbox checked
+        ctx.field_containers["conflict2"].setVisible(False)
+        ctx.labels["conflict2"].setVisible(False)
+        ctx.field_containers["conflict3"].setVisible(False)
+        ctx.labels["conflict3"].setVisible(False)
+
+        def toggle_extra(val):
+            vis = bool(val)
+            ctx.field_containers["conflict2"].setVisible(vis)
+            ctx.labels["conflict2"].setVisible(vis)
+            ctx.field_containers["conflict3"].setVisible(vis)
+            ctx.labels["conflict3"].setVisible(vis)
+
+        cb.stateChanged.connect(toggle_extra)
 
     # rename fields depending on type
     if "client_name" in ctx.fields:
         lab = ctx.labels.get("client_name")
         if lab:
-            if typ == "Разовая встреча":
-                lab.setText("🧑\u200d💼 Имя заказчика (в родительном падеже)")
+            if typ == "Организация встречи":
+                lab.setText("🧑\u200d💼 Имя и фамилия заказчика (в род. падеже):")
             else:
                 lab.setText("🧑\u200d💼 Имя заказчика:")
     if "meeting_name" in ctx.fields:
         lab = ctx.labels.get("meeting_name")
         if lab:
-            if typ == "Разовая встреча":
+            if typ == "Организация встречи":
                 lab.setText("📝 Встреча:")
             else:
                 lab.setText("📝 Название встречи:")
@@ -412,7 +479,7 @@ def generate_message(ctx: UIContext):
 Буду тебе очень {thanks_word}!
 
 Если сможем, то я всё сделаю {myself_word} :)"""
-    elif typ == "Разовая встреча":
+    elif typ == "Организация встречи":
         meeting_name = get("meeting_name")
         duration = get("duration")
         client_name = get("client_name")
@@ -445,11 +512,25 @@ def generate_message(ctx: UIContext):
             f"Понимаю, что пересечений много — но если удастся выкроить время на встречу {first_name}, это будет огонь.",
         ]
         conclusion = random.choice(multi_variants if plural else single_variants)
+        regular_one = regular_two = ""
+        if ctx.regular_meeting_enabled:
+            count = ctx.regular_count.value()
+            count_word = number_to_words(count)
+            raz_form = plural_raz(count)
+            period = ctx.regular_period.currentText().strip().lower()
+            day = ctx.regular_day.currentText().strip().lower()
+            plural_day = weekday_to_plural(day)
+            ending = "ую" if period.endswith("ю") else "ый"
+            regular_one = f"Она будет проводиться регулярно {count_word} {raz_form} в {period} по {plural_day}."
+            regular_two = f"Если всё устроит, встреча будет повторяться кажд{ending} {period} в это же время."
+
         msg = f"""{greeting}
 
 Подбираю оптимальное время для проведения встречи {client_name} «{meeting_name}»{link_part} продолжительностью в {duration}.
+{regular_one}
 
 Сейчас она стоит {formatted}{time_part}
+{regular_two}
 
 {conflict_text}
 
@@ -457,12 +538,6 @@ def generate_message(ctx: UIContext):
     else:
         msg = "Тип встречи не выбран"
 
-    if ctx.regular_meeting_enabled and ctx.regular_count and ctx.regular_period and ctx.regular_day:
-        count = ctx.regular_count.value()
-        period = ctx.regular_period.currentText()
-        day = ctx.regular_day.currentText()
-        ending = "ую" if period.endswith("я") or period.endswith("а") else "ый"
-        msg += f"\n\nОна будет проводиться регулярно {count} раза в {period} по {day}.\nЕсли всё устроит, встреча будет повторяться кажд{ending} {period} в это же время."
 
     ctx.output_text.setPlainText(msg)
     if getattr(ctx, "auto_copy_enabled", False):
