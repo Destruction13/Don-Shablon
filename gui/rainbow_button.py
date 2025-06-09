@@ -12,7 +12,6 @@ class RainbowButton(QPushButton):
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._advance)
         self._timer.start(50)
-        self.setMinimumHeight(70)
         self.setCursor(Qt.PointingHandCursor)
 
     def _advance(self):

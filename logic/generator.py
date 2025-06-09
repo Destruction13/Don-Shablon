@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
 )
 try:
-    from PySide6.QtCore import QDate, Qt, QTime
+    from PySide6.QtCore import QDate, Qt, QTime, QTimer
 except Exception:  # test fallback
     class QDate:
         def __init__(self, *args, **kwargs):
@@ -68,11 +68,7 @@ class ClickableDateEdit(QDateEdit):
 
     def _open_calendar(self):
         self.setCalendarPopup(True)
-        try:
-            self.showCalendarPopup()
-        except Exception:
-            if self.calendarWidget():
-                self.calendarWidget().show()
+        QTimer.singleShot(0, self.showCalendarPopup)
 
     def mousePressEvent(self, event):
         super().mousePressEvent(event)

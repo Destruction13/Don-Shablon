@@ -114,22 +114,22 @@ class MainWindow(QMainWindow):
         ctx.fields_layout = self.fields_layout
 
         # buttons
-        action_row = QHBoxLayout()
-        generate_btn = QPushButton("Сгенерировать")
-        generate_btn.clicked.connect(lambda: generate_message(ctx))
-        action_row.addWidget(generate_btn)
-        self.main_layout.addLayout(action_row)
-        setup_animation(generate_btn, ctx)
-
         clipboard_row = QHBoxLayout()
         from gui.rainbow_button import RainbowButton
-        cv_btn = RainbowButton("📥 Из буфера")
+        cv_btn = RainbowButton("Автозаполнение полей")
         cv_btn.setObjectName("pasteButton")
         cv_btn.clicked.connect(self.handle_clipboard_ocr)
         clipboard_row.addWidget(cv_btn)
         clipboard_row.addStretch()
         self.main_layout.addLayout(clipboard_row)
         setup_animation(cv_btn, ctx)
+
+        action_row = QHBoxLayout()
+        generate_btn = QPushButton("Сгенерировать")
+        generate_btn.clicked.connect(lambda: generate_message(ctx))
+        action_row.addWidget(generate_btn)
+        self.main_layout.addLayout(action_row)
+        setup_animation(generate_btn, ctx)
 
         self.asya_btn = QPushButton("ЛС")
         self.asya_btn.setObjectName("lsButton")
