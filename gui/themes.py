@@ -1,10 +1,10 @@
 THEME_QSS = {
     "Футуризм": """
         * { font-family: 'Segoe UI'; font-size: 14px; }
-        QMainWindow { background-color: #0d0d0d; color: #00ffcc; }
-        QPushButton { background-color: #111; color: #00ffcc; border-radius: 6px; padding: 4px; }
+        QMainWindow { background-color: #0d0d0d; color: #00FFFF; }
+        QPushButton { background-color: #111; color: #00FFFF; border-radius: 6px; padding: 4px; }
         QPushButton:checked { background-color: #007766; }
-        QTextEdit { background-color: #222; color: #00ffcc; border-radius: 6px; }
+        QLineEdit, QComboBox, QTextEdit { background-color: #222; color: #00FFFF; border-radius: 6px; }
         QPushButton#lsButton:checked { border: 2px solid #FFD700; }
         QPushButton#asyaButton:checked { border: 2px solid #00AAFF; }
     """,
@@ -19,10 +19,10 @@ THEME_QSS = {
     """,
     "Киберпанк": """
         * { font-family: 'Segoe UI'; font-size: 13px; }
-        QMainWindow { background-color: #050014; color: #ff00aa; }
-        QPushButton { background-color: #12003b; color: #ff00aa; border-radius: 6px; padding: 4px; }
+        QMainWindow { background-color: #050014; color: #FF99FF; }
+        QPushButton { background-color: #12003b; color: #FF99FF; border-radius: 6px; padding: 4px; }
         QPushButton:checked { background-color: #ff0077; color: black; }
-        QTextEdit { background-color: #12003b; color: #ff00aa; border-radius: 6px; }
+        QLineEdit, QComboBox, QTextEdit { background-color: #12003b; color: #FF99FF; border-radius: 6px; }
         QPushButton#lsButton:checked { border: 2px solid #FFD700; }
         QPushButton#asyaButton:checked { border: 2px solid #00AAFF; }
     """,

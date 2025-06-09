@@ -1,6 +1,13 @@
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QComboBox, QPushButton, QWidget, QCheckBox, QSlider
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QComboBox,
+    QPushButton,
+    QWidget,
+    QCheckBox,
+    QSlider,
 )
 from PySide6.QtCore import Qt
 
@@ -53,20 +60,22 @@ class SettingsDialog(QDialog):
         row_anim_effect = QHBoxLayout()
         row_anim_effect.addWidget(QLabel("Эффект:"))
         self.anim_effect_combo = QComboBox()
-        self.anim_effect_combo.addItems(["Glow", "Scale", "Pulse"])
+        self.anim_effect_combo.addItems(["Glow", "Scale", "Pulse", "Shimmer", "Shadow Slide"])
         self.anim_effect_combo.setCurrentText(ctx.animation_effect)
-        self.anim_effect_combo.currentTextChanged.connect(lambda val: setattr(ctx, "animation_effect", val))
+        self.anim_effect_combo.currentTextChanged.connect(self._on_effect_changed)
         row_anim_effect.addWidget(self.anim_effect_combo)
         self.settings_layout.addLayout(row_anim_effect)
 
         row_intensity = QHBoxLayout()
-        row_intensity.addWidget(QLabel("Интенсивность:"))
+        self.intensity_label = QLabel("Интенсивность:")
+        row_intensity.addWidget(self.intensity_label)
         self.anim_slider = QSlider(Qt.Horizontal)
         self.anim_slider.setRange(0, 100)
         self.anim_slider.setValue(ctx.animation_intensity)
         self.anim_slider.valueChanged.connect(lambda val: setattr(ctx, "animation_intensity", val))
         row_intensity.addWidget(self.anim_slider)
         self.settings_layout.addLayout(row_intensity)
+        self._on_effect_changed(ctx.animation_effect)
 
         ok_btn = QPushButton("OK")
         ok_btn.clicked.connect(self.accept)
@@ -79,3 +88,9 @@ class SettingsDialog(QDialog):
         self.ctx.current_theme_name = name
         if self.ctx.app:
             apply_theme(self.ctx.app, name)
+
+    def _on_effect_changed(self, name: str) -> None:
+        self.ctx.animation_effect = name
+        visible = name != "Scale"
+        self.anim_slider.setVisible(visible)
+        self.intensity_label.setVisible(visible)
