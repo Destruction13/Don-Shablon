@@ -359,11 +359,23 @@ def update_fields(ctx: UIContext):
         from PySide6.QtWidgets import QWidget, QGridLayout, QPushButton
         grid_container = QWidget()
         grid = QGridLayout(grid_container)
-        for i, key in enumerate(OTHER_TEMPLATES.keys()):
+        idx = 0
+        for key in OTHER_TEMPLATES.keys():
             btn = QPushButton(key)
             btn.clicked.connect(lambda _=False, k=key: generate_other_category(ctx, k))
             setup_animation(btn, ctx)
-            grid.addWidget(btn, i // 2, i % 2)
+            grid.addWidget(btn, idx // 2, idx % 2)
+            idx += 1
+
+        act_btn = QPushButton("Написали по актуальности")
+        act_btn.clicked.connect(lambda: show_actuality_dialog(ctx))
+        setup_animation(act_btn, ctx)
+        grid.addWidget(act_btn, idx // 2, idx % 2)
+        idx += 1
+        exch_btn = QPushButton("Написали по обмену")
+        exch_btn.clicked.connect(lambda: show_exchange_dialog(ctx))
+        setup_animation(exch_btn, ctx)
+        grid.addWidget(exch_btn, idx // 2, idx % 2)
         ctx.field_containers["other_buttons"] = grid_container
         ctx.fields_layout.addRow(grid_container)
 
@@ -533,6 +545,25 @@ def generate_message(ctx: UIContext):
     else:
         msg = "Тип встречи не выбран"
 
+    # save history for supported types
+    try:
+        date_str = ctx.fields["datetime"].date().toString("dd.MM.yyyy")
+        record = {
+            "type": typ.lower(),
+            "name": name,
+            "date": date_str,
+            "start": start,
+            "end": end,
+        }
+        if typ == "Актуализация":
+            record["room"] = room
+        elif typ == "Обмен":
+            record["his_room"] = his_room
+            record["my_room"] = my_room
+        ctx.history.add_record(record)
+    except Exception:
+        pass
+
 
     ctx.output_text.setPlainText(msg)
     if getattr(ctx, "auto_copy_enabled", False):
@@ -547,6 +578,182 @@ def generate_other_category(ctx: UIContext, category: str) -> None:
     if isinstance(gender_field, QComboBox):
         gender = "ж" if gender_field.currentText().startswith("Ж") else "м"
     text = generate_from_category(category, name, gender)
+    ctx.output_text.setPlainText(text)
+    if getattr(ctx, "auto_copy_enabled", False):
+        copy_generated_text(ctx)
+
+
+def _format_short_date(date_str: str) -> str:
+    """Return date in 'D month' format from dd.MM.yyyy string."""
+    try:
+        from datetime import datetime
+        from .utils import months
+        dt = datetime.strptime(date_str, "%d.%m.%Y")
+        return f"{dt.day} {months[dt.month - 1]}"
+    except Exception:
+        return date_str
+
+
+def show_actuality_dialog(ctx: UIContext) -> None:
+    """Dialog for 'Написали по актуальности' template."""
+    from PySide6.QtWidgets import (
+        QDialog,
+        QVBoxLayout,
+        QFormLayout,
+        QLineEdit,
+        QComboBox,
+        QPushButton,
+    )
+
+    dlg = QDialog(ctx.window)
+    dlg.setWindowTitle("Написали по актуальности")
+    layout = QVBoxLayout(dlg)
+    form = QFormLayout()
+
+    login_edit = QLineEdit()
+    date_edit = QLineEdit()
+    time_edit = QLineEdit()
+    room_edit = QLineEdit()
+    link_edit = QLineEdit()
+    tg_edit = QLineEdit()
+    channel_combo = QComboBox()
+    channel_combo.addItems(["Ася", "Telegram", "Почта", "Slack"])
+    recent_combo = QComboBox()
+
+    recs = ctx.history.get_recent_by_type("актуализация")
+    if recs:
+        recent_combo.addItem("Выбрать...", {})
+        for r in recs:
+            label = f"{r.get('room','')}, {_format_short_date(r['date'])} {r.get('start','')}\u2013{r.get('end','')}"
+            recent_combo.addItem(label, r)
+    else:
+        recent_combo.addItem("Нет сохранённых встреч", {})
+
+    def on_recent(idx: int) -> None:
+        data = recent_combo.itemData(idx)
+        if not isinstance(data, dict):
+            return
+        login_edit.setText(data.get("name", ""))
+        date_edit.setText(_format_short_date(data.get("date", "")))
+        time_edit.setText(f"{data.get('start','')}–{data.get('end','')}")
+        room_edit.setText(data.get("room", ""))
+
+    recent_combo.currentIndexChanged.connect(on_recent)
+
+    form.addRow("Логин:", login_edit)
+    form.addRow("Дата:", date_edit)
+    form.addRow("Время:", time_edit)
+    form.addRow("Переговорка:", room_edit)
+    form.addRow("Ссылка на встречу:", link_edit)
+    form.addRow("Ссылка на Telegram:", tg_edit)
+    form.addRow("Канал:", channel_combo)
+    form.addRow("Последние встречи:", recent_combo)
+    layout.addLayout(form)
+
+    ok_btn = QPushButton("OK")
+    ok_btn.clicked.connect(dlg.accept)
+    layout.addWidget(ok_btn)
+
+    if dlg.exec() != QDialog.Accepted:
+        return
+
+    date = date_edit.text().strip()
+    time = time_edit.text().strip()
+    room = room_edit.text().strip()
+    login = login_edit.text().strip()
+    link = link_edit.text().strip()
+    tg = tg_edit.text().strip()
+    text = (
+        f"Уточняю актуальность по [встрече]({link}), которая пройдёт {date} "
+        f"в {time} в переговорной {room} у {login}, [иконка Telegram]({tg})."
+        "\nОтвет:"
+    )
+    ctx.output_text.setPlainText(text)
+    if getattr(ctx, "auto_copy_enabled", False):
+        copy_generated_text(ctx)
+
+
+def show_exchange_dialog(ctx: UIContext) -> None:
+    """Dialog for 'Написали по обмену' template."""
+    from PySide6.QtWidgets import (
+        QDialog,
+        QVBoxLayout,
+        QFormLayout,
+        QLineEdit,
+        QComboBox,
+        QPushButton,
+    )
+
+    dlg = QDialog(ctx.window)
+    dlg.setWindowTitle("Написали по обмену")
+    layout = QVBoxLayout(dlg)
+    form = QFormLayout()
+
+    login_edit = QLineEdit()
+    date_edit = QLineEdit()
+    time_edit = QLineEdit()
+    his_room_edit = QLineEdit()
+    my_room_edit = QLineEdit()
+    link_edit = QLineEdit()
+    tg_edit = QLineEdit()
+    channel_combo = QComboBox()
+    channel_combo.addItems(["Ася", "Telegram", "Почта", "Slack"])
+    recent_combo = QComboBox()
+
+    recs = ctx.history.get_recent_by_type("обмен")
+    if recs:
+        recent_combo.addItem("Выбрать...", {})
+        for r in recs:
+            label = (
+                f"{r.get('his_room','')} \u2192 {r.get('my_room','')}, "
+                f"{_format_short_date(r['date'])} {r.get('start','')}\u2013{r.get('end','')}"
+            )
+            recent_combo.addItem(label, r)
+    else:
+        recent_combo.addItem("Нет сохранённых встреч", {})
+
+    def on_recent(idx: int) -> None:
+        data = recent_combo.itemData(idx)
+        if not isinstance(data, dict):
+            return
+        login_edit.setText(data.get("name", ""))
+        date_edit.setText(_format_short_date(data.get("date", "")))
+        time_edit.setText(f"{data.get('start','')}–{data.get('end','')}")
+        his_room_edit.setText(data.get("his_room", ""))
+        my_room_edit.setText(data.get("my_room", ""))
+
+    recent_combo.currentIndexChanged.connect(on_recent)
+
+    form.addRow("Логин:", login_edit)
+    form.addRow("Дата:", date_edit)
+    form.addRow("Время:", time_edit)
+    form.addRow("Его переговорка:", his_room_edit)
+    form.addRow("Твоя переговорка:", my_room_edit)
+    form.addRow("Ссылка на встречу:", link_edit)
+    form.addRow("Ссылка на Telegram:", tg_edit)
+    form.addRow("Канал:", channel_combo)
+    form.addRow("Последние встречи:", recent_combo)
+    layout.addLayout(form)
+
+    ok_btn = QPushButton("OK")
+    ok_btn.clicked.connect(dlg.accept)
+    layout.addWidget(ok_btn)
+
+    if dlg.exec() != QDialog.Accepted:
+        return
+
+    date = date_edit.text().strip()
+    time = time_edit.text().strip()
+    his_room = his_room_edit.text().strip()
+    my_room = my_room_edit.text().strip()
+    login = login_edit.text().strip()
+    link = link_edit.text().strip()
+    tg = tg_edit.text().strip()
+    text = (
+        f"Предлагаю обмен по [встрече]({link}), которая пройдёт {date}, в {time} "
+        f"в переговорной {his_room} на свою {my_room}. Пишу {login}, "
+        f"[иконка Telegram]({tg})."
+    )
     ctx.output_text.setPlainText(text)
     if getattr(ctx, "auto_copy_enabled", False):
         copy_generated_text(ctx)

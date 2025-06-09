@@ -1,5 +1,6 @@
 import os
 from PySide6.QtWidgets import QApplication
+from logic.template_history import TemplateHistory
 
 class UIContext:
     """Centralized storage for UI state and widgets."""
@@ -54,6 +55,10 @@ class UIContext:
         self.animations_enabled = True
         self.animation_effect = "Glow"
         self.animation_intensity = 50
+
+        # history of generated templates
+        hist_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "template_history.json")
+        self.history = TemplateHistory(hist_path)
 
     def refresh_music_files(self) -> None:
         """Scan the music directory and populate available tracks."""
