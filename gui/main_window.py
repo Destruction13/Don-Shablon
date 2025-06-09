@@ -9,11 +9,10 @@ import os
 import pygame
 
 from logic.app_state import UIContext
-from logic.generator import update_fields, generate_message, on_link_change
-from logic.utils import toggle_music, copy_generated_text, translate_to_english
+from logic.generator import update_fields, generate_message
+from logic.utils import copy_generated_text, translate_to_english
 from gui.themes import apply_theme
 from gui.animations import setup_animation
-from gui.music_dialog import MusicDialog
 
 
 class MainWindow(QMainWindow):
@@ -47,12 +46,25 @@ class MainWindow(QMainWindow):
         self.settings_btn = QToolButton()
         self.settings_btn.setText("⚙")
         self.settings_btn.clicked.connect(self.show_settings_dialog)
-        self.music_btn = QToolButton()
-        self.music_btn.setText("🎵")
-        self.music_btn.clicked.connect(self.show_music_dialog)
-        setup_animation(self.settings_btn, ctx)
-        setup_animation(self.music_btn, ctx)
-        header.addWidget(self.music_btn)
+
+        self.prev_btn = QToolButton()
+        self.prev_btn.setText("⏮")
+        self.prev_btn.clicked.connect(self.play_prev_track)
+
+        self.play_btn = QToolButton()
+        self.play_btn.setText("▶️")
+        self.play_btn.clicked.connect(self.handle_play_button)
+
+        self.next_btn = QToolButton()
+        self.next_btn.setText("⏭")
+        self.next_btn.clicked.connect(self.play_next_track)
+
+        for btn in (self.prev_btn, self.play_btn, self.next_btn, self.settings_btn):
+            setup_animation(btn, ctx)
+
+        header.addWidget(self.prev_btn)
+        header.addWidget(self.play_btn)
+        header.addWidget(self.next_btn)
         header.addWidget(self.settings_btn)
         self.main_layout.addLayout(header)
 
@@ -259,9 +271,58 @@ class MainWindow(QMainWindow):
         dlg = SettingsDialog(self.ctx, self)
         dlg.exec()
 
-    def show_music_dialog(self):
-        dlg = MusicDialog(self.ctx, self)
-        dlg.exec()
+    def handle_play_button(self):
+        ctx = self.ctx
+        if not ctx.music_state["playing"]:
+            if not ctx.music_files:
+                QMessageBox.information(self, "Музыка", "Папка music пуста")
+                return
+            from PySide6.QtWidgets import QMenu
+            menu = QMenu(self)
+            for idx, path in enumerate(ctx.music_files):
+                action = menu.addAction(os.path.basename(path))
+                action.triggered.connect(lambda _=False, i=idx: self.start_track(i))
+            menu.exec_(self.play_btn.mapToGlobal(self.play_btn.rect().bottomLeft()))
+        elif not ctx.music_state["paused"]:
+            pygame.mixer.music.pause()
+            ctx.music_state["paused"] = True
+            self.play_btn.setText("▶️")
+        else:
+            pygame.mixer.music.unpause()
+            ctx.music_state["paused"] = False
+            self.play_btn.setText("⏸")
+
+    def start_track(self, index: int) -> None:
+        ctx = self.ctx
+        if index < 0 or index >= len(ctx.music_files):
+            return
+        path = ctx.music_files[index]
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
+        try:
+            pygame.mixer.music.load(path)
+            pygame.mixer.music.play(-1)
+            ctx.music_index = index
+            ctx.music_path = path
+            ctx.music_state["playing"] = True
+            ctx.music_state["paused"] = False
+            self.play_btn.setText("⏸")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", str(e))
+
+    def play_next_track(self):
+        ctx = self.ctx
+        if not ctx.music_files:
+            return
+        next_idx = (ctx.music_index + 1) % len(ctx.music_files)
+        self.start_track(next_idx)
+
+    def play_prev_track(self):
+        ctx = self.ctx
+        if not ctx.music_files:
+            return
+        prev_idx = (ctx.music_index - 1) % len(ctx.music_files)
+        self.start_track(prev_idx)
 
     def toggle_regular_fields(self, checked: bool):
         self.ctx.regular_meeting_enabled = bool(checked)
