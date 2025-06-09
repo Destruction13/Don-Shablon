@@ -637,7 +637,7 @@ def show_actuality_dialog(ctx: UIContext) -> None:
         if not isinstance(data, dict):
             return
         date_edit.setText(_format_short_date(data.get("date", "")))
-        time_edit.setText(f"{data.get('start','')}–{data.get('end','')}")
+        time_edit.setText(f"{data.get('start','')} — {data.get('end','')}")
         room_edit.setText(data.get("room", ""))
 
     recent_combo.currentIndexChanged.connect(on_recent)
@@ -668,9 +668,9 @@ def show_actuality_dialog(ctx: UIContext) -> None:
     ch = channel_combo.currentText().strip()
     pref = "Уточняю с Аси" if ch == "Ася" else "Уточняю с ЛС"
     text = (
-        f"{pref} актуальность по [встрече]({link}), которая пройдёт {date} "
-        f"в {time} в переговорной {room} у {login}, [иконка Telegram]({tg})."
-        "\nОтвет:"
+    f"{pref} актуальность по [встрече]({link}), которая пройдёт {date} " 
+    f"в {time} в переговорной **{room}** у @{login}"
+    f"\n[Моё сообщение в Telegram]({tg}).\nОтвет:"
     )
     ctx.output_text.setPlainText(text)
     if getattr(ctx, "auto_copy_enabled", False):
@@ -721,7 +721,7 @@ def show_exchange_dialog(ctx: UIContext) -> None:
         if not isinstance(data, dict):
             return
         date_edit.setText(_format_short_date(data.get("date", "")))
-        time_edit.setText(f"{data.get('start','')}–{data.get('end','')}")
+        time_edit.setText(f"{data.get('start','')} — {data.get('end','')}")
         his_room_edit.setText(data.get("his_room", ""))
         my_room_edit.setText(data.get("my_room", ""))
 
@@ -756,8 +756,8 @@ def show_exchange_dialog(ctx: UIContext) -> None:
     pref = "Предлагаю обмен с Аси" if ch == "Ася" else "Предлагаю обмен с ЛС"
     text = (
         f"{pref} по [встрече]({link}), которая пройдёт {date}, в {time} "
-        f"в переговорной {his_room} на свою {my_room}. Пишу {login}, "
-        f"[иконка Telegram]({tg})."
+        f"в переговорной **{his_room}** на свою **{my_room}**. Пишу @{login}"
+        f"\n[Моё сообщение в Telegram]({tg}).\nОтвет: "
     )
     ctx.output_text.setPlainText(text)
     if getattr(ctx, "auto_copy_enabled", False):
