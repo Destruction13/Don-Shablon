@@ -243,30 +243,31 @@ THEME_QSS = {
         QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border: 1px solid #999999; }
     """,
     "Винтаж": """
-        * { font-family: 'Georgia', 'Garamond', 'DejaVu Serif'; font-size: 14px; color: #5e412f; }
-        QMainWindow { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #f5e6c8, stop:1 #e9d0a4); }
-        QLabel, QGroupBox::title, QCheckBox, QRadioButton, QToolTip { color: #5e412f; }
-        QPushButton, QToolButton {
-            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ecd5b1, stop:1 #d9b385);
-            border: 1px solid #8b6f47;
-            border-radius: 4px;
-            padding: 4px;
-        }
-        QPushButton:hover, QToolButton:hover {
-            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #f0e0c5, stop:1 #deb98f);
-        }
-        QPushButton:pressed, QToolButton:pressed, QPushButton:checked, QToolButton:checked {
-            background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #d1a679, stop:1 #c2965d);
-        }
-        QLineEdit, QComboBox, QTextEdit {
-            background: #ffffff;
-            color: #5e412f;
-            border: 1px solid #8b6f47;
-            border-radius: 4px;
-        }
-        QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border: 1px solid #a87f52; }
+        * { font-family: 'Segoe UI'; font-size: 14px; }
+        QMainWindow { background-color: #faf1e6; color: #5e412f; }
+        QPushButton { background-color: #e6d5c3; color: #5e412f; border-radius: 4px; padding: 4px; }
+        QPushButton:checked { background-color: #c9b29b; }
+        QTextEdit { background-color: #ffffff; color: #5e412f; border-radius: 4px; }
+        QPushButton#lsButton:checked { border: 2px solid #FFD700; }
+        QPushButton#asyaButton:checked { border: 2px solid #00AAFF; }
     """,
 }
+
+# Override styling for dialogs so that text is always readable on white
+# backgrounds used by secondary windows like settings or music dialogs.
+DIALOG_QSS = """
+    QDialog {
+        background-color: #ffffff;
+        color: #000000;
+    }
+    QDialog QLabel,
+    QDialog QGroupBox::title,
+    QDialog QCheckBox,
+    QDialog QRadioButton,
+    QDialog QToolTip {
+        color: #000000;
+    }
+"""
 
 DEFAULT_QSS = """
     * { font-family: 'Segoe UI'; font-size: 12px; }
@@ -283,6 +284,8 @@ DEFAULT_QSS = """
 def apply_theme(app, name: str) -> None:
     """Apply theme stylesheet to the QApplication."""
     if not name or name == "Стандартная":
-        app.setStyleSheet(DEFAULT_QSS)
+        theme = DEFAULT_QSS
     else:
-        app.setStyleSheet(THEME_QSS.get(name, DEFAULT_QSS))
+        theme = THEME_QSS.get(name, DEFAULT_QSS)
+    # Always append dialog overrides to keep dialogs readable
+    app.setStyleSheet(theme + DIALOG_QSS)
