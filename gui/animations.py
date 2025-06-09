@@ -6,7 +6,6 @@ from PySide6.QtCore import (
     QRect,
     QPoint,
     QTimer,
-    QPointer,
 )
 from PySide6.QtGui import QColor, QCursor
 from PySide6.QtWidgets import (
