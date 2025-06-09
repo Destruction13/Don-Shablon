@@ -356,7 +356,14 @@ def update_fields(ctx: UIContext):
     elif typ == "Другое":
         add_field("Имя:", "other_name", ctx)
         add_combo("Пол:", "gender", ["Мужской", "Женский"], ctx)
-        from PySide6.QtWidgets import QWidget, QGridLayout, QPushButton
+        from PySide6.QtWidgets import (
+            QWidget,
+            QGridLayout,
+            QPushButton,
+            QGroupBox,
+            QVBoxLayout,
+        )
+        grid_box = QGroupBox()
         grid_container = QWidget()
         grid = QGridLayout(grid_container)
         idx = 0
@@ -367,20 +374,26 @@ def update_fields(ctx: UIContext):
             grid.addWidget(btn, idx // 2, idx % 2)
             idx += 1
 
-        ctx.field_containers["other_buttons"] = grid_container
-        ctx.fields_layout.addRow(grid_container)
-
+        grid_box.setLayout(grid)
+        ctx.field_containers["other_buttons"] = grid_box
+        ctx.fields_layout.addRow(grid_box)
+        act_box = QGroupBox()
+        act_layout = QVBoxLayout(act_box)
         act_btn = QPushButton("Написали по актуальности")
         act_btn.setMinimumHeight(40)
         act_btn.clicked.connect(lambda: show_actuality_dialog(ctx))
         setup_animation(act_btn, ctx)
-        ctx.fields_layout.addRow(act_btn)
+        act_layout.addWidget(act_btn)
+        ctx.fields_layout.addRow(act_box)
 
+        exch_box = QGroupBox()
+        exch_layout = QVBoxLayout(exch_box)
         exch_btn = QPushButton("Написали по обмену")
         exch_btn.setMinimumHeight(40)
         exch_btn.clicked.connect(lambda: show_exchange_dialog(ctx))
         setup_animation(exch_btn, ctx)
-        ctx.fields_layout.addRow(exch_btn)
+        exch_layout.addWidget(exch_btn)
+        ctx.fields_layout.addRow(exch_box)
 
     # rename fields depending on type
     if "client_name" in ctx.fields:
@@ -604,7 +617,10 @@ def show_actuality_dialog(ctx: UIContext) -> None:
         QVBoxLayout,
         QFormLayout,
         QLineEdit,
-        QComboBox,
+        QRadioButton,
+        QButtonGroup,
+        QWidget,
+        QHBoxLayout,
         QPushButton,
     )
 
@@ -619,8 +635,17 @@ def show_actuality_dialog(ctx: UIContext) -> None:
     room_edit = QLineEdit()
     link_edit = QLineEdit()
     tg_edit = QLineEdit()
-    channel_combo = QComboBox()
-    channel_combo.addItems(["Ася", "ЛС"])
+    channel_group = QButtonGroup(dlg)
+    asya_radio = QRadioButton("Ася")
+    ls_radio = QRadioButton("ЛС")
+    asya_radio.setChecked(True)
+    channel_group.addButton(asya_radio)
+    channel_group.addButton(ls_radio)
+    ch_widget = QWidget()
+    ch_layout = QHBoxLayout(ch_widget)
+    ch_layout.setContentsMargins(0, 0, 0, 0)
+    ch_layout.addWidget(asya_radio)
+    ch_layout.addWidget(ls_radio)
     recent_combo = QComboBox()
 
     recs = ctx.history.get_recent_by_type("актуализация")
@@ -648,7 +673,7 @@ def show_actuality_dialog(ctx: UIContext) -> None:
     form.addRow("Переговорка:", room_edit)
     form.addRow("Ссылка на встречу:", link_edit)
     form.addRow("Ссылка на Telegram:", tg_edit)
-    form.addRow("Канал:", channel_combo)
+    form.addRow("Канал:", ch_widget)
     form.addRow("Последние встречи:", recent_combo)
     layout.addLayout(form)
 
@@ -665,7 +690,7 @@ def show_actuality_dialog(ctx: UIContext) -> None:
     login = login_edit.text().strip()
     link = link_edit.text().strip()
     tg = tg_edit.text().strip()
-    ch = channel_combo.currentText().strip()
+    ch = "Ася" if asya_radio.isChecked() else "ЛС"
     pref = "Уточняю с Аси" if ch == "Ася" else "Уточняю с ЛС"
     text = (
     f"{pref} актуальность по [встрече]({link}), которая пройдёт {date} " 
@@ -684,7 +709,10 @@ def show_exchange_dialog(ctx: UIContext) -> None:
         QVBoxLayout,
         QFormLayout,
         QLineEdit,
-        QComboBox,
+        QRadioButton,
+        QButtonGroup,
+        QWidget,
+        QHBoxLayout,
         QPushButton,
     )
 
@@ -700,8 +728,17 @@ def show_exchange_dialog(ctx: UIContext) -> None:
     my_room_edit = QLineEdit()
     link_edit = QLineEdit()
     tg_edit = QLineEdit()
-    channel_combo = QComboBox()
-    channel_combo.addItems(["Ася", "ЛС"])
+    channel_group = QButtonGroup(dlg)
+    asya_radio = QRadioButton("Ася")
+    ls_radio = QRadioButton("ЛС")
+    asya_radio.setChecked(True)
+    channel_group.addButton(asya_radio)
+    channel_group.addButton(ls_radio)
+    ch_widget = QWidget()
+    ch_layout = QHBoxLayout(ch_widget)
+    ch_layout.setContentsMargins(0, 0, 0, 0)
+    ch_layout.addWidget(asya_radio)
+    ch_layout.addWidget(ls_radio)
     recent_combo = QComboBox()
 
     recs = ctx.history.get_recent_by_type("обмен")
@@ -734,7 +771,7 @@ def show_exchange_dialog(ctx: UIContext) -> None:
     form.addRow("Твоя переговорка:", my_room_edit)
     form.addRow("Ссылка на встречу:", link_edit)
     form.addRow("Ссылка на Telegram:", tg_edit)
-    form.addRow("Канал:", channel_combo)
+    form.addRow("Канал:", ch_widget)
     form.addRow("Последние встречи:", recent_combo)
     layout.addLayout(form)
 
@@ -752,7 +789,7 @@ def show_exchange_dialog(ctx: UIContext) -> None:
     login = login_edit.text().strip()
     link = link_edit.text().strip()
     tg = tg_edit.text().strip()
-    ch = channel_combo.currentText().strip()
+    ch = "Ася" if asya_radio.isChecked() else "ЛС"
     pref = "Предлагаю обмен с Аси" if ch == "Ася" else "Предлагаю обмен с ЛС"
     text = (
         f"{pref} по [встрече]({link}), которая пройдёт {date}, в {time} "
