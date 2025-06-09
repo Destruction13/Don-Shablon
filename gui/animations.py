@@ -6,8 +6,9 @@ from PySide6.QtCore import (
     QRect,
     QPoint,
     QTimer,
+    Qt,
 )
-from PySide6.QtGui import QColor, QCursor
+from PySide6.QtGui import QColor, QCursor, QPalette
 from PySide6.QtWidgets import (
     QGraphicsDropShadowEffect,
     QGraphicsOpacityEffect,
@@ -24,7 +25,7 @@ class HoverAnimationFilter(QObject):
         self._effects = {}
         self._timers = {}
         self._orig_styles = {}
-        self._orig_progress = {}
+        self._progress_overlays = {}
         self._active_effect = {}
 
     def _store_anim(self, obj, anim):
@@ -137,7 +138,7 @@ class HoverAnimationFilter(QObject):
                 self._orig_styles[obj] = obj.styleSheet()
             pal = obj.palette()
             bg = pal.color(obj.backgroundRole())
-            txt = pal.color(pal.WindowText)
+            txt = pal.color(QPalette.WindowText)
             inv_bg = QColor(255 - bg.red(), 255 - bg.green(), 255 - bg.blue())
             inv_txt = QColor(255 - txt.red(), 255 - txt.green(), 255 - txt.blue())
             obj.setStyleSheet(
@@ -178,49 +179,28 @@ class HoverAnimationFilter(QObject):
             anim.setEndValue(new_rect)
             anim.start()
             self._store_anim(obj, anim)
-        elif effect == "GlowBorder":
-            glow = QGraphicsDropShadowEffect(obj)
-            glow.setOffset(0)
-            glow.setColor(QColor("#3daee9"))
-            glow.setBlurRadius(max(10, intensity))
-            obj.setGraphicsEffect(glow)
-            self._effects[obj] = glow
         elif effect == "ProgressFill":
-            if hasattr(obj, "value") and hasattr(obj, "setValue"):
-                self._orig_progress[obj] = obj.value()
-                anim = QPropertyAnimation(obj, b"value", obj)
+            from PySide6.QtWidgets import QPushButton, QWidget
+
+            if isinstance(obj, QPushButton):
+                overlay = self._progress_overlays.get(obj)
+                if overlay is None:
+                    overlay = QWidget(obj)
+                    overlay.setStyleSheet(
+                        "background-color: rgba(61,174,233,120); border: none;"
+                    )
+                    overlay.setAttribute(Qt.WA_TransparentForMouseEvents)
+                    self._progress_overlays[obj] = overlay
+                start_rect = QRect(0, 0, 0, obj.height())
+                end_rect = QRect(0, 0, int(obj.width() * 0.7), obj.height())
+                overlay.setGeometry(start_rect)
+                overlay.show()
+                anim = QPropertyAnimation(overlay, b"geometry", obj)
                 anim.setDuration(300)
-                anim.setStartValue(obj.value())
-                anim.setEndValue(70)
+                anim.setStartValue(start_rect)
+                anim.setEndValue(end_rect)
                 anim.start()
                 self._store_anim(obj, anim)
-        elif effect == "CursorGlow":
-            glow = QGraphicsDropShadowEffect(obj)
-            color = QColor("#3daee9")
-            color.setAlpha(180)
-            glow.setColor(color)
-            glow.setBlurRadius(max(15, intensity))
-            glow.setOffset(0)
-            obj.setGraphicsEffect(glow)
-            factor = max(1, intensity) / 30
-            timer = QTimer(obj)
-            timer.timeout.connect(lambda o=obj, e=glow, f=factor: self._update_cursor_offset(o, e, f))
-            timer.start(30)
-            self._timers[obj] = timer
-            self._effects[obj] = glow
-        elif effect == "DissolveOnLeave":
-            op = self._effects.get(obj)
-            if not isinstance(op, QGraphicsOpacityEffect):
-                op = QGraphicsOpacityEffect(obj)
-                op.setOpacity(0.0)
-                obj.setGraphicsEffect(op)
-                self._effects[obj] = op
-            anim = QPropertyAnimation(op, b"opacity", obj)
-            anim.setDuration(150)
-            anim.setStartValue(op.opacity())
-            anim.setEndValue(1.0)
-            anim.start()
-            self._store_anim(obj, anim)
 
     def _clear_effect(self, obj, effect_name=None):
         anim = self._animations.pop(obj, None)
@@ -238,23 +218,17 @@ class HoverAnimationFilter(QObject):
             return
 
         if effect_name == "ProgressFill":
-            val = self._orig_progress.pop(obj, None)
-            if val is not None and hasattr(obj, "setValue"):
-                obj.setValue(val)
-
-        if effect_name == "DissolveOnLeave":
-            op = self._effects.get(obj)
-            if not isinstance(op, QGraphicsOpacityEffect):
-                op = QGraphicsOpacityEffect(obj)
-                obj.setGraphicsEffect(op)
-                self._effects[obj] = op
-            fade = QPropertyAnimation(op, b"opacity", obj)
-            fade.setDuration(150)
-            fade.setStartValue(op.opacity())
-            fade.setEndValue(0.0)
-            fade.start()
-            self._store_anim(obj, fade)
-            return
+            overlay = self._progress_overlays.get(obj)
+            if overlay is not None:
+                start_rect = overlay.geometry()
+                end_rect = QRect(0, 0, 0, overlay.height())
+                anim = QPropertyAnimation(overlay, b"geometry", obj)
+                anim.setDuration(200)
+                anim.setStartValue(start_rect)
+                anim.setEndValue(end_rect)
+                anim.finished.connect(lambda o=overlay: (o.hide(), o.setGeometry(0, 0, 0, o.height())))
+                anim.start()
+                self._store_anim(obj, anim)
 
         effect = self._effects.pop(obj, None)
         if effect:

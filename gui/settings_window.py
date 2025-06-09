@@ -71,10 +71,7 @@ class SettingsDialog(QDialog):
             "Opacity",
             "ShadowAppear",
             "SlideOffset",
-            "GlowBorder",
             "ProgressFill",
-            "CursorGlow",
-            "DissolveOnLeave",
         ])
         self.anim_effect_combo.setCurrentText(ctx.animation_effect)
         self.anim_effect_combo.currentTextChanged.connect(self._on_effect_changed)
@@ -110,7 +107,6 @@ class SettingsDialog(QDialog):
             "Scale",
             "ColorInvert",
             "ProgressFill",
-            "DissolveOnLeave",
         }
         self.anim_slider.setVisible(visible)
         self.intensity_label.setVisible(visible)
