@@ -22,6 +22,7 @@ THEME_QSS = {
         QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background: #111820;
             color: #c8fcff;
+            border: 1px solid #00ffff;
             border-radius: 8px;
             padding: 6px 8px;
         }
@@ -45,6 +46,7 @@ THEME_QSS = {
         QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background: #271822;
             color: #e8d4f2;
+            border: 1px solid #aa66cc;
             border-radius: 8px;
             padding: 6px 8px;
         }
@@ -69,6 +71,7 @@ THEME_QSS = {
         QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background: #12003b;
             color: #ff9af5;
+            border: 1px solid #ff00ff;
             border-radius: 8px;
             padding: 6px 8px;
         }
@@ -92,6 +95,7 @@ THEME_QSS = {
         QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background: #ffffff;
             color: #202020;
+            border: 1px solid #bfbfbf;
             border-radius: 8px;
             padding: 6px 8px;
         }
@@ -115,6 +119,7 @@ THEME_QSS = {
         QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background: #ffffff;
             color: #d63384;
+            border: 1px solid #d63384;
             border-radius: 8px;
             padding: 6px 8px;
         }
@@ -138,6 +143,7 @@ THEME_QSS = {
         QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background: #000000;
             color: #eaeaea;
+            border: 1px solid #555555;
             border-radius: 8px;
             padding: 6px 8px;
         }
@@ -161,6 +167,7 @@ THEME_QSS = {
         QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background: #ffffff;
             color: #2d2d2d;
+            border: 1px solid #9ba0a0;
             border-radius: 8px;
             padding: 6px 8px;
         }
@@ -184,6 +191,7 @@ THEME_QSS = {
         QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background: #1a1a1a;
             color: #d0d0d0;
+            border: 1px solid #707070;
             border-radius: 8px;
             padding: 6px 8px;
         }
@@ -197,6 +205,7 @@ THEME_QSS = {
         QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background-color: #ffffff;
             color: #5e412f;
+            border: 1px solid #c9b29b;
             border-radius: 8px;
             padding: 6px 8px;
         }
@@ -227,6 +236,7 @@ DEFAULT_QSS = """
     QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
         background-color: #ffffff;
         color: #202020;
+        border: 1px solid #bfbfbf;
         border-radius: 4px;
         padding: 6px 8px;
     }
