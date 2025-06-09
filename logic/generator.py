@@ -39,6 +39,7 @@ from logic.utils import (
     copy_generated_text,
 )
 from gui.animations import setup_animation
+from logic.templates import OTHER_TEMPLATES, generate_from_category
 
 ICON_MAP = {
     "Имя": "🧑\u200d💼",
@@ -352,6 +353,19 @@ def update_fields(ctx: UIContext):
             ctx.labels["conflict3"].setVisible(vis)
 
         cb.stateChanged.connect(toggle_extra)
+    elif typ == "Другое":
+        add_field("Имя:", "other_name", ctx)
+        add_combo("Пол:", "gender", ["Мужской", "Женский"], ctx)
+        from PySide6.QtWidgets import QWidget, QGridLayout, QPushButton
+        grid_container = QWidget()
+        grid = QGridLayout(grid_container)
+        for i, key in enumerate(OTHER_TEMPLATES.keys()):
+            btn = QPushButton(key)
+            btn.clicked.connect(lambda _=False, k=key: generate_other_category(ctx, k))
+            setup_animation(btn, ctx)
+            grid.addWidget(btn, i // 2, i % 2)
+        ctx.field_containers["other_buttons"] = grid_container
+        ctx.fields_layout.addRow(grid_container)
 
     # rename fields depending on type
     if "client_name" in ctx.fields:
@@ -521,5 +535,18 @@ def generate_message(ctx: UIContext):
 
 
     ctx.output_text.setPlainText(msg)
+    if getattr(ctx, "auto_copy_enabled", False):
+        copy_generated_text(ctx)
+
+def generate_other_category(ctx: UIContext, category: str) -> None:
+    """Generate text for the "Другое" tab."""
+    name_field = ctx.fields.get("other_name")
+    gender_field = ctx.fields.get("gender")
+    name = name_field.text().strip() if name_field else ""
+    gender = "ж"
+    if isinstance(gender_field, QComboBox):
+        gender = "ж" if gender_field.currentText().startswith("Ж") else "м"
+    text = generate_from_category(category, name, gender)
+    ctx.output_text.setPlainText(text)
     if getattr(ctx, "auto_copy_enabled", False):
         copy_generated_text(ctx)
