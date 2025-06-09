@@ -130,7 +130,7 @@ def clear_layout(layout):
             widget.deleteLater()
 
 
-def add_field(label: str, name: str, ctx: UIContext, clear: bool = False, builtin_clear: bool = False):
+def add_field(label: str, name: str, ctx: UIContext, builtin_clear: bool = False):
     edit = QLineEdit()
     if builtin_clear:
         try:
@@ -141,19 +141,11 @@ def add_field(label: str, name: str, ctx: UIContext, clear: bool = False, builti
     hl = QHBoxLayout(container)
     hl.setContentsMargins(0, 0, 0, 0)
     hl.addWidget(edit)
-    if clear:
-        btn = QToolButton()
-        btn.setText("✖")
-        btn.setFocusPolicy(Qt.NoFocus)
-        btn.clicked.connect(edit.clear)
-        hl.addWidget(btn)
     ctx.fields[name] = edit
     lab = label_with_icon(label)
     ctx.labels[name] = lab
     ctx.fields_layout.addRow(lab, container)
     setup_animation(edit, ctx)
-    if clear:
-        setup_animation(btn, ctx)
     if name == "link":
         edit.textChanged.connect(lambda _: on_link_change(ctx))
 
@@ -323,7 +315,7 @@ def update_fields(ctx: UIContext):
 
     if typ == "Актуализация":
         add_name_field(ctx)
-        add_field("Ссылка:", "link", ctx, clear=True)
+        add_field("Ссылка:", "link", ctx, builtin_clear=True)
         add_date("datetime", ctx)
         add_time_range("start_time", "end_time", ctx)
         add_combo("БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
@@ -331,7 +323,7 @@ def update_fields(ctx: UIContext):
         add_combo("Тип встречи:", "regular", ["Обычная", "Регулярная"], ctx)
     elif typ == "Обмен":
         add_name_field(ctx)
-        add_field("Ссылка:", "link", ctx, clear=True)
+        add_field("Ссылка:", "link", ctx, builtin_clear=True)
         add_date("datetime", ctx)
         add_time_range("start_time", "end_time", ctx)
         add_combo("БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
@@ -340,7 +332,7 @@ def update_fields(ctx: UIContext):
         add_combo("Тип встречи:", "regular", ["Обычная", "Регулярная"], ctx)
     elif typ == "Организация встречи":
         add_name_field(ctx)
-        add_field("Ссылка:", "link", ctx, clear=True)
+        add_field("Ссылка:", "link", ctx, builtin_clear=True)
         add_field("Название встречи:", "meeting_name", ctx)
         add_combo(
             "Продолжительность встречи:",
@@ -385,10 +377,7 @@ def update_fields(ctx: UIContext):
     if "meeting_name" in ctx.fields:
         lab = ctx.labels.get("meeting_name")
         if lab:
-            if typ == "Организация встречи":
-                lab.setText("📝 Встреча:")
-            else:
-                lab.setText("📝 Название встречи:")
+            lab.setText("📝 Название встречи:")
 
 
 def on_link_change(ctx: UIContext):
@@ -520,9 +509,14 @@ def generate_message(ctx: UIContext):
             period = ctx.regular_period.currentText().strip().lower()
             day = ctx.regular_day.currentText().strip().lower()
             plural_day = weekday_to_plural(day)
-            ending = "ую" if period.endswith("ю") else "ый"
-            regular_one = f"Она будет проводиться регулярно {count_word} {raz_form} в {period} по {plural_day}."
-            regular_two = f"Если всё устроит, встреча будет повторяться кажд{ending} {period} в это же время."
+            regular_one = (
+                f"Она будет проводиться регулярно {count_word} {raz_form} в {period} "
+                f"по {plural_day}."
+            )
+            regular_two = (
+                f"Если всё устроит, встреча будет повторяться {count_word} {raz_form} "
+                f"в {period} в это же время."
+            )
 
         msg = f"""{greeting}
 

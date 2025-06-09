@@ -65,11 +65,14 @@ class MainWindow(QMainWindow):
         self.type_combo.currentTextChanged.connect(self.on_type_changed)
         setup_animation(self.type_combo, ctx)
 
-        # group for regular meeting configuration
-        self.regular_group = QGroupBox("Организация регулярной встречи")
-        self.regular_group.setCheckable(True)
-        self.regular_group.setChecked(False)
-        self.regular_group.toggled.connect(self.toggle_regular_fields)
+        # checkbox + group for regular meeting configuration
+        self.regular_cb = QCheckBox("Организация регулярной встречи")
+        self.regular_cb.stateChanged.connect(self.toggle_regular_fields)
+        setup_animation(self.regular_cb, ctx)
+        self.main_layout.addWidget(self.regular_cb)
+
+        self.regular_group = QGroupBox()
+        self.regular_group.setTitle("")
         setup_animation(self.regular_group, ctx)
 
         self.regular_layout = QFormLayout(self.regular_group)
@@ -165,21 +168,20 @@ class MainWindow(QMainWindow):
 
     def on_type_changed(self, *_):
         typ = self.type_combo.currentText()
-        self.regular_group.setVisible(typ == "Организация встречи")
-        if typ != "Организация встречи":
-            self.regular_group.setChecked(False)
+        is_org = typ == "Организация встречи"
+        self.regular_cb.setVisible(is_org)
+        if not is_org:
+            self.regular_group.setVisible(False)
+            self.regular_cb.setChecked(False)
         lab = self.ctx.labels.get("client_name")
         if lab:
-            if typ == "Организация встречи":
+            if is_org:
                 lab.setText("🧑\u200d💼 Имя и фамилия заказчика (в род. падеже):")
             else:
                 lab.setText("🧑\u200d💼 Имя заказчика:")
         lab2 = self.ctx.labels.get("meeting_name")
         if lab2:
-            if typ == "Организация встречи":
-                lab2.setText("📝 Встреча:")
-            else:
-                lab2.setText("📝 Название встречи:")
+            lab2.setText("📝 Название встречи:")
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -252,6 +254,7 @@ class MainWindow(QMainWindow):
         dlg.exec()
 
     def toggle_regular_fields(self, checked: bool):
-        self.ctx.regular_meeting_enabled = checked
+        self.ctx.regular_meeting_enabled = bool(checked)
+        self.regular_group.setVisible(bool(checked))
 
 
