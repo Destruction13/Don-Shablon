@@ -103,9 +103,9 @@ class SettingsDialog(QDialog):
         row_music.addWidget(self.music_btn)
         self.settings_layout.addLayout(row_music)
 
-        ok_btn = QPushButton("OK")
-        ok_btn.clicked.connect(self.accept)
-        main_layout.addWidget(ok_btn)
+        save_btn = QPushButton("Сохранить")
+        save_btn.clicked.connect(self.save_and_close)
+        main_layout.addWidget(save_btn)
 
     def _on_mode_changed(self, mode: str) -> None:
         self.ctx.ocr_mode = mode
@@ -137,4 +137,11 @@ class SettingsDialog(QDialog):
                 QMessageBox.information(self, "Музыка", "Список обновлён")
             else:
                 QMessageBox.information(self, "Музыка", "Треков не найдено")
+
+    def save_and_close(self) -> None:
+        """Persist selected settings and close the dialog."""
+        self.ctx.settings.theme = self.ctx.current_theme_name
+        self.ctx.settings.ocr_mode = self.ctx.ocr_mode
+        self.ctx.settings.save()
+        self.accept()
 
