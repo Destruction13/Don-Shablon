@@ -22,7 +22,8 @@ class UIContext:
             "playing": False,
             "paused": False,
         }
-        self.current_theme_name = "Светлая"
+        # "Винтаж" используется по умолчанию
+        self.current_theme_name = "Винтаж"
         self.bg_pixmap = None
         self.bg_path = None
         self.btn_ls = None
