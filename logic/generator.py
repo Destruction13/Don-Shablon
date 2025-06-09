@@ -10,11 +10,10 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QPushButton,
     QDateEdit,
-    QTimeEdit,
-    QTextEdit,
-    QMessageBox,
     QToolButton,
     QFormLayout,
+    QMessageBox,
+    QCheckBox,
 )
 try:
     from PySide6.QtCore import QDate, Qt, QTime
@@ -34,8 +33,34 @@ from logic.room_filter import FilteringComboBox
 
 from logic.app_state import UIContext
 from constants import rooms_by_bz
-from logic.utils import format_date_ru, parse_yandex_calendar_url
+from logic.utils import (
+    format_date_ru,
+    parse_yandex_calendar_url,
+    copy_generated_text,
+)
 from gui.animations import setup_animation
+
+ICON_MAP = {
+    "Имя": "🧑\u200d💼",
+    "Ссылка": "🔗",
+    "Дата": "📅",
+    "Время": "⏰",
+    "БЦ": "🏢",
+    "Переговорка": "💬",
+    "Тип встречи": "📌",
+    "Название встречи": "📝",
+}
+
+def label_with_icon(text: str) -> QLabel:
+    base = text.rstrip(":")
+    emoji = None
+    for key, ico in ICON_MAP.items():
+        if base.startswith(key):
+            emoji = ico
+            break
+    if emoji:
+        return QLabel(f"{emoji} {text}")
+    return QLabel(text)
 
 
 class ClickableDateEdit(QDateEdit):
@@ -54,6 +79,47 @@ class ClickableDateEdit(QDateEdit):
             self.calendarWidget().show()
 
 
+class TimeInput(QComboBox):
+    """Editable combo box for time selection with HH:mm support."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setEditable(True)
+        times = []
+        h = 8
+        while h < 22:
+            times.append(f"{h:02d}:00")
+            times.append(f"{h:02d}:30")
+            h += 1
+        times.append("22:00")
+        self.addItems(times)
+        self.setCurrentText("08:00")
+        if self.lineEdit():
+            self.lineEdit().editingFinished.connect(self._format_text)
+
+    def _format_text(self):
+        text = self.currentText().strip()
+        digits = text.replace(":", "")
+        if len(digits) == 3:
+            digits = "0" + digits
+        if len(digits) == 4 and digits.isdigit():
+            hh = int(digits[:2])
+            mm = int(digits[2:])
+            if 0 <= hh <= 23 and 0 <= mm <= 59:
+                self.setCurrentText(f"{hh:02d}:{mm:02d}")
+
+    def time(self) -> QTime:
+        return QTime.fromString(self.currentText(), "HH:mm")
+
+    def setTime(self, t: QTime):
+        self.setCurrentText(t.toString("HH:mm"))
+
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        if self.lineEdit():
+            self.lineEdit().selectAll()
+
+
 def clear_layout(layout):
     while layout.count():
         item = layout.takeAt(0)
@@ -64,23 +130,22 @@ def clear_layout(layout):
             widget.deleteLater()
 
 
-def add_field(label: str, name: str, ctx: UIContext, clear: bool = False):
+def add_field(label: str, name: str, ctx: UIContext, builtin_clear: bool = False):
     edit = QLineEdit()
+    if builtin_clear:
+        try:
+            edit.setClearButtonEnabled(True)
+        except Exception:
+            pass
     container = QWidget()
     hl = QHBoxLayout(container)
     hl.setContentsMargins(0, 0, 0, 0)
     hl.addWidget(edit)
-    if clear:
-        btn = QToolButton()
-        btn.setText("✖")
-        btn.setFocusPolicy(Qt.NoFocus)
-        btn.clicked.connect(edit.clear)
-        hl.addWidget(btn)
     ctx.fields[name] = edit
-    ctx.fields_layout.addRow(label, container)
+    lab = label_with_icon(label)
+    ctx.labels[name] = lab
+    ctx.fields_layout.addRow(lab, container)
     setup_animation(edit, ctx)
-    if clear:
-        setup_animation(btn, ctx)
     if name == "link":
         edit.textChanged.connect(lambda _: on_link_change(ctx))
 
@@ -98,15 +163,29 @@ def add_name_field(ctx: UIContext):
         hl.addWidget(ctx.btn_asya_plus)
         ctx.btn_asya_plus.setParent(container)
     ctx.fields["name"] = edit
-    ctx.fields_layout.addRow("Имя:", container)
+    ctx.field_containers["name"] = container
+    lab = label_with_icon("Имя:")
+    ctx.labels["name"] = lab
+    ctx.fields_layout.addRow(lab, container)
     setup_animation(edit, ctx)
+
+
+def add_checkbox(label: str, name: str, ctx: UIContext):
+    cb = QCheckBox(label)
+    ctx.fields[name] = cb
+    ctx.field_containers[name] = cb
+    ctx.fields_layout.addRow(cb)
+    setup_animation(cb, ctx)
+    return cb
 
 
 def add_combo(label: str, name: str, values: list[str], ctx: UIContext):
     combo = QComboBox()
     combo.addItems(values)
     ctx.fields[name] = combo
-    ctx.fields_layout.addRow(label, combo)
+    lab = label_with_icon(label)
+    ctx.labels[name] = lab
+    ctx.fields_layout.addRow(lab, combo)
     setup_animation(combo, ctx)
 
 
@@ -132,7 +211,9 @@ def add_room_field(label: str, name: str, bz_name: str, ctx: UIContext):
     btn.clicked.connect(lambda: combo.setEditText(""))
     hl.addWidget(btn)
     ctx.fields[name] = combo
-    ctx.fields_layout.addRow(label, container)
+    lab = label_with_icon(label)
+    ctx.labels[name] = lab
+    ctx.fields_layout.addRow(lab, container)
     setup_animation(combo, ctx)
     setup_animation(btn, ctx)
 
@@ -143,15 +224,17 @@ def add_date(name: str, ctx: UIContext):
     date_edit.setDisplayFormat("dd.MM.yyyy")
     date_edit.setDate(QDate.currentDate())
     ctx.fields[name] = date_edit
-    ctx.fields_layout.addRow("Дата:", date_edit)
+    lab = label_with_icon("Дата:")
+    ctx.labels[name] = lab
+    ctx.fields_layout.addRow(lab, date_edit)
     setup_animation(date_edit, ctx)
 
 
 def add_time_range(start_name: str, end_name: str, ctx: UIContext):
-    start_edit = QTimeEdit()
-    end_edit = QTimeEdit()
-    start_edit.setDisplayFormat("HH:mm")
-    end_edit.setDisplayFormat("HH:mm")
+    start_edit = TimeInput()
+    end_edit = TimeInput()
+    start_edit.setTime(QTime(8, 0))
+    end_edit.setTime(QTime(8, 30))
 
     container = QWidget()
     hl = QHBoxLayout(container)
@@ -163,9 +246,59 @@ def add_time_range(start_name: str, end_name: str, ctx: UIContext):
 
     ctx.fields[start_name] = start_edit
     ctx.fields[end_name] = end_edit
-    ctx.fields_layout.addRow("", container)
+    lab = label_with_icon("Время:")
+    ctx.labels[start_name] = lab
+    ctx.fields_layout.addRow(lab, container)
     setup_animation(start_edit, ctx)
     setup_animation(end_edit, ctx)
+
+    def on_start_changed():
+        st = start_edit.time()
+        et = end_edit.time()
+        new_end = st.addSecs(30 * 60)
+        if not et.isValid() or et <= st:
+            end_edit.setTime(new_end)
+
+    def on_end_changed():
+        st = start_edit.time()
+        et = end_edit.time()
+        if et <= st:
+            end_edit.setTime(st.addSecs(30 * 60))
+
+    start_edit.currentTextChanged.connect(lambda _: on_start_changed())
+    end_edit.currentTextChanged.connect(lambda _: on_end_changed())
+
+
+def number_to_words(n: int) -> str:
+    return {
+        1: "один",
+        2: "два",
+        3: "три",
+        4: "четыре",
+        5: "пять",
+    }.get(n, str(n))
+
+
+def plural_raz(n: int) -> str:
+    if n == 1:
+        return "раз"
+    elif 2 <= n <= 4:
+        return "раза"
+    else:
+        return "раз"
+
+
+def weekday_to_plural(word: str) -> str:
+    mapping = {
+        "понедельник": "понедельникам",
+        "вторник": "вторникам",
+        "среда": "средам",
+        "четверг": "четвергам",
+        "пятница": "пятницам",
+        "суббота": "субботам",
+        "воскресенье": "воскресеньям",
+    }
+    return mapping.get(word.lower(), word)
 
 
 
@@ -182,7 +315,7 @@ def update_fields(ctx: UIContext):
 
     if typ == "Актуализация":
         add_name_field(ctx)
-        add_field("Ссылка:", "link", ctx, clear=True)
+        add_field("Ссылка:", "link", ctx, builtin_clear=True)
         add_date("datetime", ctx)
         add_time_range("start_time", "end_time", ctx)
         add_combo("БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
@@ -190,24 +323,61 @@ def update_fields(ctx: UIContext):
         add_combo("Тип встречи:", "regular", ["Обычная", "Регулярная"], ctx)
     elif typ == "Обмен":
         add_name_field(ctx)
-        add_field("Ссылка:", "link", ctx, clear=True)
+        add_field("Ссылка:", "link", ctx, builtin_clear=True)
         add_date("datetime", ctx)
         add_time_range("start_time", "end_time", ctx)
         add_combo("БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
         add_room_field("Его переговорка:", "his_room", "bz", ctx)
         add_room_field("Твоя переговорка:", "my_room", "bz", ctx)
         add_combo("Тип встречи:", "regular", ["Обычная", "Регулярная"], ctx)
-    elif typ == "Разовая встреча":
+    elif typ == "Организация встречи":
         add_name_field(ctx)
-        add_field("Ссылка:", "link", ctx, clear=True)
+        add_field("Ссылка:", "link", ctx, builtin_clear=True)
         add_field("Название встречи:", "meeting_name", ctx)
-        add_field("Продолжительность:", "duration", ctx)
+        add_combo(
+            "Продолжительность встречи:",
+            "duration",
+            ["30 минут", "1 час", "1.5 часа", "2 часа"],
+            ctx,
+        )
         add_date("datetime", ctx)
         add_time_range("start_time", "end_time", ctx)
-        add_field("Ссылка пересечения 1:", "conflict1", ctx)
-        add_field("Ссылка пересечения 2:", "conflict2", ctx)
-        add_field("Ссылка пересечения 3:", "conflict3", ctx)
-        add_field("Имя заказчика:", "client_name", ctx)
+        add_field("Ссылка на пересечение №1:", "conflict1", ctx, builtin_clear=True)
+        cb = add_checkbox("Несколько пересечений", "multi_conflicts", ctx)
+        add_field("Ссылка на пересечение №2:", "conflict2", ctx, builtin_clear=True)
+        add_field("Ссылка на пересечение №3:", "conflict3", ctx, builtin_clear=True)
+        add_field(
+            "Имя и фамилия заказчика (в род. падеже):",
+            "client_name",
+            ctx,
+        )
+        # hide extra conflict links until checkbox checked
+        ctx.field_containers["conflict2"].setVisible(False)
+        ctx.labels["conflict2"].setVisible(False)
+        ctx.field_containers["conflict3"].setVisible(False)
+        ctx.labels["conflict3"].setVisible(False)
+
+        def toggle_extra(val):
+            vis = bool(val)
+            ctx.field_containers["conflict2"].setVisible(vis)
+            ctx.labels["conflict2"].setVisible(vis)
+            ctx.field_containers["conflict3"].setVisible(vis)
+            ctx.labels["conflict3"].setVisible(vis)
+
+        cb.stateChanged.connect(toggle_extra)
+
+    # rename fields depending on type
+    if "client_name" in ctx.fields:
+        lab = ctx.labels.get("client_name")
+        if lab:
+            if typ == "Организация встречи":
+                lab.setText("🧑\u200d💼 Имя и фамилия заказчика (в род. падеже):")
+            else:
+                lab.setText("🧑\u200d💼 Имя заказчика:")
+    if "meeting_name" in ctx.fields:
+        lab = ctx.labels.get("meeting_name")
+        if lab:
+            lab.setText("📝 Название встречи:")
 
 
 def on_link_change(ctx: UIContext):
@@ -298,7 +468,7 @@ def generate_message(ctx: UIContext):
 Буду тебе очень {thanks_word}!
 
 Если сможем, то я всё сделаю {myself_word} :)"""
-    elif typ == "Разовая встреча":
+    elif typ == "Организация встречи":
         meeting_name = get("meeting_name")
         duration = get("duration")
         client_name = get("client_name")
@@ -331,15 +501,38 @@ def generate_message(ctx: UIContext):
             f"Понимаю, что пересечений много — но если удастся выкроить время на встречу {first_name}, это будет огонь.",
         ]
         conclusion = random.choice(multi_variants if plural else single_variants)
+        regular_one = regular_two = ""
+        if ctx.regular_meeting_enabled:
+            count = ctx.regular_count.value()
+            count_word = number_to_words(count)
+            raz_form = plural_raz(count)
+            period = ctx.regular_period.currentText().strip().lower()
+            day = ctx.regular_day.currentText().strip().lower()
+            plural_day = weekday_to_plural(day)
+            regular_one = (
+                f"Она будет проводиться регулярно {count_word} {raz_form} в {period} "
+                f"по {plural_day}."
+            )
+            regular_two = (
+                f"Если всё устроит, встреча будет повторяться {count_word} {raz_form} "
+                f"в {period} в это же время."
+            )
+
         msg = f"""{greeting}
 
 Подбираю оптимальное время для проведения встречи {client_name} «{meeting_name}»{link_part} продолжительностью в {duration}.
+{regular_one}
 
 Сейчас она стоит {formatted}{time_part}
+{regular_two}
 
 {conflict_text}
 
 {conclusion}"""
     else:
         msg = "Тип встречи не выбран"
+
+
     ctx.output_text.setPlainText(msg)
+    if getattr(ctx, "auto_copy_enabled", False):
+        copy_generated_text(ctx)

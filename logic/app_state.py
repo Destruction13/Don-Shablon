@@ -6,6 +6,7 @@ class UIContext:
         self.app: QApplication | None = None
         self.window = None
         self.fields: dict[str, object] = {}
+        self.field_containers: dict[str, object] = {}
         self.input_fields: list[object] = []
         self.asya_mode = False
         self.custom_asya_saved = False
@@ -30,6 +31,14 @@ class UIContext:
         self.btn_asya_plus = None
         # OCR settings
         self.ocr_mode = "CPU"  # or "GPU"
+
+        # generation helpers
+        self.auto_copy_enabled = False
+        self.labels: dict[str, object] = {}
+        self.regular_meeting_enabled = False
+        self.regular_count = None
+        self.regular_period = None
+        self.regular_day = None
 
         # animation settings
         self.animations_enabled = True
