@@ -60,7 +60,19 @@ class SettingsDialog(QDialog):
         row_anim_effect = QHBoxLayout()
         row_anim_effect.addWidget(QLabel("Эффект:"))
         self.anim_effect_combo = QComboBox()
-        self.anim_effect_combo.addItems(["Glow", "Scale", "Pulse", "Shimmer", "Shadow Slide"])
+        self.anim_effect_combo.addItems([
+            "Glow",
+            "Scale",
+            "Pulse",
+            "Shimmer",
+            "Shadow Slide",
+            "ColorChange",
+            "ColorInvert",
+            "Opacity",
+            "ShadowAppear",
+            "SlideOffset",
+            "ProgressFill",
+        ])
         self.anim_effect_combo.setCurrentText(ctx.animation_effect)
         self.anim_effect_combo.currentTextChanged.connect(self._on_effect_changed)
         row_anim_effect.addWidget(self.anim_effect_combo)
@@ -91,6 +103,10 @@ class SettingsDialog(QDialog):
 
     def _on_effect_changed(self, name: str) -> None:
         self.ctx.animation_effect = name
-        visible = name != "Scale"
+        visible = name not in {
+            "Scale",
+            "ColorInvert",
+            "ProgressFill",
+        }
         self.anim_slider.setVisible(visible)
         self.intensity_label.setVisible(visible)
