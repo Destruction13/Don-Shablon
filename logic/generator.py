@@ -66,17 +66,21 @@ def label_with_icon(text: str) -> QLabel:
 class ClickableDateEdit(QDateEdit):
     """Date edit that opens the calendar when focused or clicked."""
 
+    def _open_calendar(self):
+        self.setCalendarPopup(True)
+        try:
+            self.showCalendarPopup()
+        except Exception:
+            if self.calendarWidget():
+                self.calendarWidget().show()
+
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
-        self.setCalendarPopup(True)
-        if self.calendarWidget():
-            self.calendarWidget().show()
+        self._open_calendar()
 
     def focusInEvent(self, event):
         super().focusInEvent(event)
-        self.setCalendarPopup(True)
-        if self.calendarWidget():
-            self.calendarWidget().show()
+        self._open_calendar()
 
 
 class TimeInput(QLineEdit):

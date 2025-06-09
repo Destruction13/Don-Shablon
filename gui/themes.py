@@ -302,7 +302,11 @@ DEFAULT_QSS = """
 """
 
 EXTRA_QSS = """
-    QPushButton#pasteButton { font-size: 20px; min-height: 50px; }
+    QPushButton#pasteButton {
+        font-size: 24px;
+        min-height: 70px;
+        border: none;
+    }
 """
 
 

@@ -122,9 +122,9 @@ class MainWindow(QMainWindow):
         setup_animation(generate_btn, ctx)
 
         clipboard_row = QHBoxLayout()
-        cv_btn = QPushButton("📥 Из буфера")
+        from gui.rainbow_button import RainbowButton
+        cv_btn = RainbowButton("📥 Из буфера")
         cv_btn.setObjectName("pasteButton")
-        cv_btn.setFixedHeight(60)
         cv_btn.clicked.connect(self.handle_clipboard_ocr)
         clipboard_row.addWidget(cv_btn)
         clipboard_row.addStretch()
