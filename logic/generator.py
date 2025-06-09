@@ -367,17 +367,20 @@ def update_fields(ctx: UIContext):
             grid.addWidget(btn, idx // 2, idx % 2)
             idx += 1
 
-        act_btn = QPushButton("Написали по актуальности")
-        act_btn.clicked.connect(lambda: show_actuality_dialog(ctx))
-        setup_animation(act_btn, ctx)
-        grid.addWidget(act_btn, idx // 2, idx % 2)
-        idx += 1
-        exch_btn = QPushButton("Написали по обмену")
-        exch_btn.clicked.connect(lambda: show_exchange_dialog(ctx))
-        setup_animation(exch_btn, ctx)
-        grid.addWidget(exch_btn, idx // 2, idx % 2)
         ctx.field_containers["other_buttons"] = grid_container
         ctx.fields_layout.addRow(grid_container)
+
+        act_btn = QPushButton("Написали по актуальности")
+        act_btn.setMinimumHeight(40)
+        act_btn.clicked.connect(lambda: show_actuality_dialog(ctx))
+        setup_animation(act_btn, ctx)
+        ctx.fields_layout.addRow(act_btn)
+
+        exch_btn = QPushButton("Написали по обмену")
+        exch_btn.setMinimumHeight(40)
+        exch_btn.clicked.connect(lambda: show_exchange_dialog(ctx))
+        setup_animation(exch_btn, ctx)
+        ctx.fields_layout.addRow(exch_btn)
 
     # rename fields depending on type
     if "client_name" in ctx.fields:
@@ -617,7 +620,7 @@ def show_actuality_dialog(ctx: UIContext) -> None:
     link_edit = QLineEdit()
     tg_edit = QLineEdit()
     channel_combo = QComboBox()
-    channel_combo.addItems(["Ася", "Telegram", "Почта", "Slack"])
+    channel_combo.addItems(["Ася", "ЛС"])
     recent_combo = QComboBox()
 
     recs = ctx.history.get_recent_by_type("актуализация")
@@ -633,7 +636,6 @@ def show_actuality_dialog(ctx: UIContext) -> None:
         data = recent_combo.itemData(idx)
         if not isinstance(data, dict):
             return
-        login_edit.setText(data.get("name", ""))
         date_edit.setText(_format_short_date(data.get("date", "")))
         time_edit.setText(f"{data.get('start','')}–{data.get('end','')}")
         room_edit.setText(data.get("room", ""))
@@ -663,8 +665,10 @@ def show_actuality_dialog(ctx: UIContext) -> None:
     login = login_edit.text().strip()
     link = link_edit.text().strip()
     tg = tg_edit.text().strip()
+    ch = channel_combo.currentText().strip()
+    pref = "Уточняю с Аси" if ch == "Ася" else "Уточняю с ЛС"
     text = (
-        f"Уточняю актуальность по [встрече]({link}), которая пройдёт {date} "
+        f"{pref} актуальность по [встрече]({link}), которая пройдёт {date} "
         f"в {time} в переговорной {room} у {login}, [иконка Telegram]({tg})."
         "\nОтвет:"
     )
@@ -697,7 +701,7 @@ def show_exchange_dialog(ctx: UIContext) -> None:
     link_edit = QLineEdit()
     tg_edit = QLineEdit()
     channel_combo = QComboBox()
-    channel_combo.addItems(["Ася", "Telegram", "Почта", "Slack"])
+    channel_combo.addItems(["Ася", "ЛС"])
     recent_combo = QComboBox()
 
     recs = ctx.history.get_recent_by_type("обмен")
@@ -716,7 +720,6 @@ def show_exchange_dialog(ctx: UIContext) -> None:
         data = recent_combo.itemData(idx)
         if not isinstance(data, dict):
             return
-        login_edit.setText(data.get("name", ""))
         date_edit.setText(_format_short_date(data.get("date", "")))
         time_edit.setText(f"{data.get('start','')}–{data.get('end','')}")
         his_room_edit.setText(data.get("his_room", ""))
@@ -749,8 +752,10 @@ def show_exchange_dialog(ctx: UIContext) -> None:
     login = login_edit.text().strip()
     link = link_edit.text().strip()
     tg = tg_edit.text().strip()
+    ch = channel_combo.currentText().strip()
+    pref = "Предлагаю обмен с Аси" if ch == "Ася" else "Предлагаю обмен с ЛС"
     text = (
-        f"Предлагаю обмен по [встрече]({link}), которая пройдёт {date}, в {time} "
+        f"{pref} по [встрече]({link}), которая пройдёт {date}, в {time} "
         f"в переговорной {his_room} на свою {my_room}. Пишу {login}, "
         f"[иконка Telegram]({tg})."
     )
