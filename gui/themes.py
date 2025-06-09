@@ -319,7 +319,8 @@ EXTRA_QSS = """
 # ``apply_theme``.
 COMBO_DARK_QSS = """
     QComboBox QAbstractItemView,
-    QListView {
+    QListView,
+    QListView#completerPopup {
         background-color: #2e2e2e;
         color: #f0f0f0;
         selection-background-color: #444444;
@@ -329,11 +330,39 @@ COMBO_DARK_QSS = """
 
 COMBO_LIGHT_QSS = """
     QComboBox QAbstractItemView,
-    QListView {
+    QListView,
+    QListView#completerPopup {
         background-color: #ffffff;
         color: #000000;
         selection-background-color: #d0d0d0;
         selection-color: #000000;
+    }
+"""
+
+# Calendar popup styling so dates match the selected theme
+CAL_DARK_QSS = """
+    QCalendarWidget QWidget { background-color: #2e2e2e; color: #f0f0f0; }
+    QCalendarWidget QAbstractItemView {
+        background-color: #2e2e2e;
+        color: #f0f0f0;
+        selection-background-color: #444444;
+        selection-color: #ffffff;
+    }
+    QCalendarWidget QWidget#qt_calendar_navigationbar {
+        background-color: #2e2e2e;
+    }
+"""
+
+CAL_LIGHT_QSS = """
+    QCalendarWidget QWidget { background-color: #ffffff; color: #000000; }
+    QCalendarWidget QAbstractItemView {
+        background-color: #ffffff;
+        color: #000000;
+        selection-background-color: #d0d0d0;
+        selection-color: #000000;
+    }
+    QCalendarWidget QWidget#qt_calendar_navigationbar {
+        background-color: #ffffff;
     }
 """
 
@@ -372,11 +401,17 @@ def apply_theme(app, name: str, ctx: Optional[UIContext] = None) -> None:
     if not name or name == "Стандартная":
         theme = DEFAULT_QSS
         combo = COMBO_LIGHT_QSS
+        cal = CAL_LIGHT_QSS
     else:
         theme = THEME_QSS.get(name, DEFAULT_QSS)
-        combo = COMBO_DARK_QSS if name in DARK_THEMES else COMBO_LIGHT_QSS
-    # Always append dialog overrides and extra rules, plus combo dropdown tweak
-    app.setStyleSheet(theme + combo + EXTRA_QSS + DIALOG_QSS)
+        if name in DARK_THEMES:
+            combo = COMBO_DARK_QSS
+            cal = CAL_DARK_QSS
+        else:
+            combo = COMBO_LIGHT_QSS
+            cal = CAL_LIGHT_QSS
+    # Always append dialog overrides and extra rules
+    app.setStyleSheet(theme + combo + cal + EXTRA_QSS + DIALOG_QSS)
     if ctx is not None:
         path = THEME_BACKGROUNDS.get(name)
         ctx.bg_path = str(path) if path else None
