@@ -318,7 +318,8 @@ EXTRA_QSS = """
 # white text on a light background. These snippets are appended dynamically in
 # ``apply_theme``.
 COMBO_DARK_QSS = """
-    QComboBox QAbstractItemView {
+    QComboBox QAbstractItemView,
+    QListView {
         background-color: #2e2e2e;
         color: #f0f0f0;
         selection-background-color: #444444;
@@ -327,7 +328,8 @@ COMBO_DARK_QSS = """
 """
 
 COMBO_LIGHT_QSS = """
-    QComboBox QAbstractItemView {
+    QComboBox QAbstractItemView,
+    QListView {
         background-color: #ffffff;
         color: #000000;
         selection-background-color: #d0d0d0;
@@ -350,10 +352,18 @@ DARK_THEMES = {
 # selected.
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 THEME_BACKGROUNDS = {
+    "Стандартная": ASSETS_DIR / "white.jpg",
+    "Футуризм": ASSETS_DIR / "retro.jpg",
+    "Готика": ASSETS_DIR / "gothic.jpg",
     "Киберпанк": ASSETS_DIR / "cyberpunk.jpg",
-    "Гёрли": ASSETS_DIR / "girlpunk.jpg",
+    "Минимал": ASSETS_DIR / "minimal.jpg",
+    "Аниме": ASSETS_DIR / "anime.jpg",
+    "Гёрли": ASSETS_DIR / "girly.jpg",
+    "Неон": ASSETS_DIR / "neon.jpg",
+    "Тёмная": ASSETS_DIR / "black.jpg",
+    "Сканди": ASSETS_DIR / "scandy.jpg",
     "Моно": ASSETS_DIR / "monoblack.jpg",
-    "Готика": ASSETS_DIR / "retro.jpg",
+    "Винтаж": ASSETS_DIR / "vintage.jpg",
 }
 
 
