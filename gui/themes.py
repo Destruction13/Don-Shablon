@@ -1,3 +1,7 @@
+from pathlib import Path
+from typing import Optional
+
+from logic.app_state import UIContext
 THEME_QSS = {
     "Футуризм": """
         * { font-family: 'Orbitron', 'Rajdhani', 'DejaVu Sans'; font-size: 14px; color: #c8fcff; }
@@ -26,7 +30,7 @@ THEME_QSS = {
         QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border: 1px solid #88ffff; }
     """,
     "Готика": """
-        * { font-family: 'Cinzel', 'IM Fell', 'DejaVu Serif'; font-size: 14px; color: #e8d4f2; }
+        * { font-family: 'UnifrakturCook', 'Cinzel', 'IM Fell', 'DejaVu Serif'; font-size: 14px; color: #e8d4f2; }
         QMainWindow { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1b0f16, stop:1 #000000); }
         QLabel, QGroupBox::title, QCheckBox, QRadioButton, QToolTip { color: #e8d4f2; }
         QPushButton, QToolButton {
@@ -51,7 +55,7 @@ THEME_QSS = {
         QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border: 1px solid #dd9cff; }
     """,
     "Киберпанк": """
-        * { font-family: 'Share Tech Mono', 'DejaVu Sans Mono'; font-size: 13px; color: #ff9af5; }
+        * { font-family: 'Press Start 2P', 'Share Tech Mono', 'DejaVu Sans Mono'; font-size: 13px; color: #ff9af5; }
         QMainWindow { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #090018, stop:1 #2a0048); }
         QLabel, QGroupBox::title, QCheckBox, QRadioButton, QToolTip { color: #ff9af5; }
         QPushButton, QToolButton {
@@ -127,7 +131,7 @@ THEME_QSS = {
         QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border: 1px solid #ff66b2; }
     """,
     "Гёрли": """
-        * { font-family: 'Segoe UI', 'DejaVu Sans'; font-size: 13px; color: #d63384; }
+        * { font-family: 'Comic Sans MS', 'Segoe UI', 'DejaVu Sans'; font-size: 13px; color: #d63384; }
         QMainWindow { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #fff0f8, stop:1 #ffe2ed); }
         QLabel, QGroupBox::title, QCheckBox, QRadioButton, QToolTip { color: #d63384; }
         QPushButton, QToolButton {
@@ -228,7 +232,7 @@ THEME_QSS = {
         QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border: 1px solid #668b8b; }
     """,
     "Моно": """
-        * { font-family: 'JetBrains Mono', 'DejaVu Sans Mono'; font-size: 13px; color: #d0d0d0; }
+        * { font-family: 'Fira Code', 'JetBrains Mono', 'DejaVu Sans Mono'; font-size: 13px; color: #d0d0d0; }
         QMainWindow { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #2a2a2a, stop:1 #1e1e1e); }
         QLabel, QGroupBox::title, QCheckBox, QRadioButton, QToolTip { color: #d0d0d0; }
         QPushButton, QToolButton {
@@ -341,8 +345,19 @@ DARK_THEMES = {
     "Моно",
 }
 
+# Mapping from theme names to background image paths located in the ``assets``
+# directory. These are applied via ``apply_theme`` when a matching theme is
+# selected.
+ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
+THEME_BACKGROUNDS = {
+    "Киберпанк": ASSETS_DIR / "cyberpunk.jpg",
+    "Гёрли": ASSETS_DIR / "girlpunk.jpg",
+    "Моно": ASSETS_DIR / "monoblack.jpg",
+    "Готика": ASSETS_DIR / "retro.jpg",
+}
 
-def apply_theme(app, name: str) -> None:
+
+def apply_theme(app, name: str, ctx: Optional[UIContext] = None) -> None:
     """Apply theme stylesheet to the QApplication."""
     if not name or name == "Стандартная":
         theme = DEFAULT_QSS
@@ -352,3 +367,9 @@ def apply_theme(app, name: str) -> None:
         combo = COMBO_DARK_QSS if name in DARK_THEMES else COMBO_LIGHT_QSS
     # Always append dialog overrides and extra rules, plus combo dropdown tweak
     app.setStyleSheet(theme + combo + EXTRA_QSS + DIALOG_QSS)
+    if ctx is not None:
+        path = THEME_BACKGROUNDS.get(name)
+        ctx.bg_path = str(path) if path else None
+        if ctx.window:
+            ctx.window.update_background()
+
