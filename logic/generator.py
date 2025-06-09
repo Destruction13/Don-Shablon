@@ -68,7 +68,7 @@ class ClickableDateEdit(QDateEdit):
 
     def _open_calendar(self):
         self.setCalendarPopup(True)
-        QTimer.singleShot(0, self.showCalendarPopup)
+        QTimer.singleShot(100, self.showCalendarPopup)
 
     def mousePressEvent(self, event):
         super().mousePressEvent(event)

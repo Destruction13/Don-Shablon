@@ -30,7 +30,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"[ERROR] Failed to init mixer: {e}")
         self.setWindowTitle("Генератор шаблонов встреч")
-        self.resize(800, 600)
+        self.resize(1100, 1000)
         if ctx.app:
             apply_theme(ctx.app, ctx.current_theme_name)
 
@@ -130,6 +130,9 @@ class MainWindow(QMainWindow):
         action_row.addWidget(generate_btn)
         self.main_layout.addLayout(action_row)
         setup_animation(generate_btn, ctx)
+
+        cv_btn.setFixedHeight(generate_btn.sizeHint().height())
+        cv_btn.setSizePolicy(generate_btn.sizePolicy())
 
         self.asya_btn = QPushButton("ЛС")
         self.asya_btn.setObjectName("lsButton")
