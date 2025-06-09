@@ -309,12 +309,46 @@ EXTRA_QSS = """
     }
 """
 
+# Additional styling for combo box dropdowns. Dark themes need explicit text
+# colors because QAbstractItemView defaults to system colors which may render
+# white text on a light background. These snippets are appended dynamically in
+# ``apply_theme``.
+COMBO_DARK_QSS = """
+    QComboBox QAbstractItemView {
+        background-color: #2e2e2e;
+        color: #f0f0f0;
+        selection-background-color: #444444;
+        selection-color: #ffffff;
+    }
+"""
+
+COMBO_LIGHT_QSS = """
+    QComboBox QAbstractItemView {
+        background-color: #ffffff;
+        color: #000000;
+        selection-background-color: #d0d0d0;
+        selection-color: #000000;
+    }
+"""
+
+# Names of themes that use dark color schemes
+DARK_THEMES = {
+    "Футуризм",
+    "Готика",
+    "Киберпанк",
+    "Неон",
+    "Тёмная",
+    "Моно",
+}
+
 
 def apply_theme(app, name: str) -> None:
     """Apply theme stylesheet to the QApplication."""
     if not name or name == "Стандартная":
         theme = DEFAULT_QSS
+        combo = COMBO_LIGHT_QSS
     else:
         theme = THEME_QSS.get(name, DEFAULT_QSS)
-    # Always append dialog overrides and extra rules
-    app.setStyleSheet(theme + EXTRA_QSS + DIALOG_QSS)
+        combo = COMBO_DARK_QSS if name in DARK_THEMES else COMBO_LIGHT_QSS
+    # Always append dialog overrides and extra rules, plus combo dropdown tweak
+    app.setStyleSheet(theme + combo + EXTRA_QSS + DIALOG_QSS)
