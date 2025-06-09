@@ -1,3 +1,4 @@
+import os
 from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -8,6 +9,9 @@ from PySide6.QtWidgets import (
     QWidget,
     QCheckBox,
     QSlider,
+    QToolButton,
+    QFileDialog,
+    QMessageBox,
 )
 from PySide6.QtCore import Qt
 
@@ -89,6 +93,16 @@ class SettingsDialog(QDialog):
         self.settings_layout.addLayout(row_intensity)
         self._on_effect_changed(ctx.animation_effect)
 
+        row_music = QHBoxLayout()
+        row_music.addWidget(QLabel("Музыка:"))
+        self.music_label = QLabel(os.path.basename(ctx.music_dir))
+        row_music.addWidget(self.music_label)
+        self.music_btn = QToolButton()
+        self.music_btn.setText("📂")
+        self.music_btn.clicked.connect(self.choose_music_dir)
+        row_music.addWidget(self.music_btn)
+        self.settings_layout.addLayout(row_music)
+
         ok_btn = QPushButton("OK")
         ok_btn.clicked.connect(self.accept)
         main_layout.addWidget(ok_btn)
@@ -110,3 +124,17 @@ class SettingsDialog(QDialog):
         }
         self.anim_slider.setVisible(visible)
         self.intensity_label.setVisible(visible)
+
+    def choose_music_dir(self) -> None:
+        new_dir = QFileDialog.getExistingDirectory(
+            self, "Выбрать папку с музыкой", self.ctx.music_dir
+        )
+        if new_dir:
+            self.ctx.music_dir = new_dir
+            self.music_label.setText(os.path.basename(new_dir) or new_dir)
+            self.ctx.refresh_music_files()
+            if self.ctx.music_files:
+                QMessageBox.information(self, "Музыка", "Список обновлён")
+            else:
+                QMessageBox.information(self, "Музыка", "Треков не найдено")
+
