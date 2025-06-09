@@ -16,11 +16,12 @@ THEME_QSS = {
             background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #00ffff, stop:1 #008fb3);
             color: #000000;
         }
-        QLineEdit, QComboBox, QTextEdit {
+        QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background: #111820;
             color: #c8fcff;
             border: 1px solid #00ffff;
             border-radius: 6px;
+            padding: 6px 8px;
         }
         QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border: 1px solid #88ffff; }
     """,
@@ -40,11 +41,12 @@ THEME_QSS = {
         QPushButton:pressed, QToolButton:pressed, QPushButton:checked, QToolButton:checked {
             background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #5e2c53, stop:1 #762e6d);
         }
-        QLineEdit, QComboBox, QTextEdit {
+        QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background: #271822;
             color: #e8d4f2;
             border: 1px dotted #aa66cc;
             border-radius: 5px;
+            padding: 6px 8px;
         }
         QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border: 1px solid #dd9cff; }
     """,
@@ -65,11 +67,12 @@ THEME_QSS = {
             background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #ff00a0, stop:1 #ff0080);
             color: #000000;
         }
-        QLineEdit, QComboBox, QTextEdit {
+        QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background: #12003b;
             color: #ff9af5;
             border: 1px dashed #ff00ff;
             border-radius: 4px;
+            padding: 6px 8px;
         }
         QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border: 1px solid #00ffff; }
     """,
@@ -89,11 +92,12 @@ THEME_QSS = {
         QPushButton:pressed, QToolButton:pressed, QPushButton:checked, QToolButton:checked {
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #d0d0d0, stop:1 #b0b0b0);
         }
-        QLineEdit, QComboBox, QTextEdit {
+        QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background: #ffffff;
             color: #202020;
             border: 1px solid #bfbfbf;
             border-radius: 2px;
+            padding: 6px 8px;
         }
         QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border: 1px solid #337ab7; }
     """,
@@ -113,11 +117,12 @@ THEME_QSS = {
         QPushButton:pressed, QToolButton:pressed, QPushButton:checked, QToolButton:checked {
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ff88cc, stop:1 #ff66b2);
         }
-        QLineEdit, QComboBox, QTextEdit {
+        QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background: #ffffff;
             color: #ff3399;
             border: 1px solid #ff66b2;
             border-radius: 6px;
+            padding: 6px 8px;
         }
         QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border: 1px solid #ff66b2; }
     """,
@@ -137,11 +142,12 @@ THEME_QSS = {
         QPushButton:pressed, QToolButton:pressed, QPushButton:checked, QToolButton:checked {
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ff9acb, stop:1 #ff7ab2);
         }
-        QLineEdit, QComboBox, QTextEdit {
+        QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background: #ffffff;
             color: #d63384;
             border: 1px solid #d63384;
             border-radius: 5px;
+            padding: 6px 8px;
         }
         QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border: 1px solid #e0529c; }
     """,
@@ -162,11 +168,12 @@ THEME_QSS = {
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #39ff14, stop:1 #29a329);
             color: #000000;
         }
-        QLineEdit, QComboBox, QTextEdit {
+        QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background: #1a1a1a;
             color: #eaeaea;
             border: 1px dashed #39ff14;
             border-radius: 8px;
+            padding: 6px 8px;
         }
         QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border: 1px solid #39ff14; }
     """,
@@ -186,11 +193,12 @@ THEME_QSS = {
         QPushButton:pressed, QToolButton:pressed, QPushButton:checked, QToolButton:checked {
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #333333, stop:1 #555555);
         }
-        QLineEdit, QComboBox, QTextEdit {
+        QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background: #000000;
             color: #eaeaea;
             border: 1px solid #555555;
             border-radius: 3px;
+            padding: 6px 8px;
         }
         QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border: 1px solid #888888; }
     """,
@@ -210,11 +218,12 @@ THEME_QSS = {
         QPushButton:pressed, QToolButton:pressed, QPushButton:checked, QToolButton:checked {
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #bcc0bf, stop:1 #aeb3b1);
         }
-        QLineEdit, QComboBox, QTextEdit {
+        QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background: #ffffff;
             color: #2d2d2d;
             border: 1px solid #9ba0a0;
             border-radius: 4px;
+            padding: 6px 8px;
         }
         QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border: 1px solid #668b8b; }
     """,
@@ -234,20 +243,27 @@ THEME_QSS = {
         QPushButton:pressed, QToolButton:pressed, QPushButton:checked, QToolButton:checked {
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #666666, stop:1 #888888);
         }
-        QLineEdit, QComboBox, QTextEdit {
+        QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
             background: #1a1a1a;
             color: #d0d0d0;
             border: 1px solid #707070;
             border-radius: 2px;
+            padding: 6px 8px;
         }
         QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border: 1px solid #999999; }
     """,
     "Винтаж": """
-        * { font-family: 'Segoe UI'; font-size: 14px; }
+        * { font-family: 'Georgia', 'Garamond', 'Times New Roman'; font-size: 14px; }
         QMainWindow { background-color: #faf1e6; color: #5e412f; }
         QPushButton { background-color: #e6d5c3; color: #5e412f; border-radius: 4px; padding: 4px; }
         QPushButton:checked { background-color: #c9b29b; }
-        QTextEdit { background-color: #ffffff; color: #5e412f; border-radius: 4px; }
+        QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
+            background-color: #ffffff;
+            color: #5e412f;
+            border: 1px solid #c9b29b;
+            border-radius: 4px;
+            padding: 6px 8px;
+        }
         QPushButton#lsButton:checked { border: 2px solid #FFD700; }
         QPushButton#asyaButton:checked { border: 2px solid #00AAFF; }
     """,
@@ -272,7 +288,12 @@ DIALOG_QSS = """
 DEFAULT_QSS = """
     * { font-family: 'Segoe UI'; font-size: 12px; }
     QMainWindow { background-color: #f0f0f0; color: #202020; }
-    QLineEdit, QComboBox, QTextEdit { background-color: #ffffff; color: #202020; border-radius: 4px; }
+    QLineEdit, QComboBox, QTextEdit, QAbstractSpinBox {
+        background-color: #ffffff;
+        color: #202020;
+        border-radius: 4px;
+        padding: 6px 8px;
+    }
     QPushButton { background-color: #e0e0e0; color: #202020; border-radius: 4px; padding: 4px; }
     QPushButton:hover { background-color: #d0d0d0; }
     QPushButton:checked { background-color: #bdbdbd; }
