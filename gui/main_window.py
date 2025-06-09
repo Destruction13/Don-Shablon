@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton,
     QTextEdit, QComboBox, QMessageBox, QToolButton, QFormLayout, QCheckBox,
-    QScrollArea, QSpinBox, QGroupBox
+    QScrollArea, QSpinBox, QGroupBox, QSizePolicy
 )
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
@@ -119,20 +119,20 @@ class MainWindow(QMainWindow):
         cv_btn = RainbowButton("Автозаполнение полей")
         cv_btn.setObjectName("pasteButton")
         cv_btn.clicked.connect(self.handle_clipboard_ocr)
+        cv_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         clipboard_row.addWidget(cv_btn)
-        clipboard_row.addStretch()
         self.main_layout.addLayout(clipboard_row)
         setup_animation(cv_btn, ctx)
 
         action_row = QHBoxLayout()
         generate_btn = QPushButton("Сгенерировать")
         generate_btn.clicked.connect(lambda: generate_message(ctx))
+        generate_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         action_row.addWidget(generate_btn)
         self.main_layout.addLayout(action_row)
         setup_animation(generate_btn, ctx)
 
-        cv_btn.setFixedHeight(generate_btn.sizeHint().height())
-        cv_btn.setSizePolicy(generate_btn.sizePolicy())
+        cv_btn.setFixedHeight(int(generate_btn.sizeHint().height() * 1.5))
 
         self.asya_btn = QPushButton("ЛС")
         self.asya_btn.setObjectName("lsButton")

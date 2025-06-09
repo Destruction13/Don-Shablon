@@ -67,8 +67,16 @@ class ClickableDateEdit(QDateEdit):
     """Date edit that opens the calendar when focused or clicked."""
 
     def _open_calendar(self):
+        """Open the calendar popup reliably across Qt versions."""
         self.setCalendarPopup(True)
-        QTimer.singleShot(100, self.showCalendarPopup)
+
+        def show():
+            cal = self.calendarWidget()
+            if cal:
+                cal.show()
+                cal.setFocus()
+
+        QTimer.singleShot(100, show)
 
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
