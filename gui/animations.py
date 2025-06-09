@@ -182,7 +182,7 @@ class HoverAnimationFilter(QObject):
         elif effect == "ProgressFill":
             from PySide6.QtWidgets import QPushButton, QWidget
 
-            if isinstance(obj, QPushButton):
+            if isinstance(obj, QWidget):
                 overlay = self._progress_overlays.get(obj)
                 if overlay is None:
                     overlay = QWidget(obj)
@@ -192,7 +192,7 @@ class HoverAnimationFilter(QObject):
                     overlay.setAttribute(Qt.WA_TransparentForMouseEvents)
                     self._progress_overlays[obj] = overlay
                 start_rect = QRect(0, 0, 0, obj.height())
-                end_rect = QRect(0, 0, int(obj.width() * 0.7), obj.height())
+                end_rect = QRect(0, 0, int(obj.width()), obj.height())
                 overlay.setGeometry(start_rect)
                 overlay.show()
                 anim = QPropertyAnimation(overlay, b"geometry", obj)
