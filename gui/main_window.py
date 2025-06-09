@@ -1,10 +1,10 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton,
     QTextEdit, QComboBox, QMessageBox, QToolButton, QFormLayout, QCheckBox,
-    QScrollArea, QSpinBox, QGroupBox, QSizePolicy, QSlider, QProgressBar
+    QScrollArea, QSpinBox, QGroupBox, QSizePolicy, QSlider
 )
 from PySide6.QtGui import QPixmap
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt
 import os
 import pygame
 
@@ -13,38 +13,7 @@ from logic.generator import update_fields, generate_message
 from logic.utils import copy_generated_text, translate_to_english
 from gui.themes import apply_theme
 from gui.animations import setup_animation
-
-
-class EqualizerWidget(QWidget):
-    """Simple animated equalizer using random bar heights."""
-
-    def __init__(self, ctx: UIContext, parent=None):
-        super().__init__(parent)
-        self.ctx = ctx
-        layout = QHBoxLayout(self)
-        layout.setSpacing(2)
-        self.bars = []
-        for _ in range(10):
-            bar = QProgressBar()
-            bar.setRange(0, 100)
-            bar.setValue(0)
-            bar.setTextVisible(False)
-            bar.setOrientation(Qt.Vertical)
-            bar.setFixedWidth(6)
-            layout.addWidget(bar)
-            self.bars.append(bar)
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update_bars)
-        self.timer.start(120)
-
-    def update_bars(self):
-        if self.ctx.music_state.get("playing") and not self.ctx.music_state.get("paused"):
-            import random
-            for bar in self.bars:
-                bar.setValue(random.randint(10, 100))
-        else:
-            for bar in self.bars:
-                bar.setValue(0)
+from gui.fancy_equalizer import FancyEqualizer
 
 
 class MainWindow(QMainWindow):
@@ -224,7 +193,7 @@ class MainWindow(QMainWindow):
         output_container.addLayout(top_controls)
         self.output_text = QTextEdit()
         output_container.addWidget(self.output_text)
-        self.eq_widget = EqualizerWidget(ctx)
+        self.eq_widget = FancyEqualizer(ctx)
         self.eq_widget.setFixedHeight(30)
         output_container.addWidget(self.eq_widget)
         self.main_layout.addLayout(output_container)
