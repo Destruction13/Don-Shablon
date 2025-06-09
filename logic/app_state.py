@@ -30,3 +30,8 @@ class UIContext:
         # OCR settings
         self.ocr_mode = "CPU"  # or "GPU"
 
+        # animation settings
+        self.animations_enabled = True
+        self.animation_effect = "Glow"
+        self.animation_intensity = 50
+
