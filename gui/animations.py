@@ -23,6 +23,9 @@ class HoverAnimationFilter(QObject):
         self._animations = {}
         self._effects = {}
         self._timers = {}
+        self._orig_styles = {}
+        self._orig_progress = {}
+        self._active_effect = {}
 
     def _store_anim(self, obj, anim):
         """Track running animations and clean up on finish."""
@@ -38,9 +41,11 @@ class HoverAnimationFilter(QObject):
                 return False
             effect = getattr(self.ctx, "animation_effect", "Glow")
             intensity = getattr(self.ctx, "animation_intensity", 50)
+            self._active_effect[obj] = effect
             self._apply_effect(obj, effect, intensity)
         elif event.type() == QEvent.Leave:
-            self._clear_effect(obj)
+            effect = self._active_effect.pop(obj, None)
+            self._clear_effect(obj, effect)
         return False
 
     def _apply_effect(self, obj, effect: str, intensity: int) -> None:
@@ -115,8 +120,109 @@ class HoverAnimationFilter(QObject):
             anim.setLoopCount(1)
             anim.start()
             self._store_anim(obj, anim)
+        elif effect == "ColorChange":
+            color_effect = QGraphicsColorizeEffect(obj)
+            color_effect.setColor(QColor("#3daee9"))
+            color_effect.setStrength(0.0)
+            obj.setGraphicsEffect(color_effect)
+            anim = QPropertyAnimation(color_effect, b"strength", obj)
+            anim.setDuration(200)
+            anim.setStartValue(0.0)
+            anim.setEndValue(min(1.0, intensity / 100))
+            anim.start()
+            self._store_anim(obj, anim)
+            self._effects[obj] = color_effect
+        elif effect == "ColorInvert":
+            if obj not in self._orig_styles:
+                self._orig_styles[obj] = obj.styleSheet()
+            pal = obj.palette()
+            bg = pal.color(obj.backgroundRole())
+            txt = pal.color(pal.WindowText)
+            inv_bg = QColor(255 - bg.red(), 255 - bg.green(), 255 - bg.blue())
+            inv_txt = QColor(255 - txt.red(), 255 - txt.green(), 255 - txt.blue())
+            obj.setStyleSheet(
+                f"background-color: {inv_bg.name()}; color: {inv_txt.name()};"
+            )
+        elif effect == "Opacity":
+            op = QGraphicsOpacityEffect(obj)
+            obj.setGraphicsEffect(op)
+            anim = QPropertyAnimation(op, b"opacity", obj)
+            anim.setDuration(150)
+            anim.setStartValue(1.0)
+            anim.setEndValue(max(0.0, 1 - intensity / 100))
+            anim.start()
+            self._store_anim(obj, anim)
+            self._effects[obj] = op
+        elif effect == "ShadowAppear":
+            shadow = QGraphicsDropShadowEffect(obj)
+            shadow.setColor(QColor(0, 0, 0, 150))
+            shadow.setOffset(0)
+            obj.setGraphicsEffect(shadow)
+            anim = QPropertyAnimation(shadow, b"blurRadius", obj)
+            anim.setDuration(200)
+            anim.setStartValue(0)
+            anim.setEndValue(max(5, intensity))
+            anim.start()
+            self._store_anim(obj, anim)
+            self._effects[obj] = shadow
+        elif effect == "SlideOffset":
+            rect = obj.geometry()
+            self._orig_geom[obj] = QRect(rect)
+            offset = max(1, intensity // 20)
+            new_rect = QRect(rect)
+            new_rect.translate(offset, offset)
+            anim = QPropertyAnimation(obj, b"geometry", obj)
+            anim.setDuration(150)
+            anim.setEasingCurve(QEasingCurve.OutQuad)
+            anim.setStartValue(rect)
+            anim.setEndValue(new_rect)
+            anim.start()
+            self._store_anim(obj, anim)
+        elif effect == "GlowBorder":
+            glow = QGraphicsDropShadowEffect(obj)
+            glow.setOffset(0)
+            glow.setColor(QColor("#3daee9"))
+            glow.setBlurRadius(max(10, intensity))
+            obj.setGraphicsEffect(glow)
+            self._effects[obj] = glow
+        elif effect == "ProgressFill":
+            if hasattr(obj, "value") and hasattr(obj, "setValue"):
+                self._orig_progress[obj] = obj.value()
+                anim = QPropertyAnimation(obj, b"value", obj)
+                anim.setDuration(300)
+                anim.setStartValue(obj.value())
+                anim.setEndValue(70)
+                anim.start()
+                self._store_anim(obj, anim)
+        elif effect == "CursorGlow":
+            glow = QGraphicsDropShadowEffect(obj)
+            color = QColor("#3daee9")
+            color.setAlpha(180)
+            glow.setColor(color)
+            glow.setBlurRadius(max(15, intensity))
+            glow.setOffset(0)
+            obj.setGraphicsEffect(glow)
+            factor = max(1, intensity) / 30
+            timer = QTimer(obj)
+            timer.timeout.connect(lambda o=obj, e=glow, f=factor: self._update_cursor_offset(o, e, f))
+            timer.start(30)
+            self._timers[obj] = timer
+            self._effects[obj] = glow
+        elif effect == "DissolveOnLeave":
+            op = self._effects.get(obj)
+            if not isinstance(op, QGraphicsOpacityEffect):
+                op = QGraphicsOpacityEffect(obj)
+                op.setOpacity(0.0)
+                obj.setGraphicsEffect(op)
+                self._effects[obj] = op
+            anim = QPropertyAnimation(op, b"opacity", obj)
+            anim.setDuration(150)
+            anim.setStartValue(op.opacity())
+            anim.setEndValue(1.0)
+            anim.start()
+            self._store_anim(obj, anim)
 
-    def _clear_effect(self, obj):
+    def _clear_effect(self, obj, effect_name=None):
         anim = self._animations.pop(obj, None)
         if anim:
             anim.stop()
@@ -124,6 +230,32 @@ class HoverAnimationFilter(QObject):
         if timer:
             timer.stop()
             timer.deleteLater()
+
+        if effect_name == "ColorInvert":
+            style = self._orig_styles.pop(obj, None)
+            if style is not None:
+                obj.setStyleSheet(style)
+            return
+
+        if effect_name == "ProgressFill":
+            val = self._orig_progress.pop(obj, None)
+            if val is not None and hasattr(obj, "setValue"):
+                obj.setValue(val)
+
+        if effect_name == "DissolveOnLeave":
+            op = self._effects.get(obj)
+            if not isinstance(op, QGraphicsOpacityEffect):
+                op = QGraphicsOpacityEffect(obj)
+                obj.setGraphicsEffect(op)
+                self._effects[obj] = op
+            fade = QPropertyAnimation(op, b"opacity", obj)
+            fade.setDuration(150)
+            fade.setStartValue(op.opacity())
+            fade.setEndValue(0.0)
+            fade.start()
+            self._store_anim(obj, fade)
+            return
+
         effect = self._effects.pop(obj, None)
         if effect:
             if isinstance(effect, QGraphicsDropShadowEffect):
@@ -144,7 +276,7 @@ class HoverAnimationFilter(QObject):
                 fade = QPropertyAnimation(effect, b"opacity", obj)
                 fade.setDuration(150)
                 fade.setStartValue(effect.opacity())
-                fade.setEndValue(0.0)
+                fade.setEndValue(1.0)
                 fade.finished.connect(lambda eff=effect, o=obj: self._remove_effect(o, eff))
                 fade.start()
                 self._store_anim(obj, fade)
