@@ -79,45 +79,23 @@ class ClickableDateEdit(QDateEdit):
             self.calendarWidget().show()
 
 
-class TimeInput(QComboBox):
-    """Editable combo box for time selection with HH:mm support."""
+class TimeInput(QLineEdit):
+    """Simple line edit for time with HH:mm format."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setEditable(True)
-        times = []
-        h = 8
-        while h < 22:
-            times.append(f"{h:02d}:00")
-            times.append(f"{h:02d}:30")
-            h += 1
-        times.append("22:00")
-        self.addItems(times)
-        self.setCurrentText("08:00")
-        if self.lineEdit():
-            self.lineEdit().editingFinished.connect(self._format_text)
-
-    def _format_text(self):
-        text = self.currentText().strip()
-        digits = text.replace(":", "")
-        if len(digits) == 3:
-            digits = "0" + digits
-        if len(digits) == 4 and digits.isdigit():
-            hh = int(digits[:2])
-            mm = int(digits[2:])
-            if 0 <= hh <= 23 and 0 <= mm <= 59:
-                self.setCurrentText(f"{hh:02d}:{mm:02d}")
+        self.setInputMask("00:00")
+        self.setText("08:00")
 
     def time(self) -> QTime:
-        return QTime.fromString(self.currentText(), "HH:mm")
+        return QTime.fromString(self.text(), "HH:mm")
 
     def setTime(self, t: QTime):
-        self.setCurrentText(t.toString("HH:mm"))
+        self.setText(t.toString("HH:mm"))
 
     def focusInEvent(self, event):
         super().focusInEvent(event)
-        if self.lineEdit():
-            self.lineEdit().selectAll()
+        self.selectAll()
 
 
 def clear_layout(layout):
@@ -142,6 +120,7 @@ def add_field(label: str, name: str, ctx: UIContext, builtin_clear: bool = False
     hl.setContentsMargins(0, 0, 0, 0)
     hl.addWidget(edit)
     ctx.fields[name] = edit
+    ctx.field_containers[name] = container
     lab = label_with_icon(label)
     ctx.labels[name] = lab
     ctx.fields_layout.addRow(lab, container)
@@ -265,8 +244,8 @@ def add_time_range(start_name: str, end_name: str, ctx: UIContext):
         if et <= st:
             end_edit.setTime(st.addSecs(30 * 60))
 
-    start_edit.currentTextChanged.connect(lambda _: on_start_changed())
-    end_edit.currentTextChanged.connect(lambda _: on_end_changed())
+    start_edit.editingFinished.connect(on_start_changed)
+    end_edit.editingFinished.connect(on_end_changed)
 
 
 def number_to_words(n: int) -> str:

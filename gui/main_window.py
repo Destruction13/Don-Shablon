@@ -101,10 +101,15 @@ class MainWindow(QMainWindow):
 
         # fields frame inside scroll area
         self.scroll_area = QScrollArea()
+        self.scroll_area.setObjectName("fieldsArea")
         self.scroll_area.setWidgetResizable(True)
         self.fields_widget = QWidget()
+        self.fields_widget.setObjectName("fieldsWidget")
         self.fields_layout = QFormLayout(self.fields_widget)
         self.scroll_area.setWidget(self.fields_widget)
+        self.scroll_area.setStyleSheet(
+            "QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; border: none; }"
+        )
         self.main_layout.addWidget(self.scroll_area)
         ctx.fields_layout = self.fields_layout
 
@@ -118,6 +123,8 @@ class MainWindow(QMainWindow):
 
         clipboard_row = QHBoxLayout()
         cv_btn = QPushButton("📥 Из буфера")
+        cv_btn.setObjectName("pasteButton")
+        cv_btn.setFixedHeight(60)
         cv_btn.clicked.connect(self.handle_clipboard_ocr)
         clipboard_row.addWidget(cv_btn)
         clipboard_row.addStretch()
@@ -149,9 +156,9 @@ class MainWindow(QMainWindow):
         output_container = QVBoxLayout()
         self.auto_copy_cb = QCheckBox("📋 Авто-копирование")
         self.auto_copy_cb.stateChanged.connect(lambda val: setattr(ctx, "auto_copy_enabled", bool(val)))
-        output_container.addWidget(self.auto_copy_cb)
         top_controls = QHBoxLayout()
         top_controls.addStretch()
+        top_controls.addWidget(self.auto_copy_cb)
         top_controls.addWidget(self.copy_btn)
         top_controls.addWidget(self.trans_btn)
         output_container.addLayout(top_controls)
@@ -161,6 +168,7 @@ class MainWindow(QMainWindow):
         ctx.output_text = self.output_text
 
         update_fields(ctx)
+        self.on_type_changed()
 
     def on_theme_changed(self, name):
         self.ctx.current_theme_name = name

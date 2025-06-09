@@ -301,6 +301,10 @@ DEFAULT_QSS = """
     QPushButton#asyaButton:checked { border: 2px solid #00AAFF; }
 """
 
+EXTRA_QSS = """
+    QPushButton#pasteButton { font-size: 20px; min-height: 50px; }
+"""
+
 
 def apply_theme(app, name: str) -> None:
     """Apply theme stylesheet to the QApplication."""
@@ -308,5 +312,5 @@ def apply_theme(app, name: str) -> None:
         theme = DEFAULT_QSS
     else:
         theme = THEME_QSS.get(name, DEFAULT_QSS)
-    # Always append dialog overrides to keep dialogs readable
-    app.setStyleSheet(theme + DIALOG_QSS)
+    # Always append dialog overrides and extra rules
+    app.setStyleSheet(theme + EXTRA_QSS + DIALOG_QSS)
