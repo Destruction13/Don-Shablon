@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QCheckBox
-from PySide6.QtCore import QSize, Qt, QRectF
+from PySide6.QtCore import QSize, Qt, QRectF, QPoint
 from PySide6.QtGui import QPainter, QColor
 
 class ToggleSwitch(QCheckBox):
@@ -16,7 +16,11 @@ class ToggleSwitch(QCheckBox):
         self.setToolTip("Женский" if checked else "Мужской")
 
     def sizeHint(self) -> QSize:
-        return QSize(40, 20)
+        return QSize(50, 24)
+
+    def hitButton(self, pos: QPoint) -> bool:  # pragma: no cover - UI behavior
+        """Make entire widget clickable regardless of painted area."""
+        return True
 
     def paintEvent(self, event):
         p = QPainter(self)

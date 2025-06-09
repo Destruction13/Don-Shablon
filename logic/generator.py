@@ -365,7 +365,9 @@ def update_fields(ctx: UIContext):
             QHBoxLayout,
         )
         info_box = QGroupBox()
-        info_box.setStyleSheet("QGroupBox { border: 1px solid gray; border-radius: 6px; margin-top: 6px; }")
+        info_box.setStyleSheet(
+            "QGroupBox { border: 2px solid gray; border-radius: 6px; margin-top: 6px; }"
+        )
         info_layout = QFormLayout(info_box)
         name_container = QWidget()
         name_hl = QHBoxLayout(name_container)
@@ -373,14 +375,19 @@ def update_fields(ctx: UIContext):
         name_edit = QLineEdit()
         gender_switch = ToggleSwitch()
         name_hl.addWidget(name_edit)
+        name_hl.addStretch()
+        name_hl.addWidget(QLabel("Мужское"))
         name_hl.addWidget(gender_switch)
+        name_hl.addWidget(QLabel("Женское"))
         ctx.fields["other_name"] = name_edit
         ctx.fields["gender"] = gender_switch
         info_layout.addRow(label_with_icon("Имя:"), name_container)
         ctx.fields_layout.addRow(info_box)
 
         grid_box = QGroupBox()
-        grid_box.setStyleSheet("QGroupBox { border: 1px solid gray; border-radius: 6px; margin-top: 6px; }")
+        grid_box.setStyleSheet(
+            "QGroupBox { border: 2px solid gray; border-radius: 6px; margin-top: 6px; }"
+        )
         grid_container = QWidget()
         grid = QGridLayout(grid_container)
         idx = 0
@@ -395,7 +402,9 @@ def update_fields(ctx: UIContext):
         ctx.field_containers["other_buttons"] = grid_box
         ctx.fields_layout.addRow(grid_box)
         act_box = QGroupBox()
-        act_box.setStyleSheet("QGroupBox { border: 1px solid gray; border-radius: 6px; margin-top: 6px; }")
+        act_box.setStyleSheet(
+            "QGroupBox { border: 2px solid gray; border-radius: 6px; margin-top: 6px; }"
+        )
         act_layout = QVBoxLayout(act_box)
         act_btn = QPushButton("Написали по актуальности")
         act_btn.setMinimumHeight(40)
@@ -405,7 +414,9 @@ def update_fields(ctx: UIContext):
         ctx.fields_layout.addRow(act_box)
 
         exch_box = QGroupBox()
-        exch_box.setStyleSheet("QGroupBox { border: 1px solid gray; border-radius: 6px; margin-top: 6px; }")
+        exch_box.setStyleSheet(
+            "QGroupBox { border: 2px solid gray; border-radius: 6px; margin-top: 6px; }"
+        )
         exch_layout = QVBoxLayout(exch_box)
         exch_btn = QPushButton("Написали по обмену")
         exch_btn.setMinimumHeight(40)

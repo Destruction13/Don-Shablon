@@ -1,6 +1,7 @@
 import os
 from PySide6.QtWidgets import QApplication
 from logic.template_history import TemplateHistory
+from logic.user_settings import UserSettings
 
 class UIContext:
     """Centralized storage for UI state and widgets."""
@@ -34,14 +35,20 @@ class UIContext:
             "playing": False,
             "paused": False,
         }
+        # persistent settings
+        settings_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), "user_settings.json"
+        )
+        self.settings = UserSettings(settings_path)
+
         # "Винтаж" используется по умолчанию
-        self.current_theme_name = "Винтаж"
+        self.current_theme_name = self.settings.theme
         self.bg_pixmap = None
         self.bg_path = None
         self.btn_ls = None
         self.btn_asya_plus = None
         # OCR settings
-        self.ocr_mode = "CPU"  # or "GPU"
+        self.ocr_mode = self.settings.ocr_mode  # "CPU" or "GPU"
 
         # generation helpers
         self.auto_copy_enabled = False
