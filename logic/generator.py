@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QMessageBox,
     QCheckBox,
+    QGroupBox,
 )
 try:
     from PySide6.QtCore import QDate, Qt, QTime, QTimer
@@ -39,6 +40,7 @@ from logic.utils import (
     copy_generated_text,
 )
 from gui.animations import setup_animation
+from gui import ToggleSwitch
 from logic.templates import OTHER_TEMPLATES, generate_from_category
 
 ICON_MAP = {
@@ -354,16 +356,31 @@ def update_fields(ctx: UIContext):
 
         cb.stateChanged.connect(toggle_extra)
     elif typ == "Другое":
-        add_field("Имя:", "other_name", ctx)
-        add_combo("Пол:", "gender", ["Мужской", "Женский"], ctx)
         from PySide6.QtWidgets import (
             QWidget,
             QGridLayout,
             QPushButton,
-            QGroupBox,
             QVBoxLayout,
+            QFormLayout,
+            QHBoxLayout,
         )
+        info_box = QGroupBox()
+        info_box.setStyleSheet("QGroupBox { border: 1px solid gray; border-radius: 6px; margin-top: 6px; }")
+        info_layout = QFormLayout(info_box)
+        name_container = QWidget()
+        name_hl = QHBoxLayout(name_container)
+        name_hl.setContentsMargins(0, 0, 0, 0)
+        name_edit = QLineEdit()
+        gender_switch = ToggleSwitch()
+        name_hl.addWidget(name_edit)
+        name_hl.addWidget(gender_switch)
+        ctx.fields["other_name"] = name_edit
+        ctx.fields["gender"] = gender_switch
+        info_layout.addRow(label_with_icon("Имя:"), name_container)
+        ctx.fields_layout.addRow(info_box)
+
         grid_box = QGroupBox()
+        grid_box.setStyleSheet("QGroupBox { border: 1px solid gray; border-radius: 6px; margin-top: 6px; }")
         grid_container = QWidget()
         grid = QGridLayout(grid_container)
         idx = 0
@@ -378,6 +395,7 @@ def update_fields(ctx: UIContext):
         ctx.field_containers["other_buttons"] = grid_box
         ctx.fields_layout.addRow(grid_box)
         act_box = QGroupBox()
+        act_box.setStyleSheet("QGroupBox { border: 1px solid gray; border-radius: 6px; margin-top: 6px; }")
         act_layout = QVBoxLayout(act_box)
         act_btn = QPushButton("Написали по актуальности")
         act_btn.setMinimumHeight(40)
@@ -387,6 +405,7 @@ def update_fields(ctx: UIContext):
         ctx.fields_layout.addRow(act_box)
 
         exch_box = QGroupBox()
+        exch_box.setStyleSheet("QGroupBox { border: 1px solid gray; border-radius: 6px; margin-top: 6px; }")
         exch_layout = QVBoxLayout(exch_box)
         exch_btn = QPushButton("Написали по обмену")
         exch_btn.setMinimumHeight(40)
@@ -593,6 +612,8 @@ def generate_other_category(ctx: UIContext, category: str) -> None:
     gender = "ж"
     if isinstance(gender_field, QComboBox):
         gender = "ж" if gender_field.currentText().startswith("Ж") else "м"
+    elif hasattr(gender_field, "isChecked"):
+        gender = "ж" if gender_field.isChecked() else "м"
     text = generate_from_category(category, name, gender)
     ctx.output_text.setPlainText(text)
     if getattr(ctx, "auto_copy_enabled", False):
