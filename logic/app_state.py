@@ -19,16 +19,16 @@ class UIContext:
         self.user_gender = ''
         self.ls_saved = False
         self.ls_active = False
-        self.music_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "music")
+        self.music_dir = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), "music"
+        )
         if not os.path.isdir(self.music_dir):
             os.makedirs(self.music_dir, exist_ok=True)
-        self.music_files: list[str] = [
-            os.path.join(self.music_dir, f)
-            for f in os.listdir(self.music_dir)
-            if f.lower().endswith((".mp3", ".wav", ".ogg"))
-        ]
-        self.music_index: int = 0 if self.music_files else -1
-        self.music_path = self.music_files[0] if self.music_files else ""
+        self.music_files: list[str] = []
+        self.music_index: int = -1
+        self.music_path = ""
+        self.music_volume = 50
+        self.refresh_music_files()
         self.music_state = {
             "playing": False,
             "paused": False,
@@ -55,3 +55,14 @@ class UIContext:
         self.animation_effect = "Glow"
         self.animation_intensity = 50
 
+    def refresh_music_files(self) -> None:
+        """Scan the music directory and populate available tracks."""
+        if not os.path.isdir(self.music_dir):
+            os.makedirs(self.music_dir, exist_ok=True)
+        self.music_files = [
+            os.path.join(self.music_dir, f)
+            for f in os.listdir(self.music_dir)
+            if f.lower().endswith((".mp3", ".wav", ".ogg"))
+        ]
+        self.music_index = 0 if self.music_files else -1
+        self.music_path = self.music_files[0] if self.music_files else ""

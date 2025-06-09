@@ -1,10 +1,10 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton,
     QTextEdit, QComboBox, QMessageBox, QToolButton, QFormLayout, QCheckBox,
-    QScrollArea, QSpinBox, QGroupBox, QSizePolicy
+    QScrollArea, QSpinBox, QGroupBox, QSizePolicy, QSlider, QProgressBar
 )
 from PySide6.QtGui import QPixmap
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 import os
 import pygame
 
@@ -13,6 +13,38 @@ from logic.generator import update_fields, generate_message
 from logic.utils import copy_generated_text, translate_to_english
 from gui.themes import apply_theme
 from gui.animations import setup_animation
+
+
+class EqualizerWidget(QWidget):
+    """Simple animated equalizer using random bar heights."""
+
+    def __init__(self, ctx: UIContext, parent=None):
+        super().__init__(parent)
+        self.ctx = ctx
+        layout = QHBoxLayout(self)
+        layout.setSpacing(2)
+        self.bars = []
+        for _ in range(10):
+            bar = QProgressBar()
+            bar.setRange(0, 100)
+            bar.setValue(0)
+            bar.setTextVisible(False)
+            bar.setOrientation(Qt.Vertical)
+            bar.setFixedWidth(6)
+            layout.addWidget(bar)
+            self.bars.append(bar)
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_bars)
+        self.timer.start(120)
+
+    def update_bars(self):
+        if self.ctx.music_state.get("playing") and not self.ctx.music_state.get("paused"):
+            import random
+            for bar in self.bars:
+                bar.setValue(random.randint(10, 100))
+        else:
+            for bar in self.bars:
+                bar.setValue(0)
 
 
 class MainWindow(QMainWindow):
@@ -26,6 +58,7 @@ class MainWindow(QMainWindow):
             music_path = ctx.music_path
             if music_path and os.path.exists(music_path):
                 pygame.mixer.music.load(music_path)
+                pygame.mixer.music.set_volume(ctx.music_volume / 100)
         except Exception as e:
             print(f"[ERROR] Failed to init mixer: {e}")
         self.bg_label = QLabel(self)
@@ -59,12 +92,25 @@ class MainWindow(QMainWindow):
         self.next_btn.setText("⏭")
         self.next_btn.clicked.connect(self.play_next_track)
 
-        for btn in (self.prev_btn, self.play_btn, self.next_btn, self.settings_btn):
+        self.volume_btn = QToolButton()
+        self.volume_btn.setText("🔊")
+        self.volume_btn.clicked.connect(self.toggle_volume_slider)
+
+        self.volume_slider = QSlider(Qt.Horizontal)
+        self.volume_slider.setRange(0, 100)
+        self.volume_slider.setFixedWidth(100)
+        self.volume_slider.setValue(ctx.music_volume)
+        self.volume_slider.valueChanged.connect(self.change_volume)
+        self.volume_slider.setVisible(False)
+
+        for btn in (self.prev_btn, self.play_btn, self.next_btn, self.volume_btn, self.settings_btn):
             setup_animation(btn, ctx)
 
         header.addWidget(self.prev_btn)
         header.addWidget(self.play_btn)
         header.addWidget(self.next_btn)
+        header.addWidget(self.volume_btn)
+        header.addWidget(self.volume_slider)
         header.addWidget(self.settings_btn)
         self.main_layout.addLayout(header)
 
@@ -178,6 +224,9 @@ class MainWindow(QMainWindow):
         output_container.addLayout(top_controls)
         self.output_text = QTextEdit()
         output_container.addWidget(self.output_text)
+        self.eq_widget = EqualizerWidget(ctx)
+        self.eq_widget.setFixedHeight(30)
+        output_container.addWidget(self.eq_widget)
         self.main_layout.addLayout(output_container)
         ctx.output_text = self.output_text
 
@@ -275,7 +324,7 @@ class MainWindow(QMainWindow):
         ctx = self.ctx
         if not ctx.music_state["playing"]:
             if not ctx.music_files:
-                QMessageBox.information(self, "Музыка", "Папка music пуста")
+                QMessageBox.information(self, "Музыка", "Папка с музыкой пуста")
                 return
             from PySide6.QtWidgets import QMenu
             menu = QMenu(self)
@@ -301,6 +350,7 @@ class MainWindow(QMainWindow):
             pygame.mixer.init()
         try:
             pygame.mixer.music.load(path)
+            pygame.mixer.music.set_volume(ctx.music_volume / 100)
             pygame.mixer.music.play(-1)
             ctx.music_index = index
             ctx.music_path = path
@@ -323,6 +373,14 @@ class MainWindow(QMainWindow):
             return
         prev_idx = (ctx.music_index - 1) % len(ctx.music_files)
         self.start_track(prev_idx)
+
+    def toggle_volume_slider(self):
+        self.volume_slider.setVisible(not self.volume_slider.isVisible())
+
+    def change_volume(self, value: int) -> None:
+        self.ctx.music_volume = value
+        if pygame.mixer.get_init():
+            pygame.mixer.music.set_volume(value / 100)
 
     def toggle_regular_fields(self, checked: bool):
         self.ctx.regular_meeting_enabled = bool(checked)
