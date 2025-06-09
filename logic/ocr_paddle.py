@@ -9,7 +9,17 @@ import numpy as np
 from PIL import Image, ImageGrab, ImageQt, ImageDraw, ImageFont
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QMessageBox
-from PySide6.QtCore import QDate
+try:
+    from PySide6.QtCore import QDate, QTime
+except Exception:  # Fallbacks for headless test environment
+    class QDate:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class QTime:
+        def __init__(self, h=0, m=0):
+            self._h = h
+            self._m = m
 import json
 from pathlib import Path
 
@@ -179,9 +189,17 @@ def _apply_fields(ctx: UIContext, fields: Dict[str, str]) -> None:
         if dt:
             ctx.fields["datetime"].setDate(QDate(dt.year, dt.month, dt.day))
     if fields.get("start") and "start_time" in ctx.fields:
-        ctx.fields["start_time"].setCurrentText(fields["start"])
+        try:
+            h, m = map(int, fields["start"].split(":"))
+            ctx.fields["start_time"].setTime(QTime(h, m))
+        except Exception:
+            pass
     if fields.get("end") and "end_time" in ctx.fields:
-        ctx.fields["end_time"].setCurrentText(fields["end"])
+        try:
+            h, m = map(int, fields["end"].split(":"))
+            ctx.fields["end_time"].setTime(QTime(h, m))
+        except Exception:
+            pass
     if "regular" in ctx.fields:
         ctx.fields["regular"].setCurrentText("Обычная")
 
@@ -790,9 +808,17 @@ def update_gui_fields(
             ctx.fields["datetime"].setDate(QDate(dt.year, dt.month, dt.day))
 
     if data.get("start") and "start_time" in ctx.fields:
-        ctx.fields["start_time"].setCurrentText(data["start"])
+        try:
+            h, m = map(int, data["start"].split(":"))
+            ctx.fields["start_time"].setTime(QTime(h, m))
+        except Exception:
+            pass
     if data.get("end") and "end_time" in ctx.fields:
-        ctx.fields["end_time"].setCurrentText(data["end"])
+        try:
+            h, m = map(int, data["end"].split(":"))
+            ctx.fields["end_time"].setTime(QTime(h, m))
+        except Exception:
+            pass
     if "regular" in ctx.fields:
         ctx.fields["regular"].setCurrentText("Обычная")
 

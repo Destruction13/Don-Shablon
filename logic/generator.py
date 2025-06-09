@@ -10,18 +10,32 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QPushButton,
     QDateEdit,
+    QTimeEdit,
     QTextEdit,
     QMessageBox,
     QToolButton,
     QFormLayout,
 )
-from PySide6.QtCore import QDate, Qt
+try:
+    from PySide6.QtCore import QDate, Qt, QTime
+except Exception:  # test fallback
+    class QDate:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class QTime:
+        def __init__(self, h=0, m=0):
+            self._h = h
+            self._m = m
+    class Qt:
+        NoFocus = 0
 
 from logic.room_filter import FilteringComboBox
 
 from logic.app_state import UIContext
 from constants import rooms_by_bz
 from logic.utils import format_date_ru, parse_yandex_calendar_url
+from gui.animations import setup_animation
 
 
 class ClickableDateEdit(QDateEdit):
@@ -64,6 +78,9 @@ def add_field(label: str, name: str, ctx: UIContext, clear: bool = False):
         hl.addWidget(btn)
     ctx.fields[name] = edit
     ctx.fields_layout.addRow(label, container)
+    setup_animation(edit, ctx)
+    if clear:
+        setup_animation(btn, ctx)
     if name == "link":
         edit.textChanged.connect(lambda _: on_link_change(ctx))
 
@@ -82,6 +99,7 @@ def add_name_field(ctx: UIContext):
         ctx.btn_asya_plus.setParent(container)
     ctx.fields["name"] = edit
     ctx.fields_layout.addRow("Имя:", container)
+    setup_animation(edit, ctx)
 
 
 def add_combo(label: str, name: str, values: list[str], ctx: UIContext):
@@ -89,6 +107,7 @@ def add_combo(label: str, name: str, values: list[str], ctx: UIContext):
     combo.addItems(values)
     ctx.fields[name] = combo
     ctx.fields_layout.addRow(label, combo)
+    setup_animation(combo, ctx)
 
 
 def add_room_field(label: str, name: str, bz_name: str, ctx: UIContext):
@@ -114,6 +133,8 @@ def add_room_field(label: str, name: str, bz_name: str, ctx: UIContext):
     hl.addWidget(btn)
     ctx.fields[name] = combo
     ctx.fields_layout.addRow(label, container)
+    setup_animation(combo, ctx)
+    setup_animation(btn, ctx)
 
 
 def add_date(name: str, ctx: UIContext):
@@ -123,49 +144,31 @@ def add_date(name: str, ctx: UIContext):
     date_edit.setDate(QDate.currentDate())
     ctx.fields[name] = date_edit
     ctx.fields_layout.addRow("Дата:", date_edit)
+    setup_animation(date_edit, ctx)
 
 
 def add_time_range(start_name: str, end_name: str, ctx: UIContext):
-    start_combo = QComboBox()
-    end_combo = QComboBox()
-    start_combo.setEditable(True)
-    end_combo.setEditable(True)
-    times = [f"{h:02d}:{m:02d}" for h in range(8, 22) for m in (0, 30)]
-    start_combo.addItems(times)
-    start_combo.currentTextChanged.connect(
-        lambda val: update_end_times(val, end_combo, times)
-    )
-    start_container = QWidget()
-    hl_start = QHBoxLayout(start_container)
-    hl_start.setContentsMargins(0, 0, 0, 0)
-    hl_start.addWidget(start_combo)
-    btn_clear_start = QToolButton()
-    btn_clear_start.setText("✖")
-    btn_clear_start.setFocusPolicy(Qt.NoFocus)
-    btn_clear_start.clicked.connect(lambda: start_combo.setCurrentIndex(-1))
-    hl_start.addWidget(btn_clear_start)
+    start_edit = QTimeEdit()
+    end_edit = QTimeEdit()
+    start_edit.setDisplayFormat("HH:mm")
+    end_edit.setDisplayFormat("HH:mm")
 
-    end_container = QWidget()
-    hl_end = QHBoxLayout(end_container)
-    hl_end.setContentsMargins(0, 0, 0, 0)
-    hl_end.addWidget(end_combo)
-    btn_clear_end = QToolButton()
-    btn_clear_end.setText("✖")
-    btn_clear_end.setFocusPolicy(Qt.NoFocus)
-    btn_clear_end.clicked.connect(lambda: end_combo.setCurrentIndex(-1))
-    hl_end.addWidget(btn_clear_end)
+    container = QWidget()
+    hl = QHBoxLayout(container)
+    hl.setContentsMargins(0, 0, 0, 0)
+    hl.addWidget(QLabel("\u23F1\ufe0f \u0441"))
+    hl.addWidget(start_edit)
+    hl.addWidget(QLabel("\u0434\u043e"))
+    hl.addWidget(end_edit)
 
-    ctx.fields[start_name] = start_combo
-    ctx.fields[end_name] = end_combo
-    ctx.fields_layout.addRow("Начало:", start_container)
-    ctx.fields_layout.addRow("Конец:", end_container)
+    ctx.fields[start_name] = start_edit
+    ctx.fields[end_name] = end_edit
+    ctx.fields_layout.addRow("", container)
+    setup_animation(start_edit, ctx)
+    setup_animation(end_edit, ctx)
 
 
-def update_end_times(start: str, end_combo: QComboBox, all_slots: list[str]):
-    if start in all_slots:
-        idx = all_slots.index(start)
-        end_combo.clear()
-        end_combo.addItems(all_slots[idx + 1:])
+
 
 
 def update_fields(ctx: UIContext):
@@ -222,15 +225,22 @@ def on_link_change(ctx: UIContext):
         try:
             h, m = map(int, time_str.split(":"))
             h = (h + 3) % 24
-            start_str = f"{h:02d}:{m:02d}"
-            ctx.fields["start_time"].setCurrentText(start_str)
+            ctx.fields["start_time"].setTime(QTime(h, m))
         except Exception:
             pass
 
 
 def generate_message(ctx: UIContext):
     typ = ctx.type_combo.currentText()
-    get = lambda name: ctx.fields.get(name).text() if isinstance(ctx.fields.get(name), QLineEdit) else ctx.fields.get(name).currentText() if isinstance(ctx.fields.get(name), QComboBox) else ''
+    def get(name: str):
+        widget = ctx.fields.get(name)
+        if isinstance(widget, QLineEdit):
+            return widget.text()
+        if isinstance(widget, QComboBox):
+            return widget.currentText()
+        if hasattr(widget, "time"):
+            return widget.time().toString("HH:mm")
+        return ""
     start = get("start_time")
     end = get("end_time")
     if start and end:
