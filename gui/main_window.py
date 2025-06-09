@@ -121,6 +121,7 @@ class MainWindow(QMainWindow):
         cv_btn.clicked.connect(self.handle_clipboard_ocr)
         cv_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         clipboard_row.addWidget(cv_btn)
+        clipboard_row.setContentsMargins(0, 0, 0, 10)
         self.main_layout.addLayout(clipboard_row)
         setup_animation(cv_btn, ctx)
 
