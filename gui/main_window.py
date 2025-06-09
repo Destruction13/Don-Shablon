@@ -13,7 +13,7 @@ from logic.generator import update_fields, generate_message
 from logic.utils import copy_generated_text, translate_to_english
 from gui.themes import apply_theme
 from gui.animations import setup_animation
-from gui.fancy_equalizer import FancyEqualizer
+
 
 
 class MainWindow(QMainWindow):
@@ -193,9 +193,6 @@ class MainWindow(QMainWindow):
         output_container.addLayout(top_controls)
         self.output_text = QTextEdit()
         output_container.addWidget(self.output_text)
-        self.eq_widget = FancyEqualizer(ctx)
-        self.eq_widget.setFixedHeight(30)
-        output_container.addWidget(self.eq_widget)
         self.main_layout.addLayout(output_container)
         ctx.output_text = self.output_text
 
