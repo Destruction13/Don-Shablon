@@ -156,3 +156,12 @@ def copy_generated_text(ctx: UIContext):
     if text:
         clipboard = QGuiApplication.clipboard()
         clipboard.setText(text)
+
+
+def copy_report_text(ctx: UIContext) -> None:
+    """Copy auto-report text to the clipboard."""
+    if getattr(ctx, "report_text", None):
+        text = ctx.report_text.toPlainText().strip()
+        if text:
+            clipboard = QGuiApplication.clipboard()
+            clipboard.setText(text)

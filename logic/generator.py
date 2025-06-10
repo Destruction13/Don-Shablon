@@ -614,6 +614,8 @@ def generate_message(ctx: UIContext):
     ctx.output_text.setPlainText(msg)
     if getattr(ctx, "auto_copy_enabled", False):
         copy_generated_text(ctx)
+    if getattr(ctx, "auto_report_enabled", False):
+        show_auto_report_dialog(ctx)
 
 def generate_other_category(ctx: UIContext, category: str) -> None:
     """Generate text for the "Другое" tab."""
@@ -829,5 +831,75 @@ def show_exchange_dialog(ctx: UIContext) -> None:
         f"\n[Моё сообщение в Telegram]({tg}).\nОтвет: "
     )
     ctx.output_text.setPlainText(text)
+    if getattr(ctx, "auto_copy_enabled", False):
+        copy_generated_text(ctx)
+
+
+def show_auto_report_dialog(ctx: UIContext) -> None:
+    """Dialog for auto-reporting after generating main text."""
+    from PySide6.QtWidgets import (
+        QDialog,
+        QVBoxLayout,
+        QFormLayout,
+        QLineEdit,
+        QPushButton,
+    )
+
+    typ = ctx.type_combo.currentText()
+    if typ not in {"Обмен", "Актуализация"}:
+        return
+
+    dlg = QDialog(ctx.window)
+    dlg.setWindowTitle("Авто-отчёт")
+    layout = QVBoxLayout(dlg)
+    form = QFormLayout()
+
+    login_edit = QLineEdit()
+    link_edit = QLineEdit()
+    tg_edit = QLineEdit()
+
+    form.addRow("Логин:", login_edit)
+    form.addRow("Ссылка на встречу:", link_edit)
+    form.addRow("Telegram:", tg_edit)
+    layout.addLayout(form)
+
+    ok_btn = QPushButton("Подтвердить")
+    ok_btn.clicked.connect(dlg.accept)
+    layout.addWidget(ok_btn)
+
+    if dlg.exec() != QDialog.Accepted:
+        return
+
+    login = login_edit.text().strip()
+    link = link_edit.text().strip()
+    tg = tg_edit.text().strip()
+
+    date = ctx.fields["datetime"].date().toString("dd.MM.yyyy") if "datetime" in ctx.fields else ""
+    start = ctx.fields["start_time"].time().toString("HH:mm") if "start_time" in ctx.fields else ""
+    end = ctx.fields["end_time"].time().toString("HH:mm") if "end_time" in ctx.fields else ""
+    time = f"{start} — {end}" if start and end else start
+
+    if typ == "Обмен":
+        his_room = ctx.fields.get("his_room")
+        my_room = ctx.fields.get("my_room")
+        his_room_val = his_room.currentText() if hasattr(his_room, "currentText") else getattr(his_room, "text", lambda: "")()
+        my_room_val = my_room.currentText() if hasattr(my_room, "currentText") else getattr(my_room, "text", lambda: "")()
+        text = (
+            f"Предлагаю обмен по [встрече]({link}), которая пройдёт {date}, в {time} "
+            f"в переговорной **{his_room_val}** на свою **{my_room_val}**. Пишу @{login}\n"
+            f"[Моё сообщение в Telegram]({tg}).\nОтвет: "
+        )
+    else:  # Актуализация
+        room = ctx.fields.get("room")
+        room_val = room.currentText() if hasattr(room, "currentText") else getattr(room, "text", lambda: "")()
+        text = (
+            f"Уточняю актуальность по [встрече]({link}), которая пройдёт {date} "
+            f"в {time} в переговорной **{room_val}** у @{login}\n"
+            f"[Моё сообщение в Telegram]({tg}).\nОтвет:"
+        )
+
+    if ctx.report_text:
+        ctx.report_text.setPlainText(text)
+        ctx.report_text.setVisible(True)
     if getattr(ctx, "auto_copy_enabled", False):
         copy_generated_text(ctx)

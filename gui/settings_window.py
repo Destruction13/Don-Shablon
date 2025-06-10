@@ -120,6 +120,12 @@ class SettingsDialog(QDialog):
         self.save_auto_copy_sw = ToggleSwitch()
         self.save_auto_copy_sw.setChecked(ctx.settings.save_auto_copy)
         save_layout.addRow("Автокопирование", self.save_auto_copy_sw)
+        self.save_auto_generate_sw = ToggleSwitch()
+        self.save_auto_generate_sw.setChecked(ctx.settings.save_auto_generate)
+        save_layout.addRow("Автогенерацию", self.save_auto_generate_sw)
+        self.save_auto_report_sw = ToggleSwitch()
+        self.save_auto_report_sw.setChecked(ctx.settings.save_auto_report)
+        save_layout.addRow("Авто-отчёт", self.save_auto_report_sw)
         self.settings_layout.addWidget(save_box)
 
         save_btn = QPushButton("Сохранить")
@@ -163,11 +169,15 @@ class SettingsDialog(QDialog):
         self.ctx.settings.ocr_mode = self.ctx.ocr_mode
         self.ctx.settings.animation_effect = self.ctx.animation_effect
         self.ctx.settings.auto_copy = self.ctx.auto_copy_enabled
+        self.ctx.settings.auto_generate = self.ctx.auto_generate_after_autofill
+        self.ctx.settings.auto_report = self.ctx.auto_report_enabled
 
         self.ctx.settings.save_theme = self.save_theme_sw.isChecked()
         self.ctx.settings.save_ocr_mode = self.save_ocr_sw.isChecked()
         self.ctx.settings.save_animation_effect = self.save_anim_sw.isChecked()
         self.ctx.settings.save_auto_copy = self.save_auto_copy_sw.isChecked()
+        self.ctx.settings.save_auto_generate = self.save_auto_generate_sw.isChecked()
+        self.ctx.settings.save_auto_report = self.save_auto_report_sw.isChecked()
         self.ctx.settings.save()
         self.accept()
 
