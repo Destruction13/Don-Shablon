@@ -58,8 +58,12 @@ class UIContext:
         self.auto_copy_enabled = (
             self.settings.auto_copy if self.settings.save_auto_copy else False
         )
-        self.auto_generate_after_autofill = False
-        self.auto_report_enabled = False
+        self.auto_generate_after_autofill = (
+            self.settings.auto_generate if self.settings.save_auto_generate else False
+        )
+        self.auto_report_enabled = (
+            self.settings.auto_report if self.settings.save_auto_report else False
+        )
         self.report_text = None
         self.labels: dict[str, object] = {}
         self.regular_meeting_enabled = False

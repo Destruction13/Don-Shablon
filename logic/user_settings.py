@@ -11,11 +11,15 @@ class UserSettings:
         self.ocr_mode = "CPU"
         self.animation_effect = "Glow"
         self.auto_copy = False
+        self.auto_generate = False
+        self.auto_report = False
 
         self.save_theme = True
         self.save_ocr_mode = True
         self.save_animation_effect = True
         self.save_auto_copy = True
+        self.save_auto_generate = True
+        self.save_auto_report = True
         self.load()
 
     def load(self) -> None:
@@ -26,6 +30,8 @@ class UserSettings:
                 self.save_ocr_mode = data.get("save_ocr_mode", True)
                 self.save_animation_effect = data.get("save_animation_effect", True)
                 self.save_auto_copy = data.get("save_auto_copy", True)
+                self.save_auto_generate = data.get("save_auto_generate", True)
+                self.save_auto_report = data.get("save_auto_report", True)
 
                 if self.save_theme:
                     self.theme = data.get("theme", self.theme)
@@ -35,6 +41,10 @@ class UserSettings:
                     self.animation_effect = data.get("animation_effect", self.animation_effect)
                 if self.save_auto_copy:
                     self.auto_copy = data.get("auto_copy", self.auto_copy)
+                if self.save_auto_generate:
+                    self.auto_generate = data.get("auto_generate", self.auto_generate)
+                if self.save_auto_report:
+                    self.auto_report = data.get("auto_report", self.auto_report)
             except Exception:
                 pass
 
@@ -44,10 +54,14 @@ class UserSettings:
             "ocr_mode": self.ocr_mode,
             "animation_effect": self.animation_effect,
             "auto_copy": self.auto_copy,
+            "auto_generate": self.auto_generate,
+            "auto_report": self.auto_report,
             "save_theme": self.save_theme,
             "save_ocr_mode": self.save_ocr_mode,
             "save_animation_effect": self.save_animation_effect,
             "save_auto_copy": self.save_auto_copy,
+            "save_auto_generate": self.save_auto_generate,
+            "save_auto_report": self.save_auto_report,
         }
         try:
             self.path.write_text(

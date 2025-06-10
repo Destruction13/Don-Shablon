@@ -11,7 +11,7 @@ import pygame
 
 from logic.app_state import UIContext
 from logic.generator import update_fields, generate_message
-from logic.utils import copy_generated_text, translate_to_english
+from logic.utils import copy_generated_text, copy_report_text, translate_to_english
 from gui.themes import apply_theme
 from gui.animations import setup_animation
 from gui import ToggleSwitch
@@ -218,9 +218,24 @@ class MainWindow(QMainWindow):
         output_container.addLayout(top_controls)
         self.output_text = QTextEdit()
         output_container.addWidget(self.output_text)
+
+        # Block for auto-report text with copy button
+        report_box = QVBoxLayout()
+        report_top = QHBoxLayout()
+        report_top.addStretch()
+        self.report_copy_btn = QToolButton()
+        self.report_copy_btn.setText("📋")
+        self.report_copy_btn.setToolTip("Скопировать авто-отчёт")
+        self.report_copy_btn.clicked.connect(lambda: copy_report_text(ctx))
+        setup_animation(self.report_copy_btn, ctx)
+        report_top.addWidget(self.report_copy_btn)
+        report_box.addLayout(report_top)
         self.report_text = QTextEdit()
-        self.report_text.setVisible(ctx.auto_report_enabled)
-        output_container.addWidget(self.report_text)
+        report_box.addWidget(self.report_text)
+        self.report_block = QWidget()
+        self.report_block.setLayout(report_box)
+        self.report_block.setVisible(ctx.auto_report_enabled)
+        output_container.addWidget(self.report_block)
         self.main_layout.addLayout(output_container)
         ctx.output_text = self.output_text
         ctx.report_text = self.report_text
@@ -387,7 +402,7 @@ class MainWindow(QMainWindow):
 
     def toggle_auto_report(self, val: bool) -> None:
         self.ctx.auto_report_enabled = bool(val)
-        if hasattr(self, "report_text"):
-            self.report_text.setVisible(bool(val))
+        if hasattr(self, "report_block"):
+            self.report_block.setVisible(bool(val))
 
 
