@@ -42,16 +42,23 @@ class UIContext:
         self.settings = UserSettings(settings_path)
 
         # "Винтаж" используется по умолчанию
-        self.current_theme_name = self.settings.theme
+        self.current_theme_name = (
+            self.settings.theme if self.settings.save_theme else "Винтаж"
+        )
         self.bg_pixmap = None
         self.bg_path = None
         self.btn_ls = None
         self.btn_asya_plus = None
         # OCR settings
-        self.ocr_mode = self.settings.ocr_mode  # "CPU" or "GPU"
+        self.ocr_mode = (
+            self.settings.ocr_mode if self.settings.save_ocr_mode else "CPU"
+        )  # "CPU" or "GPU"
 
         # generation helpers
-        self.auto_copy_enabled = False
+        self.auto_copy_enabled = (
+            self.settings.auto_copy if self.settings.save_auto_copy else False
+        )
+        self.auto_generate_after_autofill = False
         self.labels: dict[str, object] = {}
         self.regular_meeting_enabled = False
         self.regular_count = None
@@ -60,7 +67,11 @@ class UIContext:
 
         # animation settings
         self.animations_enabled = True
-        self.animation_effect = "Glow"
+        self.animation_effect = (
+            self.settings.animation_effect
+            if self.settings.save_animation_effect
+            else "Glow"
+        )
         self.animation_intensity = 50
 
         # history of generated templates

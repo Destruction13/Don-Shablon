@@ -12,11 +12,14 @@ from PySide6.QtWidgets import (
     QToolButton,
     QFileDialog,
     QMessageBox,
+    QGroupBox,
+    QFormLayout,
 )
 from PySide6.QtCore import Qt
 
 from logic.app_state import UIContext
 from gui.themes import THEME_QSS, apply_theme
+from gui import ToggleSwitch
 
 
 class SettingsDialog(QDialog):
@@ -103,6 +106,22 @@ class SettingsDialog(QDialog):
         row_music.addWidget(self.music_btn)
         self.settings_layout.addLayout(row_music)
 
+        save_box = QGroupBox("Сохранять")
+        save_layout = QFormLayout(save_box)
+        self.save_theme_sw = ToggleSwitch()
+        self.save_theme_sw.setChecked(ctx.settings.save_theme)
+        save_layout.addRow("Тему", self.save_theme_sw)
+        self.save_ocr_sw = ToggleSwitch()
+        self.save_ocr_sw.setChecked(ctx.settings.save_ocr_mode)
+        save_layout.addRow("OCR (GPU/CPU)", self.save_ocr_sw)
+        self.save_anim_sw = ToggleSwitch()
+        self.save_anim_sw.setChecked(ctx.settings.save_animation_effect)
+        save_layout.addRow("Эффект анимации", self.save_anim_sw)
+        self.save_auto_copy_sw = ToggleSwitch()
+        self.save_auto_copy_sw.setChecked(ctx.settings.save_auto_copy)
+        save_layout.addRow("Автокопирование", self.save_auto_copy_sw)
+        self.settings_layout.addWidget(save_box)
+
         save_btn = QPushButton("Сохранить")
         save_btn.clicked.connect(self.save_and_close)
         main_layout.addWidget(save_btn)
@@ -142,6 +161,13 @@ class SettingsDialog(QDialog):
         """Persist selected settings and close the dialog."""
         self.ctx.settings.theme = self.ctx.current_theme_name
         self.ctx.settings.ocr_mode = self.ctx.ocr_mode
+        self.ctx.settings.animation_effect = self.ctx.animation_effect
+        self.ctx.settings.auto_copy = self.ctx.auto_copy_enabled
+
+        self.ctx.settings.save_theme = self.save_theme_sw.isChecked()
+        self.ctx.settings.save_ocr_mode = self.save_ocr_sw.isChecked()
+        self.ctx.settings.save_animation_effect = self.save_anim_sw.isChecked()
+        self.ctx.settings.save_auto_copy = self.save_auto_copy_sw.isChecked()
         self.ctx.settings.save()
         self.accept()
 

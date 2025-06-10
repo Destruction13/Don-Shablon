@@ -349,6 +349,9 @@ def recognize_from_clipboard(ctx: UIContext) -> None:
 
     validated = validate_with_rooms(parsed, rooms_by_bz, fuzzy_threshold=0.6)
     update_gui_fields(validated, ctx, scores=scores)
+    if getattr(ctx, "auto_generate_after_autofill", False):
+        from logic.generator import generate_message
+        generate_message(ctx)
     
 def merge_split_lines(lines: List[Dict]) -> List[Dict]:
     """Merge neighbouring OCR lines that likely belong to the same word."""
