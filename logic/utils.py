@@ -25,8 +25,7 @@ days = [
 ]
 
 DEEPL_URL = "https://api-free.deepl.com/v2/translate"
-# Hardcoded DeepL API key as requested
-DEEPL_API_KEY = "69999737-95c3-440e-84bc-96fb8550f83a:fx"
+GOOGLE_URL = "https://translate.googleapis.com/translate_a/single"
 
 
 class _Task(QRunnable):
@@ -119,36 +118,52 @@ def translate_to_english(ctx: UIContext):
     if not text:
         QMessageBox.warning(ctx.window, "Предупреждение", "Нет текста для перевода")
         return
-    if not DEEPL_API_KEY:
-        QMessageBox.warning(ctx.window, "Ошибка", "Не указан ключ DeepL API")
-        return
 
-    def do_translate():
+    translator = getattr(ctx, "translator", "Google")
+
+    def do_translate_deepl() -> str:
         logging.debug("[DEEPL] Sending translation request")
-        params = {
-            "text": text,
-            "target_lang": "EN",
-        }
-        headers = {"Authorization": f"DeepL-Auth-Key {DEEPL_API_KEY}"}
-        logging.debug("[DEEPL] Request params: %s", params)
+        params = {"text": text, "target_lang": "EN"}
+        headers = {"Authorization": f"DeepL-Auth-Key {ctx.deepl_api_key}"}
         response = requests.post(DEEPL_URL, data=params, headers=headers, timeout=10)
-        logging.debug("[DEEPL] Status %s, body: %s", response.status_code, response.text)
+        logging.debug("[DEEPL] Status %s", response.status_code)
         if response.status_code != 200:
             raise Exception(f"HTTP {response.status_code}: {response.text}")
         return response.json()["translations"][0]["text"]
 
+    def do_translate_google() -> str:
+        logging.debug("[Google] Sending translation request")
+        params = {
+            "client": "gtx",
+            "sl": "auto",
+            "tl": "en",
+            "dt": "t",
+            "q": text,
+        }
+        response = requests.get(GOOGLE_URL, params=params, timeout=10)
+        logging.debug("[Google] Status %s", response.status_code)
+        if response.status_code != 200:
+            raise Exception(f"HTTP {response.status_code}: {response.text}")
+        data = response.json()
+        return "".join(seg[0] for seg in data[0])
+
+    if translator == "DeepL":
+        if not ctx.deepl_api_key:
+            QMessageBox.warning(ctx.window, "Ошибка", "Не указан ключ DeepL API")
+            return
+        task = do_translate_deepl
+    else:
+        task = do_translate_google
+
     @Slot(object)
     def show_result(result_error):
         result, error = result_error
-        logging.debug("[DEEPL] show_result error=%s", error)
         if error:
             QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось перевести текст:\n{error}")
             return
-        translated = result
-        logging.debug("[DEEPL] Translation completed")
-        ctx.output_text.setPlainText(translated)
+        ctx.output_text.setPlainText(result)
 
-    run_in_thread(do_translate, show_result)
+    run_in_thread(task, show_result)
 
 
 def copy_generated_text(ctx: UIContext):

@@ -106,6 +106,26 @@ class SettingsDialog(QDialog):
         row_music.addWidget(self.music_btn)
         self.settings_layout.addLayout(row_music)
 
+        # Translator selector
+        row_tr = QHBoxLayout()
+        row_tr.addWidget(QLabel("Переводчик:"))
+        self.translator_combo = QComboBox()
+        self.translator_combo.addItems(["Google", "DeepL"])
+        self.translator_combo.setCurrentText(ctx.translator)
+        self.translator_combo.currentTextChanged.connect(
+            lambda val: setattr(ctx, "translator", val)
+        )
+        row_tr.addWidget(self.translator_combo)
+        self.settings_layout.addLayout(row_tr)
+
+        row_key = QHBoxLayout()
+        self.key_btn = QPushButton("API DeepL")
+        self.key_btn.clicked.connect(self.ask_deepl_key)
+        row_key.addWidget(self.key_btn)
+        self.key_label = QLabel("Сохранен" if ctx.deepl_api_key else "Не указан")
+        row_key.addWidget(self.key_label)
+        self.settings_layout.addLayout(row_key)
+
         save_box = QGroupBox("Сохранять")
         save_layout = QFormLayout(save_box)
         self.save_theme_sw = ToggleSwitch()
@@ -163,6 +183,15 @@ class SettingsDialog(QDialog):
             else:
                 QMessageBox.information(self, "Музыка", "Треков не найдено")
 
+    def ask_deepl_key(self) -> None:
+        from PySide6.QtWidgets import QInputDialog
+        key, ok = QInputDialog.getText(
+            self, "DeepL API", "Введите ключ", text=self.ctx.deepl_api_key
+        )
+        if ok:
+            self.ctx.deepl_api_key = key
+            self.key_label.setText("Сохранен" if key else "Не указан")
+
     def save_and_close(self) -> None:
         """Persist selected settings and close the dialog."""
         self.ctx.settings.theme = self.ctx.current_theme_name
@@ -171,6 +200,8 @@ class SettingsDialog(QDialog):
         self.ctx.settings.auto_copy = self.ctx.auto_copy_enabled
         self.ctx.settings.auto_generate = self.ctx.auto_generate_after_autofill
         self.ctx.settings.auto_report = self.ctx.auto_report_enabled
+        self.ctx.settings.deepl_api_key = self.ctx.deepl_api_key
+        self.ctx.settings.translator = self.ctx.translator
 
         self.ctx.settings.save_theme = self.save_theme_sw.isChecked()
         self.ctx.settings.save_ocr_mode = self.save_ocr_sw.isChecked()

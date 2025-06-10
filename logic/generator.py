@@ -146,12 +146,6 @@ def add_name_field(ctx: UIContext):
     hl = QHBoxLayout(container)
     hl.setContentsMargins(0, 0, 0, 0)
     hl.addWidget(edit)
-    if ctx.btn_ls:
-        hl.addWidget(ctx.btn_ls)
-        ctx.btn_ls.setParent(container)
-    if ctx.btn_asya_plus:
-        hl.addWidget(ctx.btn_asya_plus)
-        ctx.btn_asya_plus.setParent(container)
     ctx.fields["name"] = edit
     ctx.field_containers["name"] = container
     lab = label_with_icon("Имя:")
@@ -295,10 +289,6 @@ def weekday_to_plural(word: str) -> str:
 
 
 def update_fields(ctx: UIContext):
-    if ctx.btn_ls:
-        ctx.btn_ls.setParent(None)
-    if ctx.btn_asya_plus:
-        ctx.btn_asya_plus.setParent(None)
     clear_layout(ctx.fields_layout)
     ctx.fields.clear()
     typ = ctx.type_combo.currentText()

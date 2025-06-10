@@ -268,6 +268,24 @@ EXTRA_QSS = """
     }
 """
 
+MENU_DARK_QSS = """
+    QMenu { background-color: #2e2e2e; color: #f0f0f0; }
+    QMenu::item:selected { background-color: #444444; }
+"""
+
+MENU_LIGHT_QSS = """
+    QMenu { background-color: #ffffff; color: #000000; }
+    QMenu::item:selected { background-color: #d0d0d0; }
+"""
+
+TOOLTIP_DARK_QSS = """
+    QToolTip { background-color: #2e2e2e; color: #f0f0f0; border: 1px solid #555555; }
+"""
+
+TOOLTIP_LIGHT_QSS = """
+    QToolTip { background-color: #ffffff; color: #000000; border: 1px solid #bfbfbf; }
+"""
+
 # Additional styling for combo box dropdowns. Dark themes need explicit text
 # colors because QAbstractItemView defaults to system colors which may render
 # white text on a light background. These snippets are appended dynamically in
@@ -354,17 +372,23 @@ def apply_theme(app, name: str, ctx: Optional[UIContext] = None) -> None:
         theme = DEFAULT_QSS
         combo = COMBO_LIGHT_QSS
         cal = CAL_LIGHT_QSS
+        menu = MENU_LIGHT_QSS
+        tip = TOOLTIP_LIGHT_QSS
     else:
         theme = THEME_QSS.get(name, DEFAULT_QSS)
         if name in DARK_THEMES:
             combo = COMBO_DARK_QSS
             cal = CAL_DARK_QSS
+            menu = MENU_DARK_QSS
+            tip = TOOLTIP_DARK_QSS
         else:
             combo = COMBO_LIGHT_QSS
             cal = CAL_LIGHT_QSS
+            menu = MENU_LIGHT_QSS
+            tip = TOOLTIP_LIGHT_QSS
     # Always append dialog overrides and extra rules
     dialog = DIALOG_DARK_QSS if name in DARK_THEMES else DIALOG_LIGHT_QSS
-    app.setStyleSheet(theme + combo + cal + EXTRA_QSS + dialog)
+    app.setStyleSheet(theme + combo + cal + menu + tip + EXTRA_QSS + dialog)
     if ctx is not None:
         path = THEME_BACKGROUNDS.get(name)
         ctx.bg_path = str(path) if path else None
