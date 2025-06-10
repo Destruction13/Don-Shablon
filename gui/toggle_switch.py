@@ -3,17 +3,19 @@ from PySide6.QtCore import QSize, Qt, QRectF, QPoint
 from PySide6.QtGui import QPainter, QColor
 
 class ToggleSwitch(QCheckBox):
-    """Simple on/off switch widget."""
+    """Simple on/off switch widget with customizable tooltips."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, tooltip_off: str = "Мужской", tooltip_on: str = "Женский", *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.tooltip_off = tooltip_off
+        self.tooltip_on = tooltip_on
         self.setCursor(Qt.PointingHandCursor)
         self.setChecked(False)
         self.toggled.connect(self._update_tooltip)
         self._update_tooltip(self.isChecked())
 
     def _update_tooltip(self, checked: bool) -> None:
-        self.setToolTip("Женский" if checked else "Мужской")
+        self.setToolTip(self.tooltip_on if checked else self.tooltip_off)
 
     def sizeHint(self) -> QSize:
         return QSize(50, 24)

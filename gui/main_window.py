@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton,
-    QTextEdit, QComboBox, QMessageBox, QToolButton, QFormLayout, QCheckBox,
-    QScrollArea, QSpinBox, QGroupBox, QSizePolicy, QSlider
+    QTextEdit, QComboBox, QMessageBox, QToolButton, QFormLayout,
+    QScrollArea, QSpinBox, QGroupBox, QSizePolicy, QSlider, QCheckBox
 )
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
@@ -14,6 +14,7 @@ from logic.generator import update_fields, generate_message
 from logic.utils import copy_generated_text, translate_to_english
 from gui.themes import apply_theme
 from gui.animations import setup_animation
+from gui import ToggleSwitch
 
 
 
@@ -191,11 +192,21 @@ class MainWindow(QMainWindow):
         setup_animation(self.trans_btn, ctx)
 
         output_container = QVBoxLayout()
-        self.auto_copy_cb = QCheckBox("📋 Авто-копирование")
-        self.auto_copy_cb.stateChanged.connect(lambda val: setattr(ctx, "auto_copy_enabled", bool(val)))
         top_controls = QHBoxLayout()
         top_controls.addStretch()
-        top_controls.addWidget(self.auto_copy_cb)
+
+        self.auto_copy_sw = ToggleSwitch(tooltip_off="Выкл", tooltip_on="Вкл")
+        self.auto_copy_sw.setChecked(ctx.auto_copy_enabled)
+        self.auto_copy_sw.toggled.connect(lambda val: setattr(ctx, "auto_copy_enabled", bool(val)))
+        self.auto_gen_sw = ToggleSwitch(tooltip_off="Выкл", tooltip_on="Вкл")
+        self.auto_gen_sw.setChecked(ctx.auto_generate_after_autofill)
+        self.auto_gen_sw.toggled.connect(lambda val: setattr(ctx, "auto_generate_after_autofill", bool(val)))
+
+        top_controls.addWidget(QLabel("Авто-копирование"))
+        top_controls.addWidget(self.auto_copy_sw)
+        top_controls.addSpacing(15)
+        top_controls.addWidget(QLabel("Автогенерация после автозаполнения"))
+        top_controls.addWidget(self.auto_gen_sw)
         top_controls.addWidget(self.copy_btn)
         top_controls.addWidget(self.trans_btn)
         output_container.addLayout(top_controls)

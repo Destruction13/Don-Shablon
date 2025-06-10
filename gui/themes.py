@@ -214,9 +214,8 @@ THEME_QSS = {
     """,
 }
 
-# Override styling for dialogs so that text is always readable on white
-# backgrounds used by secondary windows like settings or music dialogs.
-DIALOG_QSS = """
+# Override styling for dialogs so that text matches the current theme
+DIALOG_LIGHT_QSS = """
     QDialog {
         background-color: #ffffff;
         color: #000000;
@@ -227,6 +226,20 @@ DIALOG_QSS = """
     QDialog QRadioButton,
     QDialog QToolTip {
         color: #000000;
+    }
+"""
+
+DIALOG_DARK_QSS = """
+    QDialog {
+        background-color: #2e2e2e;
+        color: #f0f0f0;
+    }
+    QDialog QLabel,
+    QDialog QGroupBox::title,
+    QDialog QCheckBox,
+    QDialog QRadioButton,
+    QDialog QToolTip {
+        color: #f0f0f0;
     }
 """
 
@@ -350,7 +363,8 @@ def apply_theme(app, name: str, ctx: Optional[UIContext] = None) -> None:
             combo = COMBO_LIGHT_QSS
             cal = CAL_LIGHT_QSS
     # Always append dialog overrides and extra rules
-    app.setStyleSheet(theme + combo + cal + EXTRA_QSS + DIALOG_QSS)
+    dialog = DIALOG_DARK_QSS if name in DARK_THEMES else DIALOG_LIGHT_QSS
+    app.setStyleSheet(theme + combo + cal + EXTRA_QSS + dialog)
     if ctx is not None:
         path = THEME_BACKGROUNDS.get(name)
         ctx.bg_path = str(path) if path else None
