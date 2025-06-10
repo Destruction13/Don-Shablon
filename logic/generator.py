@@ -415,6 +415,20 @@ def update_fields(ctx: UIContext):
         exch_layout.addWidget(exch_btn)
         ctx.fields_layout.addRow(exch_box)
 
+        custom_box = QGroupBox()
+        custom_box.setTitle("Пользовательские шаблоны")
+        custom_box.setStyleSheet(
+            "QGroupBox { border: 2px solid gray; border-radius: 6px; margin-top: 6px; }"
+        )
+        custom_layout = QVBoxLayout(custom_box)
+        custom_layout.setContentsMargins(9, 15, 9, 9)
+        my_btn = QPushButton("Мои шаблоны")
+        my_btn.setMinimumHeight(40)
+        my_btn.clicked.connect(lambda: show_user_templates_dialog(ctx))
+        setup_animation(my_btn, ctx)
+        custom_layout.addWidget(my_btn)
+        ctx.fields_layout.addRow(custom_box)
+
     # rename fields depending on type
     if "client_name" in ctx.fields:
         lab = ctx.labels.get("client_name")
@@ -893,3 +907,117 @@ def show_auto_report_dialog(ctx: UIContext) -> None:
         ctx.report_text.setVisible(True)
     if getattr(ctx, "auto_copy_enabled", False):
         copy_generated_text(ctx)
+
+
+def add_user_template_dialog(ctx: UIContext, parent=None) -> bool:
+    """Dialog for creating a new custom template."""
+    from PySide6.QtWidgets import (
+        QDialog,
+        QVBoxLayout,
+        QLineEdit,
+        QTextEdit,
+        QLabel,
+        QPushButton,
+        QMessageBox,
+    )
+
+    dlg = QDialog(parent or ctx.window)
+    dlg.setWindowTitle("Новый шаблон")
+    layout = QVBoxLayout(dlg)
+    layout.addWidget(QLabel("ТЕГ"))
+    tag_edit = QLineEdit()
+    layout.addWidget(tag_edit)
+    layout.addWidget(QLabel("Текст шаблона"))
+    text_edit = QTextEdit()
+    layout.addWidget(text_edit)
+    ok_btn = QPushButton("OK")
+    layout.addWidget(ok_btn)
+
+    result = {"added": False}
+
+    def on_ok():
+        tag = tag_edit.text().strip()
+        text = text_edit.toPlainText().strip()
+        if not tag or not text:
+            QMessageBox.warning(dlg, "Ошибка", "Введите тег и текст шаблона")
+            return
+        ctx.user_templates.add_template(tag, text)
+        result["added"] = True
+        dlg.accept()
+
+    ok_btn.clicked.connect(on_ok)
+    dlg.exec()
+    return result["added"]
+
+
+def show_user_templates_dialog(ctx: UIContext) -> None:
+    """List and manage user templates."""
+    from PySide6.QtWidgets import (
+        QDialog,
+        QVBoxLayout,
+        QHBoxLayout,
+        QLineEdit,
+        QPushButton,
+        QToolButton,
+        QSizePolicy,
+        QScrollArea,
+        QWidget,
+        QLabel,
+    )
+
+    dlg = QDialog(ctx.window)
+    dlg.setWindowTitle("Мои шаблоны")
+    layout = QVBoxLayout(dlg)
+    top = QHBoxLayout()
+    search_edit = QLineEdit()
+    search_edit.setPlaceholderText("Поиск по тегу...")
+    add_btn = QPushButton("➕ Добавить новый шаблон")
+    top.addWidget(search_edit)
+    top.addStretch()
+    top.addWidget(add_btn)
+    layout.addLayout(top)
+
+    scroll = QScrollArea()
+    scroll.setWidgetResizable(True)
+    scroll.setStyleSheet(
+        "QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; border: none; }"
+    )
+    container = QWidget()
+    vbox = QVBoxLayout(container)
+    scroll.setWidget(container)
+    layout.addWidget(scroll)
+
+    def refresh():
+        for i in reversed(range(vbox.count())):
+            item = vbox.takeAt(i)
+            w = item.widget()
+            if w:
+                w.deleteLater()
+        items = ctx.user_templates.filter_by_tag(search_edit.text().strip())
+        for tpl in items:
+            idx = ctx.user_templates.templates.index(tpl)
+            row = QWidget()
+            hl = QHBoxLayout(row)
+            btn = QPushButton(tpl.get("tag", ""))
+            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            btn.clicked.connect(
+                lambda _=False, t=tpl.get("text", ""): ctx.output_text.setPlainText(t)
+            )
+            hl.addWidget(btn)
+            hl.addStretch()
+            del_btn = QToolButton()
+            del_btn.setText("🗑")
+            del_btn.clicked.connect(lambda _=False, i=idx: (ctx.user_templates.remove_template(i), refresh()))
+            hl.addWidget(del_btn)
+            vbox.addWidget(row)
+        vbox.addStretch()
+
+    search_edit.textChanged.connect(refresh)
+
+    def on_add():
+        if add_user_template_dialog(ctx, dlg):
+            refresh()
+
+    add_btn.clicked.connect(on_add)
+    refresh()
+    dlg.exec()
