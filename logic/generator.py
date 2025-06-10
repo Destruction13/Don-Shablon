@@ -421,6 +421,7 @@ def update_fields(ctx: UIContext):
             "QGroupBox { border: 2px solid gray; border-radius: 6px; margin-top: 6px; }"
         )
         custom_layout = QVBoxLayout(custom_box)
+        custom_layout.setContentsMargins(9, 15, 9, 9)
         my_btn = QPushButton("Мои шаблоны")
         my_btn.setMinimumHeight(40)
         my_btn.clicked.connect(lambda: show_user_templates_dialog(ctx))
@@ -958,6 +959,7 @@ def show_user_templates_dialog(ctx: UIContext) -> None:
         QLineEdit,
         QPushButton,
         QToolButton,
+        QSizePolicy,
         QScrollArea,
         QWidget,
         QLabel,
@@ -977,6 +979,9 @@ def show_user_templates_dialog(ctx: UIContext) -> None:
 
     scroll = QScrollArea()
     scroll.setWidgetResizable(True)
+    scroll.setStyleSheet(
+        "QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; border: none; }"
+    )
     container = QWidget()
     vbox = QVBoxLayout(container)
     scroll.setWidget(container)
@@ -994,7 +999,10 @@ def show_user_templates_dialog(ctx: UIContext) -> None:
             row = QWidget()
             hl = QHBoxLayout(row)
             btn = QPushButton(tpl.get("tag", ""))
-            btn.clicked.connect(lambda _=False, t=tpl.get("text", ""): ctx.output_text.setPlainText(t))
+            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            btn.clicked.connect(
+                lambda _=False, t=tpl.get("text", ""): ctx.output_text.setPlainText(t)
+            )
             hl.addWidget(btn)
             hl.addStretch()
             del_btn = QToolButton()
