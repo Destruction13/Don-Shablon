@@ -87,6 +87,11 @@ class UIContext:
         hist_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "template_history.json")
         self.history = TemplateHistory(hist_path)
 
+        # user-defined templates
+        tpl_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "user_templates.json")
+        from .user_templates import UserTemplates
+        self.user_templates = UserTemplates(tpl_path)
+
     def refresh_music_files(self) -> None:
         """Scan the music directory and populate available tracks."""
         if not os.path.isdir(self.music_dir):
