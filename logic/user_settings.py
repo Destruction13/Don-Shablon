@@ -13,6 +13,8 @@ class UserSettings:
         self.auto_copy = False
         self.auto_generate = False
         self.auto_report = False
+        self.deepl_api_key = ""
+        self.translator = "Google"
 
         self.save_theme = True
         self.save_ocr_mode = True
@@ -32,6 +34,9 @@ class UserSettings:
                 self.save_auto_copy = data.get("save_auto_copy", True)
                 self.save_auto_generate = data.get("save_auto_generate", True)
                 self.save_auto_report = data.get("save_auto_report", True)
+
+                self.deepl_api_key = data.get("deepl_api_key", self.deepl_api_key)
+                self.translator = data.get("translator", self.translator)
 
                 if self.save_theme:
                     self.theme = data.get("theme", self.theme)
@@ -56,6 +61,8 @@ class UserSettings:
             "auto_copy": self.auto_copy,
             "auto_generate": self.auto_generate,
             "auto_report": self.auto_report,
+            "deepl_api_key": self.deepl_api_key,
+            "translator": self.translator,
             "save_theme": self.save_theme,
             "save_ocr_mode": self.save_ocr_mode,
             "save_animation_effect": self.save_animation_effect,

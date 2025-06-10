@@ -41,6 +41,9 @@ class UIContext:
         )
         self.settings = UserSettings(settings_path)
 
+        self.deepl_api_key = self.settings.deepl_api_key
+        self.translator = self.settings.translator
+
         # "Винтаж" используется по умолчанию
         self.current_theme_name = (
             self.settings.theme if self.settings.save_theme else "Винтаж"

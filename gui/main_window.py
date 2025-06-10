@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QScrollArea, QSpinBox, QGroupBox, QSizePolicy, QSlider, QCheckBox
 )
 from PySide6.QtGui import QPixmap
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 import logging
 import os
 import pygame
@@ -73,6 +73,10 @@ class MainWindow(QMainWindow):
         self.volume_slider.setValue(ctx.music_volume)
         self.volume_slider.valueChanged.connect(self.change_volume)
         self.volume_slider.setVisible(False)
+
+        self.track_timer = QTimer(self)
+        self.track_timer.setInterval(1000)
+        self.track_timer.timeout.connect(self.check_music)
 
         for btn in (self.prev_btn, self.play_btn, self.next_btn, self.volume_btn, self.settings_btn):
             setup_animation(btn, ctx)
@@ -174,11 +178,13 @@ class MainWindow(QMainWindow):
         self.asya_btn.setCheckable(True)
         self.asya_btn.toggled.connect(self.toggle_ls)
         setup_animation(self.asya_btn, ctx)
+
         self.asya_mode_btn = QPushButton("Ася+")
         self.asya_mode_btn.setObjectName("asyaButton")
         self.asya_mode_btn.setCheckable(True)
         self.asya_mode_btn.toggled.connect(lambda val: setattr(ctx, 'asya_mode', val))
         setup_animation(self.asya_mode_btn, ctx)
+
         ctx.btn_ls = self.asya_btn
         ctx.btn_asya_plus = self.asya_mode_btn
 
@@ -193,6 +199,8 @@ class MainWindow(QMainWindow):
 
         output_container = QVBoxLayout()
         top_controls = QHBoxLayout()
+        top_controls.addWidget(self.asya_mode_btn)
+        top_controls.addWidget(self.asya_btn)
         top_controls.addStretch()
 
         self.auto_copy_sw = ToggleSwitch(tooltip_off="Выкл", tooltip_on="Вкл")
@@ -354,6 +362,8 @@ class MainWindow(QMainWindow):
             pygame.mixer.music.unpause()
             ctx.music_state["paused"] = False
             self.play_btn.setText("⏸")
+            if not self.track_timer.isActive():
+                self.track_timer.start()
 
     def start_track(self, index: int) -> None:
         ctx = self.ctx
@@ -365,12 +375,14 @@ class MainWindow(QMainWindow):
         try:
             pygame.mixer.music.load(path)
             pygame.mixer.music.set_volume(ctx.music_volume / 100)
-            pygame.mixer.music.play(-1)
+            pygame.mixer.music.play()
             ctx.music_index = index
             ctx.music_path = path
             ctx.music_state["playing"] = True
             ctx.music_state["paused"] = False
             self.play_btn.setText("⏸")
+            if not self.track_timer.isActive():
+                self.track_timer.start()
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", str(e))
 
@@ -395,6 +407,12 @@ class MainWindow(QMainWindow):
         self.ctx.music_volume = value
         if pygame.mixer.get_init():
             pygame.mixer.music.set_volume(value / 100)
+
+    def check_music(self) -> None:
+        ctx = self.ctx
+        if ctx.music_state["playing"] and not ctx.music_state["paused"]:
+            if not pygame.mixer.music.get_busy():
+                self.play_next_track()
 
     def toggle_regular_fields(self, checked: bool):
         self.ctx.regular_meeting_enabled = bool(checked)
