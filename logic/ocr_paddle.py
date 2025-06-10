@@ -26,8 +26,6 @@ from pathlib import Path
 from constants import rooms_by_bz
 from logic.app_state import UIContext
 from logic.utils import run_in_thread
-import torch
-print(torch.cuda.is_available())
 
 
 # --- OCR configuration ---
@@ -822,82 +820,5 @@ def update_gui_fields(
     if "regular" in ctx.fields:
         ctx.fields["regular"].setCurrentText("Обычная")
 
-    try:
-        with open("final_fields.json", "w", encoding="utf-8") as f:
-            json.dump({"fields": data, "scores": scores or {}}, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        logging.error("[OCR] Failed to write final_fields.json: %s", e)
 
-
-def on_clipboard_button_click(ctx: UIContext) -> None:
-    """Entry point for the clipboard OCR workflow."""
-    img = get_image_from_clipboard()
-    if img is None:
-        QMessageBox.critical(ctx.window, "Ошибка", "Буфер обмена не содержит изображение.")
-        return
-
-    def worker():
-        lines = run_ocr(img, use_gpu=ctx.ocr_mode == "GPU")
-        print("[DEBUG] OCR lines:", lines)
-        parsed, scores = parse_fields(lines, return_scores=True)
-        print("[DEBUG] Parsed fields:", parsed)
-        validated = validate_with_rooms(parsed, rooms_by_bz, fuzzy_threshold=FUZZY_THRESHOLD)
-        print("[DEBUG] Validated fields:", validated)
-        return validated, scores
-
-    def on_finish(result_error):
-        print("[DEBUG] on_finish called with:", result_error)
-        result_tuple, error = result_error
-        if error:
-            logging.error("[OCR] Pipeline failed: %s", error)
-            QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось распознать изображение:\n{error}")
-            return
-        result, scores = result_tuple
-        if not any(result.values()):
-            QMessageBox.information(ctx.window, "Предупреждение", "Не удалось распознать данные")
-            return
-        update_gui_fields(result, ctx, scores=scores)
-
-    run_in_thread(worker, on_finish)
-
-
-def ocr_pipeline(ctx: UIContext) -> None:
-    logging.debug("[OCR] Start pipeline")
-
-    img = ImageGrab.grabclipboard()
-    if isinstance(img, list) or img is None:
-        qimg = QGuiApplication.clipboard().image()
-        if qimg.isNull():
-            QMessageBox.critical(ctx.window, "Ошибка", "Буфер обмена не содержит изображение.")
-            return
-        img = ImageQt.fromqimage(qimg).convert("RGB")
-    else:
-        if not isinstance(img, Image.Image):
-            QMessageBox.critical(ctx.window, "Ошибка", "Буфер обмена не содержит изображение.")
-            return
-        img = img.convert("RGB")
-
-    def do_ocr():
-        return run_ocr(img, use_gpu=ctx.ocr_mode == "GPU")
-
-    def on_result(result_error):
-        result_tuple, error = result_error
-        if error:
-            logging.error("[OCR] OCR failed: %s", error)
-            QMessageBox.critical(ctx.window, "Ошибка", f"Не удалось распознать изображение:\n{error}")
-            return
-        try:
-            lines = result_tuple
-            logging.debug("[OCR] Lines: %s", lines)
-            parsed, scores = parse_fields(lines, return_scores=True)
-            validated = validate_with_rooms(parsed, rooms_by_bz)
-            if not any(validated.values()):
-                QMessageBox.information(ctx.window, "Предупреждение", "Не удалось распознать данные")
-                return
-            update_gui_fields(validated, ctx, scores=scores)
-        except Exception as e:
-            logging.exception("[OCR] Parsing failed: %s", e)
-            QMessageBox.critical(ctx.window, "Ошибка", f"Ошибка при разборе OCR-результата:\n{e}")
-
-    run_in_thread(do_ocr, on_result)
 

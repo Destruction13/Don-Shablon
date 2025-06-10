@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import List
 
@@ -45,9 +44,3 @@ def recognize_from_clipboard(ctx: UIContext) -> None:
 
     validated = validate_with_rooms(parsed, rooms_by_bz, fuzzy_threshold=0.6)
     update_gui_fields(validated, ctx, scores=scores)
-
-    try:
-        with open("final_fields.json", "w", encoding="utf-8") as f:
-            json.dump({"fields": validated, "scores": scores}, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        logging.error("[OCR] Failed to write final_fields.json: %s", e)

@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
+import logging
 import os
 import pygame
 
@@ -29,7 +30,7 @@ class MainWindow(QMainWindow):
                 pygame.mixer.music.load(music_path)
                 pygame.mixer.music.set_volume(ctx.music_volume / 100)
         except Exception as e:
-            print(f"[ERROR] Failed to init mixer: {e}")
+            logging.error("Failed to init mixer: %s", e)
         self.bg_label = QLabel(self)
         self.bg_label.setScaledContents(True)
         self.bg_label.lower()
