@@ -201,19 +201,29 @@ class MainWindow(QMainWindow):
         self.auto_gen_sw = ToggleSwitch(tooltip_off="Выкл", tooltip_on="Вкл")
         self.auto_gen_sw.setChecked(ctx.auto_generate_after_autofill)
         self.auto_gen_sw.toggled.connect(lambda val: setattr(ctx, "auto_generate_after_autofill", bool(val)))
+        self.auto_report_sw = ToggleSwitch(tooltip_off="Выкл", tooltip_on="Вкл")
+        self.auto_report_sw.setChecked(ctx.auto_report_enabled)
+        self.auto_report_sw.toggled.connect(self.toggle_auto_report)
 
         top_controls.addWidget(QLabel("Авто-копирование"))
         top_controls.addWidget(self.auto_copy_sw)
         top_controls.addSpacing(15)
         top_controls.addWidget(QLabel("Автогенерация после автозаполнения"))
         top_controls.addWidget(self.auto_gen_sw)
+        top_controls.addSpacing(15)
+        top_controls.addWidget(QLabel("Авто-отчёт"))
+        top_controls.addWidget(self.auto_report_sw)
         top_controls.addWidget(self.copy_btn)
         top_controls.addWidget(self.trans_btn)
         output_container.addLayout(top_controls)
         self.output_text = QTextEdit()
         output_container.addWidget(self.output_text)
+        self.report_text = QTextEdit()
+        self.report_text.setVisible(ctx.auto_report_enabled)
+        output_container.addWidget(self.report_text)
         self.main_layout.addLayout(output_container)
         ctx.output_text = self.output_text
+        ctx.report_text = self.report_text
 
         update_fields(ctx)
         self.on_type_changed()
@@ -374,5 +384,10 @@ class MainWindow(QMainWindow):
     def toggle_regular_fields(self, checked: bool):
         self.ctx.regular_meeting_enabled = bool(checked)
         self.regular_group.setVisible(bool(checked))
+
+    def toggle_auto_report(self, val: bool) -> None:
+        self.ctx.auto_report_enabled = bool(val)
+        if hasattr(self, "report_text"):
+            self.report_text.setVisible(bool(val))
 
 
