@@ -8,3 +8,6 @@ torchvision
 PySide6
 rapidfuzz
 pyqtgraph
+sounddevice
+soundfile
+faster-whisper

@@ -42,6 +42,7 @@ from logic.utils import (
 from gui.animations import setup_animation
 from gui import ToggleSwitch
 from logic.templates import OTHER_TEMPLATES, generate_from_category
+from logic.voice_recognition import WhisperRecognizer, match_room
 
 ICON_MAP = {
     "Имя": "🧑\u200d💼",
@@ -194,12 +195,36 @@ def add_room_field(label: str, name: str, bz_name: str, ctx: UIContext):
     btn.setFocusPolicy(Qt.NoFocus)
     btn.clicked.connect(lambda: combo.setEditText(""))
     hl.addWidget(btn)
+    mic_btn = QToolButton()
+    mic_btn.setText("🎤")
+    mic_btn.setFocusPolicy(Qt.NoFocus)
+
+    def on_mic_clicked():
+        recognizer = getattr(ctx, "whisper", None)
+        if recognizer is None:
+            recognizer = WhisperRecognizer()
+            ctx.whisper = recognizer
+        text = recognizer.recognize()
+        if not text:
+            QMessageBox.warning(ctx.window, "Ошибка", "Не удалось распознать речь")
+            return
+        room, bz = match_room(text)
+        if room:
+            combo.setEditText(room)
+            if bz_name in ctx.fields:
+                ctx.fields[bz_name].setCurrentText(bz)
+        else:
+            QMessageBox.warning(ctx.window, "Ошибка", "Переговорка не найдена")
+
+    mic_btn.clicked.connect(on_mic_clicked)
+    hl.addWidget(mic_btn)
     ctx.fields[name] = combo
     lab = label_with_icon(label)
     ctx.labels[name] = lab
     ctx.fields_layout.addRow(lab, container)
     setup_animation(combo, ctx)
     setup_animation(btn, ctx)
+    setup_animation(mic_btn, ctx)
 
 
 def add_date(name: str, ctx: UIContext):
@@ -928,12 +953,36 @@ def add_user_template_dialog(ctx: UIContext, parent=None) -> bool:
     tag_edit = QLineEdit()
     layout.addWidget(tag_edit)
     layout.addWidget(QLabel("Текст шаблона"))
+    text_row = QHBoxLayout()
     text_edit = QTextEdit()
-    layout.addWidget(text_edit)
+    mic_btn = QToolButton()
+    mic_btn.setText("🎤")
+    mic_btn.setFocusPolicy(Qt.NoFocus)
+    text_row.addWidget(text_edit)
+    text_row.addWidget(mic_btn)
+    layout.addLayout(text_row)
     ok_btn = QPushButton("OK")
     layout.addWidget(ok_btn)
 
     result = {"added": False}
+
+    def on_record():
+        recognizer = getattr(ctx, "whisper", None)
+        if recognizer is None:
+            recognizer = WhisperRecognizer()
+            ctx.whisper = recognizer
+        text = recognizer.recognize()
+        if not text:
+            QMessageBox.warning(dlg, "Ошибка", "Не удалось распознать речь")
+            return
+        current = text_edit.toPlainText().strip()
+        if current:
+            text_edit.setPlainText(current + " " + text)
+        else:
+            text_edit.setPlainText(text)
+
+    mic_btn.clicked.connect(on_record)
+    setup_animation(mic_btn, ctx)
 
     def on_ok():
         tag = tag_edit.text().strip()

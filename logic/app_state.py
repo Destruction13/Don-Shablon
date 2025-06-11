@@ -92,6 +92,9 @@ class UIContext:
         from .user_templates import UserTemplates
         self.user_templates = UserTemplates(tpl_path)
 
+        # voice recognizer (lazy-loaded)
+        self.whisper = None
+
     def refresh_music_files(self) -> None:
         """Scan the music directory and populate available tracks."""
         if not os.path.isdir(self.music_dir):
