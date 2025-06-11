@@ -16,6 +16,7 @@ class WhisperRecognizer:
 
     def __init__(self, model_size: str = "base", model_path: str | None = None, preload: bool = False) -> None:
         self.model_size = model_size
+        # prefer explicit path or WHISPER_MODEL_PATH env var
         self.model_path = model_path or os.getenv("WHISPER_MODEL_PATH")
         self.model: WhisperModel | None = None
         if preload:
@@ -23,7 +24,15 @@ class WhisperRecognizer:
 
     def _load_model(self) -> WhisperModel:
         if self.model is None:
-            model_id = self.model_path or self.model_size
+            model_id = self.model_path
+            if not model_id:
+                raise RuntimeError(
+                    "WHISPER_MODEL_PATH is not set. Please download a model and set the path via this environment variable."
+                )
+            if not os.path.exists(model_id):
+                raise FileNotFoundError(
+                    f"Whisper model path '{model_id}' does not exist."
+                )
             logging.debug("[Whisper] Loading model %s", model_id)
             self.model = WhisperModel(model_id, device="cpu", compute_type="int8")
         return self.model
