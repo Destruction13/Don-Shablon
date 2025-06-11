@@ -270,8 +270,6 @@ class MainWindow(QMainWindow):
         if lab:
             if is_org:
                 lab.setText("🧑\u200d💼 Имя и фамилия заказчика (в род. падеже):")
-            else:
-                lab.setText("🧑\u200d💼 Имя заказчика:")
         lab2 = self.ctx.labels.get("meeting_name")
         if lab2:
             lab2.setText("📝 Название встречи:")
