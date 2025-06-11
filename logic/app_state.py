@@ -92,8 +92,9 @@ class UIContext:
         from .user_templates import UserTemplates
         self.user_templates = UserTemplates(tpl_path)
 
-        # voice recognizer (lazy-loaded)
-        self.whisper = None
+        # voice recognizer (preloaded to avoid delays on first use)
+        from .voice_recognition import WhisperRecognizer
+        self.whisper = WhisperRecognizer(preload=True)
 
     def refresh_music_files(self) -> None:
         """Scan the music directory and populate available tracks."""

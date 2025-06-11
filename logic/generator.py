@@ -200,10 +200,8 @@ def add_room_field(label: str, name: str, bz_name: str, ctx: UIContext):
     mic_btn.setFocusPolicy(Qt.NoFocus)
 
     def on_mic_clicked():
-        recognizer = getattr(ctx, "whisper", None)
-        if recognizer is None:
-            recognizer = WhisperRecognizer()
-            ctx.whisper = recognizer
+        recognizer = getattr(ctx, "whisper", None) or WhisperRecognizer(preload=True)
+        ctx.whisper = recognizer
         text = recognizer.recognize()
         if not text:
             QMessageBox.warning(ctx.window, "Ошибка", "Не удалось распознать речь")
@@ -967,10 +965,8 @@ def add_user_template_dialog(ctx: UIContext, parent=None) -> bool:
     result = {"added": False}
 
     def on_record():
-        recognizer = getattr(ctx, "whisper", None)
-        if recognizer is None:
-            recognizer = WhisperRecognizer()
-            ctx.whisper = recognizer
+        recognizer = getattr(ctx, "whisper", None) or WhisperRecognizer(preload=True)
+        ctx.whisper = recognizer
         text = recognizer.recognize()
         if not text:
             QMessageBox.warning(dlg, "Ошибка", "Не удалось распознать речь")

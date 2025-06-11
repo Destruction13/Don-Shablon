@@ -1,3 +1,4 @@
+import os
 import tempfile
 import difflib
 import logging
@@ -13,15 +14,23 @@ from constants import rooms_by_bz
 class WhisperRecognizer:
     """Simple wrapper around faster-whisper for offline speech recognition."""
 
-    def __init__(self, model_size: str = "base") -> None:
+    def __init__(self, model_size: str = "base", model_path: str | None = None, preload: bool = False) -> None:
         self.model_size = model_size
+        self.model_path = model_path or os.getenv("WHISPER_MODEL_PATH")
         self.model: WhisperModel | None = None
+        if preload:
+            self._load_model()
 
     def _load_model(self) -> WhisperModel:
         if self.model is None:
-            logging.debug("[Whisper] Loading model %s", self.model_size)
-            self.model = WhisperModel(self.model_size, device="cpu", compute_type="int8")
+            model_id = self.model_path or self.model_size
+            logging.debug("[Whisper] Loading model %s", model_id)
+            self.model = WhisperModel(model_id, device="cpu", compute_type="int8")
         return self.model
+
+    def load_model(self) -> None:
+        """Public method to preload the model."""
+        self._load_model()
 
     def recognize(self, duration: float = 4.0, language: str = "ru") -> str:
         """Record audio from the microphone and return recognized text."""
