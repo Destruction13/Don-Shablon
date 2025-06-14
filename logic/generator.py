@@ -15,9 +15,11 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QCheckBox,
     QGroupBox,
+    QApplication,
 )
 try:
-    from PySide6.QtCore import QDate, Qt, QTime, QTimer, QEvent, QPoint
+    from PySide6.QtCore import QDate, Qt, QTime, QTimer, QEvent
+    from PySide6.QtGui import QKeyEvent
 except Exception:  # test fallback
     class QDate:
         def __init__(self, *args, **kwargs):
@@ -29,6 +31,19 @@ except Exception:  # test fallback
             self._m = m
     class Qt:
         NoFocus = 0
+        Key_F4 = 0
+
+    class QEvent:
+        MouseButtonPress = 0
+
+    class QKeyEvent:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class QTimer:
+        @staticmethod
+        def singleShot(msec, func):
+            func()
 
 from logic.room_filter import FilteringComboBox
 
@@ -76,17 +91,12 @@ class ClickableDateEdit(QDateEdit):
         self.lineEdit().installEventFilter(self)
 
     def _open_calendar(self) -> None:
-        """Open the calendar popup reliably across Qt versions."""
-        def show():
-            cal = self.calendarWidget()
-            if cal:
-                popup = cal.parentWidget()
-                if popup:
-                    popup.move(self.mapToGlobal(QPoint(0, self.height())))
-                    popup.show()
-                    cal.setFocus()
+        """Open the calendar popup using the widget's built-in logic."""
+        def trigger():
+            evt = QKeyEvent(QEvent.KeyPress, Qt.Key_F4, Qt.NoModifier)
+            QApplication.postEvent(self, evt)
 
-        QTimer.singleShot(0, show)
+        QTimer.singleShot(0, trigger)
 
     def eventFilter(self, obj, event):
         if obj == self.lineEdit() and event.type() == QEvent.MouseButtonPress:
