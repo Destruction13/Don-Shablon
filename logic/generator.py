@@ -967,6 +967,9 @@ def show_user_templates_dialog(ctx: UIContext) -> None:
 
     dlg = QDialog(ctx.window)
     dlg.setWindowTitle("Мои шаблоны")
+    # Make the dialog large enough to show several templates without
+    # additional resizing from the user.
+    dlg.resize(600, 400)
     layout = QVBoxLayout(dlg)
     top = QHBoxLayout()
     search_edit = QLineEdit()
@@ -1004,6 +1007,13 @@ def show_user_templates_dialog(ctx: UIContext) -> None:
                 lambda _=False, t=tpl.get("text", ""): ctx.output_text.setPlainText(t)
             )
             hl.addWidget(btn)
+
+            # Information button that shows template text on hover
+            info_btn = QToolButton()
+            info_btn.setText("?")
+            info_btn.setToolTip(tpl.get("text", ""))
+            hl.addWidget(info_btn)
+
             hl.addStretch()
             del_btn = QToolButton()
             del_btn.setText("🗑")
