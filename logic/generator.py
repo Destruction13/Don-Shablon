@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
 )
 try:
-    from PySide6.QtCore import QDate, Qt, QTime, QTimer
+    from PySide6.QtCore import QDate, Qt, QTime, QTimer, QEvent
 except Exception:  # test fallback
     class QDate:
         def __init__(self, *args, **kwargs):
@@ -67,19 +67,25 @@ def label_with_icon(text: str) -> QLabel:
 
 
 class ClickableDateEdit(QDateEdit):
-    """Date edit that opens the calendar when focused or clicked."""
+    """Date edit that opens the calendar when focused or clicked anywhere."""
 
-    def _open_calendar(self):
-        """Open the calendar popup reliably across Qt versions."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # Ensure the popup is enabled and capture clicks inside the line edit
         self.setCalendarPopup(True)
+        self.lineEdit().installEventFilter(self)
 
-        def show():
-            cal = self.calendarWidget()
-            if cal:
-                cal.show()
-                cal.setFocus()
+    def _open_calendar(self) -> None:
+        """Open the calendar popup reliably across Qt versions."""
+        cal = self.calendarWidget()
+        if cal:
+            cal.show()
+            cal.setFocus()
 
-        QTimer.singleShot(100, show)
+    def eventFilter(self, obj, event):
+        if obj == self.lineEdit() and event.type() == QEvent.MouseButtonPress:
+            self._open_calendar()
+        return super().eventFilter(obj, event)
 
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
