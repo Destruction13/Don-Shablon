@@ -15,9 +15,11 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QCheckBox,
     QGroupBox,
+    QApplication,
 )
 try:
-    from PySide6.QtCore import QDate, Qt, QTime, QTimer
+    from PySide6.QtCore import QDate, Qt, QTime, QTimer, QEvent
+    from PySide6.QtGui import QKeyEvent
 except Exception:  # test fallback
     class QDate:
         def __init__(self, *args, **kwargs):
@@ -29,6 +31,19 @@ except Exception:  # test fallback
             self._m = m
     class Qt:
         NoFocus = 0
+        Key_F4 = 0
+
+    class QEvent:
+        MouseButtonPress = 0
+
+    class QKeyEvent:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class QTimer:
+        @staticmethod
+        def singleShot(msec, func):
+            func()
 
 from logic.room_filter import FilteringComboBox
 
@@ -67,19 +82,26 @@ def label_with_icon(text: str) -> QLabel:
 
 
 class ClickableDateEdit(QDateEdit):
-    """Date edit that opens the calendar when focused or clicked."""
+    """Date edit that opens the calendar when focused or clicked anywhere."""
 
-    def _open_calendar(self):
-        """Open the calendar popup reliably across Qt versions."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # Ensure the popup is enabled and capture clicks inside the line edit
         self.setCalendarPopup(True)
+        self.lineEdit().installEventFilter(self)
 
-        def show():
-            cal = self.calendarWidget()
-            if cal:
-                cal.show()
-                cal.setFocus()
+    def _open_calendar(self) -> None:
+        """Open the calendar popup using the widget's built-in logic."""
+        def trigger():
+            evt = QKeyEvent(QEvent.KeyPress, Qt.Key_F4, Qt.NoModifier)
+            QApplication.postEvent(self, evt)
 
-        QTimer.singleShot(100, show)
+        QTimer.singleShot(0, trigger)
+
+    def eventFilter(self, obj, event):
+        if obj == self.lineEdit() and event.type() == QEvent.MouseButtonPress:
+            self._open_calendar()
+        return super().eventFilter(obj, event)
 
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
@@ -967,6 +989,9 @@ def show_user_templates_dialog(ctx: UIContext) -> None:
 
     dlg = QDialog(ctx.window)
     dlg.setWindowTitle("Мои шаблоны")
+    # Make the dialog large enough to show several templates without
+    # additional resizing from the user.
+    dlg.resize(600, 400)
     layout = QVBoxLayout(dlg)
     top = QHBoxLayout()
     search_edit = QLineEdit()
@@ -1004,6 +1029,13 @@ def show_user_templates_dialog(ctx: UIContext) -> None:
                 lambda _=False, t=tpl.get("text", ""): ctx.output_text.setPlainText(t)
             )
             hl.addWidget(btn)
+
+            # Information button that shows template text on hover
+            info_btn = QToolButton()
+            info_btn.setText("?")
+            info_btn.setToolTip(tpl.get("text", ""))
+            hl.addWidget(info_btn)
+
             hl.addStretch()
             del_btn = QToolButton()
             del_btn.setText("🗑")
