@@ -173,20 +173,20 @@ class MainWindow(QMainWindow):
 
         cv_btn.setFixedHeight(int(generate_btn.sizeHint().height() * 1.5))
 
-        self.asya_btn = QPushButton("ЛС")
-        self.asya_btn.setObjectName("lsButton")
-        self.asya_btn.setCheckable(True)
-        self.asya_btn.toggled.connect(self.toggle_ls)
-        setup_animation(self.asya_btn, ctx)
+        self.ls_sw = ToggleSwitch(tooltip_off="Выкл", tooltip_on="Вкл")
+        self.ls_sw.setObjectName("lsButton")
+        self.ls_sw.setChecked(ctx.ls_active)
+        self.ls_sw.toggled.connect(self.toggle_ls)
+        setup_animation(self.ls_sw, ctx)
 
-        self.asya_mode_btn = QPushButton("Ася+")
-        self.asya_mode_btn.setObjectName("asyaButton")
-        self.asya_mode_btn.setCheckable(True)
-        self.asya_mode_btn.toggled.connect(lambda val: setattr(ctx, 'asya_mode', val))
-        setup_animation(self.asya_mode_btn, ctx)
+        self.asya_mode_sw = ToggleSwitch(tooltip_off="Выкл", tooltip_on="Вкл")
+        self.asya_mode_sw.setObjectName("asyaButton")
+        self.asya_mode_sw.setChecked(ctx.asya_mode)
+        self.asya_mode_sw.toggled.connect(lambda val: setattr(ctx, 'asya_mode', val))
+        setup_animation(self.asya_mode_sw, ctx)
 
-        ctx.btn_ls = self.asya_btn
-        ctx.btn_asya_plus = self.asya_mode_btn
+        ctx.btn_ls = self.ls_sw
+        ctx.btn_asya_plus = self.asya_mode_sw
 
         self.copy_btn = QToolButton()
         self.copy_btn.setText("📋")
@@ -199,9 +199,12 @@ class MainWindow(QMainWindow):
 
         output_container = QVBoxLayout()
         top_controls = QHBoxLayout()
-        top_controls.addWidget(self.asya_mode_btn)
-        top_controls.addWidget(self.asya_btn)
-        top_controls.addStretch()
+        top_controls.addWidget(QLabel("ЛС"))
+        top_controls.addWidget(self.ls_sw)
+        top_controls.addSpacing(15)
+        top_controls.addWidget(QLabel("Ася+"))
+        top_controls.addWidget(self.asya_mode_sw)
+        top_controls.addSpacing(15)
 
         self.auto_copy_sw = ToggleSwitch(tooltip_off="Выкл", tooltip_on="Вкл")
         self.auto_copy_sw.setChecked(ctx.auto_copy_enabled)
@@ -221,6 +224,7 @@ class MainWindow(QMainWindow):
         top_controls.addSpacing(15)
         top_controls.addWidget(QLabel("Авто-отчёт"))
         top_controls.addWidget(self.auto_report_sw)
+        top_controls.addStretch()
         top_controls.addWidget(self.copy_btn)
         top_controls.addWidget(self.trans_btn)
         output_container.addLayout(top_controls)
@@ -327,7 +331,7 @@ class MainWindow(QMainWindow):
     def toggle_ls(self, checked):
         if checked and not self.ctx.ls_saved:
             if not self.show_ls_dialog():
-                self.asya_btn.setChecked(False)
+                self.ls_sw.setChecked(False)
                 return
         self.ctx.ls_active = checked
 
