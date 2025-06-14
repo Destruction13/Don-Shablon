@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
 )
 try:
-    from PySide6.QtCore import QDate, Qt, QTime, QTimer, QEvent
+    from PySide6.QtCore import QDate, Qt, QTime, QTimer, QEvent, QPoint
 except Exception:  # test fallback
     class QDate:
         def __init__(self, *args, **kwargs):
@@ -77,10 +77,16 @@ class ClickableDateEdit(QDateEdit):
 
     def _open_calendar(self) -> None:
         """Open the calendar popup reliably across Qt versions."""
-        cal = self.calendarWidget()
-        if cal:
-            cal.show()
-            cal.setFocus()
+        def show():
+            cal = self.calendarWidget()
+            if cal:
+                popup = cal.parentWidget()
+                if popup:
+                    popup.move(self.mapToGlobal(QPoint(0, self.height())))
+                    popup.show()
+                    cal.setFocus()
+
+        QTimer.singleShot(0, show)
 
     def eventFilter(self, obj, event):
         if obj == self.lineEdit() and event.type() == QEvent.MouseButtonPress:
