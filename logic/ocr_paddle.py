@@ -46,8 +46,8 @@ FORCE_FUZZY = True
 # Checkbox detection parameters
 CHECKBOX_X_OFFSET = 55  # pixels to the left from "Повторять" text
 CHECKBOX_SIZE = 37      # ROI size in pixels
-CHECKBOX_THRESHOLD = 80
-CHECKBOX_DARK_RATIO = 0.09
+CHECKBOX_THRESHOLD = 170
+CHECKBOX_DARK_RATIO = 0.07
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -483,12 +483,13 @@ def detect_repeat_checkbox(
             if roi.size > 0:
                 cv2.imwrite("checkbox_roi.jpg", roi)
                 gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-                _, thresh = cv2.threshold(gray, CHECKBOX_THRESHOLD, 255, cv2.THRESH_BINARY)
+                _, thresh = cv2.threshold(gray, CHECKBOX_THRESHOLD, 255, cv2.THRESH_BINARY)         
                 dark_ratio = (gray < CHECKBOX_THRESHOLD).mean()
+                # 👇 ДЕБАГ
+                print(f"[DEBUG] dark_ratio = {dark_ratio:.4f}")
                 if dark_ratio > CHECKBOX_DARK_RATIO:
                     meeting_type = "Регулярная"
             break
-
     return meeting_type, repeat_bbox, checkbox_bbox
 
 
