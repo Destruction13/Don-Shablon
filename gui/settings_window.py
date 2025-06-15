@@ -60,26 +60,30 @@ class SettingsDialog(QDialog):
         row_anim_enable = QHBoxLayout()
         self.anim_checkbox = QCheckBox("Включить анимации")
         self.anim_checkbox.setChecked(ctx.animations_enabled)
-        self.anim_checkbox.stateChanged.connect(lambda val: setattr(ctx, "animations_enabled", bool(val)))
+        self.anim_checkbox.stateChanged.connect(
+            lambda val: setattr(ctx, "animations_enabled", bool(val))
+        )
         row_anim_enable.addWidget(self.anim_checkbox)
         self.settings_layout.addLayout(row_anim_enable)
 
         row_anim_effect = QHBoxLayout()
         row_anim_effect.addWidget(QLabel("Эффект:"))
         self.anim_effect_combo = QComboBox()
-        self.anim_effect_combo.addItems([
-            "Glow",
-            "Scale",
-            "Pulse",
-            "Shimmer",
-            "Shadow Slide",
-            "ColorChange",
-            "ColorInvert",
-            "Opacity",
-            "ShadowAppear",
-            "SlideOffset",
-            "ProgressFill",
-        ])
+        self.anim_effect_combo.addItems(
+            [
+                "Glow",
+                "Scale",
+                "Pulse",
+                "Shimmer",
+                "Shadow Slide",
+                "ColorChange",
+                "ColorInvert",
+                "Opacity",
+                "ShadowAppear",
+                "SlideOffset",
+                "ProgressFill",
+            ]
+        )
         self.anim_effect_combo.setCurrentText(ctx.animation_effect)
         self.anim_effect_combo.currentTextChanged.connect(self._on_effect_changed)
         row_anim_effect.addWidget(self.anim_effect_combo)
@@ -91,7 +95,9 @@ class SettingsDialog(QDialog):
         self.anim_slider = QSlider(Qt.Horizontal)
         self.anim_slider.setRange(0, 100)
         self.anim_slider.setValue(ctx.animation_intensity)
-        self.anim_slider.valueChanged.connect(lambda val: setattr(ctx, "animation_intensity", val))
+        self.anim_slider.valueChanged.connect(
+            lambda val: setattr(ctx, "animation_intensity", val)
+        )
         row_intensity.addWidget(self.anim_slider)
         self.settings_layout.addLayout(row_intensity)
         self._on_effect_changed(ctx.animation_effect)
@@ -117,6 +123,15 @@ class SettingsDialog(QDialog):
         )
         row_tr.addWidget(self.translator_combo)
         self.settings_layout.addLayout(row_tr)
+
+        row_help = QHBoxLayout()
+        self.help_checkbox = QCheckBox("Показывать подсказки")
+        self.help_checkbox.setChecked(ctx.show_help_icons)
+        self.help_checkbox.stateChanged.connect(
+            lambda val: setattr(ctx, "show_help_icons", bool(val))
+        )
+        row_help.addWidget(self.help_checkbox)
+        self.settings_layout.addLayout(row_help)
 
         row_key = QHBoxLayout()
         self.key_btn = QPushButton("API DeepL")
@@ -185,6 +200,7 @@ class SettingsDialog(QDialog):
 
     def ask_deepl_key(self) -> None:
         from PySide6.QtWidgets import QInputDialog
+
         key, ok = QInputDialog.getText(
             self, "DeepL API", "Введите ключ", text=self.ctx.deepl_api_key
         )
@@ -202,6 +218,7 @@ class SettingsDialog(QDialog):
         self.ctx.settings.auto_report = self.ctx.auto_report_enabled
         self.ctx.settings.deepl_api_key = self.ctx.deepl_api_key
         self.ctx.settings.translator = self.ctx.translator
+        self.ctx.settings.show_help_icons = self.ctx.show_help_icons
 
         self.ctx.settings.save_theme = self.save_theme_sw.isChecked()
         self.ctx.settings.save_ocr_mode = self.save_ocr_sw.isChecked()
@@ -211,4 +228,3 @@ class SettingsDialog(QDialog):
         self.ctx.settings.save_auto_report = self.save_auto_report_sw.isChecked()
         self.ctx.settings.save()
         self.accept()
-
