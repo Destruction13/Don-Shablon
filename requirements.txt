@@ -1,5 +1,11 @@
 pygame
 requests
 Pillow
-tkcalendar
+numpy
 easyocr
+torch
+torchvision
+PySide6
+rapidfuzz
+pyqtgraph
+opencv-python-headless
