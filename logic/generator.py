@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 try:
     from PySide6.QtCore import QDate, Qt, QTime, QTimer, QEvent
     from PySide6.QtGui import QKeyEvent
-except Exception:  # test fallback
+except Exception:
 
     class QDate:
         def __init__(self, *args, **kwargs):
@@ -73,7 +73,6 @@ ICON_MAP = {
     "Название встречи": "📝",
 }
 
-# Help text for form fields
 HELP_TEXTS = {
     "name": "Имя человека, к которому мы обращаемся с вопросом. Заполняется автоматически.",
     "link": "Ссылка на встречу, по которой запрашиваем информацию",
@@ -94,7 +93,7 @@ HELP_TEXTS = {
 
 
 def add_help_icon(label: QLabel, help_text: str, ctx: UIContext) -> QWidget:
-    """Return a widget combining label with a help icon if enabled."""
+    """Вернуть виджет с подсказкой, если она включена."""
     if not getattr(ctx, "show_help_icons", True):
         return label
 
@@ -123,16 +122,16 @@ def label_with_icon(text: str) -> QLabel:
 
 
 class ClickableDateEdit(QDateEdit):
-    """Date edit that opens the calendar when focused or clicked anywhere."""
+    """Поле даты, автоматически открывающее календарь."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        # Ensure the popup is enabled and capture clicks inside the line edit
+        
         self.setCalendarPopup(True)
         self.lineEdit().installEventFilter(self)
 
     def _open_calendar(self) -> None:
-        """Open the calendar popup using the widget's built-in logic."""
+        """Открыть всплывающий календарь."""
 
         def trigger():
             evt = QKeyEvent(QEvent.KeyPress, Qt.Key_F4, Qt.NoModifier)
@@ -155,7 +154,7 @@ class ClickableDateEdit(QDateEdit):
 
 
 class TimeInput(QLineEdit):
-    """Simple line edit for time with HH:mm format."""
+    """Поле ввода времени в формате HH:mm."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -588,7 +587,6 @@ def update_fields(ctx: UIContext):
         custom_layout.addWidget(my_btn)
         ctx.fields_layout.addRow(custom_box)
 
-    # rename fields depending on type
     if "client_name" in ctx.fields:
         lab = ctx.labels.get("client_name")
         if lab:
@@ -834,7 +832,7 @@ def generate_message(ctx: UIContext):
 
 
 def generate_other_category(ctx: UIContext, category: str) -> None:
-    """Generate text for the "Другое" tab."""
+    """Сгенерировать текст для вкладки "Другое"."""
     name_field = ctx.fields.get("other_name")
     gender_field = ctx.fields.get("gender")
     name = name_field.text().strip() if name_field else ""
@@ -850,7 +848,7 @@ def generate_other_category(ctx: UIContext, category: str) -> None:
 
 
 def _format_short_date(date_str: str) -> str:
-    """Return date in 'D month' format from dd.MM.yyyy string."""
+    """Преобразовать строку даты в формат "Д месяц"."""
     try:
         from datetime import datetime
         from .utils import months
@@ -862,7 +860,7 @@ def _format_short_date(date_str: str) -> str:
 
 
 def show_actuality_dialog(ctx: UIContext) -> None:
-    """Dialog for 'Написали по актуальности' template."""
+    """Диалог по шаблону "Написали по актуальности"."""
     from PySide6.QtWidgets import (
         QDialog,
         QVBoxLayout,
@@ -954,7 +952,7 @@ def show_actuality_dialog(ctx: UIContext) -> None:
 
 
 def show_exchange_dialog(ctx: UIContext) -> None:
-    """Dialog for 'Написали по обмену' template."""
+    """Диалог по шаблону "Написали по обмену"."""
     from PySide6.QtWidgets import (
         QDialog,
         QVBoxLayout,
@@ -1053,7 +1051,7 @@ def show_exchange_dialog(ctx: UIContext) -> None:
 
 
 def show_auto_report_dialog(ctx: UIContext) -> None:
-    """Dialog for auto-reporting after generating main text."""
+    """Диалог автозаполнения отчёта после генерации текста."""
     from PySide6.QtWidgets import (
         QDialog,
         QVBoxLayout,
@@ -1147,7 +1145,7 @@ def show_auto_report_dialog(ctx: UIContext) -> None:
 
 
 def add_user_template_dialog(ctx: UIContext, parent=None) -> bool:
-    """Dialog for creating a new custom template."""
+    """Диалог создания нового пользовательского шаблона."""
     from PySide6.QtWidgets import (
         QDialog,
         QVBoxLayout,
@@ -1188,7 +1186,7 @@ def add_user_template_dialog(ctx: UIContext, parent=None) -> bool:
 
 
 def show_user_templates_dialog(ctx: UIContext) -> None:
-    """List and manage user templates."""
+    """Список пользовательских шаблонов и управление ими."""
     from PySide6.QtWidgets import (
         QDialog,
         QVBoxLayout,
@@ -1204,8 +1202,6 @@ def show_user_templates_dialog(ctx: UIContext) -> None:
 
     dlg = QDialog(ctx.window)
     dlg.setWindowTitle("Мои шаблоны")
-    # Make the dialog large enough to show several templates without
-    # additional resizing from the user.
     dlg.resize(600, 400)
     layout = QVBoxLayout(dlg)
     top = QHBoxLayout()
@@ -1245,7 +1241,6 @@ def show_user_templates_dialog(ctx: UIContext) -> None:
             )
             hl.addWidget(btn)
 
-            # Information button that shows template text on hover
             info_btn = QToolButton()
             info_btn.setText("?")
             info_btn.setToolTip(tpl.get("text", ""))

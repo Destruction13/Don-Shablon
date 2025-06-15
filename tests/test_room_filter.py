@@ -4,7 +4,6 @@ import types
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# stub PySide6 for headless test environment
 qt_widgets = types.ModuleType('PySide6.QtWidgets')
 qt_widgets.QComboBox = object
 qt_widgets.QCompleter = object

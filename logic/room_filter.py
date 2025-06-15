@@ -1,9 +1,8 @@
-# Filtering utilities and combo box widget for meeting rooms
 from PySide6.QtWidgets import QComboBox, QCompleter
 from PySide6.QtCore import QStringListModel, Qt, QEvent
 
 
-# Mapping from English keyboard layout to Russian
+
 _EN_TO_RU = {
     'q': 'й', 'w': 'ц', 'e': 'у', 'r': 'к', 't': 'е', 'y': 'н', 'u': 'г',
     'i': 'ш', 'o': 'щ', 'p': 'з', '[': 'х', ']': 'ъ',
@@ -13,17 +12,17 @@ _EN_TO_RU = {
     ',': 'б', '.': 'ю', '`': 'ё', '/': '.',
     '<': 'Б', '>': 'Ю',
 }
-# add uppercase mapping
+
 _EN_TO_RU.update({k.upper(): v.upper() for k, v in list(_EN_TO_RU.items())})
 
 
 def fix_layout(text: str) -> str:
-    """Convert text typed in English layout to Russian layout."""
+    """Преобразовать текст с английской раскладки на русскую."""
     return ''.join(_EN_TO_RU.get(ch, ch) for ch in text)
 
 
 def filter_rooms(all_rooms: list[str], query: str) -> list[str]:
-    """Return rooms filtered according to prefix, substring and layout correction."""
+    """Отфильтровать список переговорок по запросу."""
     if not query:
         return list(all_rooms)
     q = query.lower()
@@ -44,12 +43,11 @@ def filter_rooms(all_rooms: list[str], query: str) -> list[str]:
 
 
 class FilteringComboBox(QComboBox):
-    """QComboBox with non-blocking autocompletion based on custom filtering."""
+    """Комбобокс с автодополнением и фильтрацией списка."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setEditable(True)
-        # Keep focus in the line edit so Tab doesn't jump to the next widget
         line_edit = self.lineEdit()
         if hasattr(line_edit, "setTabChangesFocus"):
             line_edit.setTabChangesFocus(False)
@@ -61,19 +59,17 @@ class FilteringComboBox(QComboBox):
         self._completer.setCompletionMode(QCompleter.PopupCompletion)
         self.setCompleter(self._completer)
         self._popup = self._completer.popup()
-        # Give the popup a predictable object name so themes can target it
         try:
             self._popup.setObjectName("completerPopup")
         except Exception:
             pass
         self.lineEdit().textEdited.connect(self._on_text_edited)
         self.lineEdit().installEventFilter(self)
-        # listen on the combo box and popup so Tab from any focus widget is handled
         self.installEventFilter(self)
         self._popup.installEventFilter(self)
 
     def set_items(self, items: list[str]):
-        """Populate the combo box with a new list of rooms."""
+        """Заполнить выпадающий список новым набором комнат."""
         self._all_items = list(items)
         self.clear()
         self.addItems(self._all_items)
@@ -82,6 +78,7 @@ class FilteringComboBox(QComboBox):
             self.setCurrentIndex(0)
 
     def _on_text_edited(self, text: str):
+        """Обновить список при вводе текста."""
         filtered = filter_rooms(self._all_items, text)
         self._model.setStringList(filtered)
         if text and filtered:
@@ -89,7 +86,7 @@ class FilteringComboBox(QComboBox):
             self.lineEdit().setFocus()
 
     def accept_first(self):
-        """Fill the edit with the first filtered item if available."""
+        """Подставить первый подходящий вариант."""
         filtered = self._model.stringList()
         if not filtered:
             return
@@ -100,6 +97,7 @@ class FilteringComboBox(QComboBox):
             self.setCurrentIndex(idx)
 
     def eventFilter(self, obj, event):
+        """Обработать нажатия клавиш в выпадающем списке."""
         target = self.lineEdit()
         if obj in (self, target, getattr(self, "_popup", None)) and event.type() == QEvent.KeyPress:
             if event.key() == Qt.Key_Tab:

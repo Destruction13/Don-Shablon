@@ -38,7 +38,9 @@ from gui import ToggleSwitch
 
 
 class MainWindow(QMainWindow):
+    """Главное окно генератора шаблонов."""
     def __init__(self, ctx: UIContext):
+        """Создать главное окно и настроить элементы интерфейса."""
         super().__init__()
         self.ctx = ctx
         ctx.window = self
@@ -114,7 +116,6 @@ class MainWindow(QMainWindow):
         header.addWidget(self.settings_btn)
         self.main_layout.addLayout(header)
 
-        # meeting type selector
         self.type_combo = QComboBox()
         self.type_combo.addItems(
             [
@@ -130,7 +131,6 @@ class MainWindow(QMainWindow):
         self.type_combo.currentTextChanged.connect(self.on_type_changed)
         setup_animation(self.type_combo, ctx)
 
-        # checkbox + group for regular meeting configuration
         self.regular_cb = QCheckBox("Организация регулярной встречи")
         self.regular_cb.stateChanged.connect(self.toggle_regular_fields)
         setup_animation(self.regular_cb, ctx)
@@ -166,7 +166,6 @@ class MainWindow(QMainWindow):
         ctx.regular_period = self.reg_period_combo
         ctx.regular_day = self.reg_day_combo
 
-        # fields frame inside scroll area
         self.scroll_area = QScrollArea()
         self.scroll_area.setObjectName("fieldsArea")
         self.scroll_area.setWidgetResizable(True)
@@ -180,7 +179,6 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.scroll_area)
         ctx.fields_layout = self.fields_layout
 
-        # buttons
         clipboard_row = QHBoxLayout()
         from gui.rainbow_button import RainbowButton
 
@@ -267,7 +265,6 @@ class MainWindow(QMainWindow):
         self.output_text = QTextEdit()
         output_container.addWidget(self.output_text)
 
-        # Block for auto-report text with copy button
         report_box = QVBoxLayout()
         report_top = QHBoxLayout()
         report_top.addStretch()
@@ -332,6 +329,7 @@ class MainWindow(QMainWindow):
             self.bg_label.lower()
 
     def show_ls_dialog(self):
+        """Показать диалог настройки личного ассистента."""
         from PySide6.QtWidgets import (
             QDialog,
             QVBoxLayout,

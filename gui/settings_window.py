@@ -23,9 +23,10 @@ from gui import ToggleSwitch
 
 
 class SettingsDialog(QDialog):
-    """Simple settings dialog with extensible layout."""
+    """Диалоговое окно настроек приложения."""
 
     def __init__(self, ctx: UIContext, parent=None):
+        """Инициализировать диалог настроек."""
         super().__init__(parent)
         self.ctx = ctx
         self.setWindowTitle("Настройки")
@@ -209,7 +210,7 @@ class SettingsDialog(QDialog):
             self.key_label.setText("Сохранен" if key else "Не указан")
 
     def save_and_close(self) -> None:
-        """Persist selected settings and close the dialog."""
+        """Сохранить выбранные настройки и закрыть окно."""
         self.ctx.settings.theme = self.ctx.current_theme_name
         self.ctx.settings.ocr_mode = self.ctx.ocr_mode
         self.ctx.settings.animation_effect = self.ctx.animation_effect

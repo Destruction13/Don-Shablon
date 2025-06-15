@@ -3,11 +3,9 @@ import urllib.parse
 from datetime import datetime, timedelta
 import requests
 import logging
-import pygame
 from PySide6.QtWidgets import QMessageBox, QApplication
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtCore import QRunnable, QThreadPool, Slot, QTimer
-import logging
 
 from logic.app_state import UIContext
 
@@ -29,7 +27,7 @@ GOOGLE_URL = "https://translate.googleapis.com/translate_a/single"
 
 
 class _Task(QRunnable):
-    """Simple QRunnable that executes a function in a worker thread."""
+    """Задача для выполнения функции в рабочем потоке."""
 
     def __init__(self, func, callback):
         super().__init__()
@@ -38,14 +36,14 @@ class _Task(QRunnable):
 
     @Slot()
     def run(self):
-        logging.debug("[POOL] Task running")
+        logging.debug("[POOL] Задача запущена")
         result = None
         error = None
         try:
             result = self.func()
         except Exception as e:
             error = e
-        logging.debug("[POOL] Task done")
+        logging.debug("[POOL] Задача завершена")
         QTimer.singleShot(
             0,
             QApplication.instance(),
@@ -54,36 +52,14 @@ class _Task(QRunnable):
 
 
 def run_in_thread(func, callback):
-    logging.debug("[POOL] Submitting task to thread pool")
+    """Запустить функцию в отдельном потоке."""
+    logging.debug("[POOL] Запуск в отдельном потоке")
     _threadpool.start(_Task(func, callback))
 
 
-def toggle_music(button, ctx: UIContext):
-    if not ctx.music_path:
-        return
-    if not pygame.mixer.get_init():
-        try:
-            pygame.mixer.init()
-            pygame.mixer.music.load(ctx.music_path)
-        except Exception as e:
-            QMessageBox.critical(ctx.window, "Ошибка", f"Музыка недоступна:\n{e}")
-            return
-    if not ctx.music_state["playing"]:
-        pygame.mixer.music.play(-1)
-        button.setText("⏸")
-        ctx.music_state["playing"] = True
-        ctx.music_state["paused"] = False
-    elif not ctx.music_state["paused"]:
-        pygame.mixer.music.pause()
-        button.setText("▶️")
-        ctx.music_state["paused"] = True
-    else:
-        pygame.mixer.music.unpause()
-        button.setText("⏸")
-        ctx.music_state["paused"] = False
-
 
 def parse_yandex_calendar_url(url):
+    """Извлечь дату и время из ссылки на Яндекс.Календарь."""
     parsed = urllib.parse.urlparse(url)
     query = urllib.parse.parse_qs(parsed.query)
     event_date = query.get("event_date", [""])[0]
@@ -97,6 +73,7 @@ def parse_yandex_calendar_url(url):
 
 
 def format_date_ru(date_obj):
+    """Вернуть дату в человекочитаемом виде на русском."""
     if not date_obj:
         return ""
     today = datetime.today().date()
@@ -114,6 +91,7 @@ def format_date_ru(date_obj):
 
 
 def translate_to_english(ctx: UIContext):
+    """Перевести текст из выходного поля на английский."""
     text = ctx.output_text.toPlainText().strip()
     if not text:
         QMessageBox.warning(ctx.window, "Предупреждение", "Нет текста для перевода")
@@ -167,6 +145,7 @@ def translate_to_english(ctx: UIContext):
 
 
 def copy_generated_text(ctx: UIContext):
+    """Скопировать сгенерированный текст в буфер обмена."""
     text = ctx.output_text.toPlainText().strip()
     if text:
         clipboard = QGuiApplication.clipboard()
@@ -174,7 +153,7 @@ def copy_generated_text(ctx: UIContext):
 
 
 def copy_report_text(ctx: UIContext) -> None:
-    """Copy auto-report text to the clipboard."""
+    """Скопировать текст автоотчёта в буфер обмена."""
     if getattr(ctx, "report_text", None):
         text = ctx.report_text.toPlainText().strip()
         if text:

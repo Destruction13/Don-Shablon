@@ -12,7 +12,7 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QMessageBox
 try:
     from PySide6.QtCore import QDate, QTime
-except Exception:  # Fallbacks for headless test environment
+except Exception:
     class QDate:
         def __init__(self, *args, **kwargs):
             pass
@@ -29,23 +29,17 @@ from logic.app_state import UIContext
 from logic.utils import run_in_thread
 
 
-# --- OCR configuration ---
-# Threshold below which OCR results are ignored
+# --- OCR конфигурация ---
 SCORE_IGNORE_THRESHOLD = 0.7
-# Threshold for accepting a value without fuzzy matching
 SCORE_THRESHOLD = 0.82
-# Fuzzy matching acceptance level
 FUZZY_THRESHOLD = 0.75
-# How far in pixels two boxes may be on Y to be considered on one line
 BBOX_Y_TOLERANCE = 25
-# Maximum horizontal gap between splitted tokens
 SPLIT_TOKEN_MAX_GAP = 70
-# Force fuzzy matching even for low score items (debug)
 FORCE_FUZZY = True
 
-# Checkbox detection parameters
-CHECKBOX_X_OFFSET = 55  # pixels to the left from "Повторять" text
-CHECKBOX_SIZE = 37      # ROI size in pixels
+# Checkbox конфигурация
+CHECKBOX_X_OFFSET = 55
+CHECKBOX_SIZE = 37
 CHECKBOX_THRESHOLD = 170
 CHECKBOX_DARK_RATIO = 0.07
 
@@ -80,10 +74,6 @@ def _init_ocr(use_gpu: bool = False):
     return _ocr_instance
 
 
-def _normalize(text: str) -> str:
-    return re.sub(r"[^a-zA-Z0-9а-яА-Я]", "", text).lower()
-
-
 def normalize_russian(text: str) -> str:
     return (
         text.replace("A", "А")
@@ -113,7 +103,7 @@ def normalize_generic(text: str) -> str:
 
 
 def fix_ocr_time_garbage(text: str) -> str:
-    """Replace common OCR misreads in time strings."""
+    """Исправить типичные ошибки распознавания времени."""
     return (
         text.replace("з", "3")
         .replace("o", "0")
@@ -122,12 +112,12 @@ def fix_ocr_time_garbage(text: str) -> str:
 
 
 def clean_name(text: str) -> str:
-    """Remove duration suffixes from organizer name."""
+    """Убрать указание продолжительности из имени организатора."""
     return re.sub(r"\s*(?:-?\d+ч|\(.*?ч\)|на \d+ч).*", "", text).strip()
 
 
 def normalize_time(text: str) -> str | None:
-    """Normalize various time formats to HH:MM."""
+    """Преобразовать разные форматы времени к HH:MM."""
     txt = fix_ocr_time_garbage(text).replace(".", ":")
     if re.fullmatch(r"\d{1,2}:\d{2}", txt):
         h, m = txt.split(":")
@@ -139,83 +129,9 @@ def normalize_time(text: str) -> str | None:
     return None
 
 
-def has_organizer_typo(text: str) -> bool:
-    return (
-        "рганизатор" in text
-        or "рганизатop" in text
-        or SequenceMatcher(None, text, "организатор").ratio() > 0.75
-    )
-
-
-def _extract_text_lines(result) -> List[str]:
-    if isinstance(result, list) and result:
-        first = result[0]
-        if isinstance(first, list):
-            return [line[1][0] for line in first]
-    if isinstance(result, list):
-        return [str(r) for r in result]
-    return []
-
-
-
-def _validate_room(fields: Dict[str, str]) -> None:
-    bz = fields.get("bz")
-    room = fields.get("room")
-    if not bz or bz not in rooms_by_bz:
-        logging.warning("[OCR] Unknown business center: %s", bz)
-        fields["bz"] = ""
-        fields["room"] = "" if room and bz else room
-        return
-    if room and room not in rooms_by_bz[bz]:
-        logging.warning("[OCR] Room '%s' not found in BZ '%s'", room, bz)
-        fields["room"] = ""
-
-
-def _apply_fields(
-    ctx: UIContext,
-    fields: Dict[str, str],
-    *,
-    meeting_type: str | None = None,
-) -> None:
-    logging.info("[OCR] Parsed fields: %s", fields)
-    if fields.get("name") and "name" in ctx.fields:
-        ctx.fields["name"].setText(fields["name"])
-    if fields.get("bz") and "bz" in ctx.fields:
-        ctx.fields["bz"].setCurrentText(fields["bz"])
-    if ctx.type_combo.currentText() == "Обмен":
-        target = "his_room"
-    else:
-        target = "room"
-    if fields.get("room") and target in ctx.fields:
-        ctx.fields[target].setEditText(fields["room"])
-    if fields.get("date") and "datetime" in ctx.fields:
-        try:
-            dt = datetime.strptime(fields["date"], "%d.%m.%Y")
-        except ValueError:
-            try:
-                dt = datetime.strptime(fields["date"], "%d.%m.%y")
-            except ValueError:
-                dt = None
-        if dt:
-            ctx.fields["datetime"].setDate(QDate(dt.year, dt.month, dt.day))
-    if fields.get("start") and "start_time" in ctx.fields:
-        try:
-            h, m = map(int, fields["start"].split(":"))
-            ctx.fields["start_time"].setTime(QTime(h, m))
-        except Exception:
-            pass
-    if fields.get("end") and "end_time" in ctx.fields:
-        try:
-            h, m = map(int, fields["end"].split(":"))
-            ctx.fields["end_time"].setTime(QTime(h, m))
-        except Exception:
-            pass
-    if "regular" in ctx.fields:
-        ctx.fields["regular"].setCurrentText(meeting_type or "Обычная")
-
 
 def get_image_from_clipboard() -> Optional[Image.Image]:
-    """Return an image from clipboard or ``None`` if not available."""
+    """Получить изображение из буфера обмена или ``None``."""
     try:
         img = ImageGrab.grabclipboard()
     except Exception as e:
@@ -238,28 +154,11 @@ def run_ocr(
     ignore_threshold: float = SCORE_IGNORE_THRESHOLD,
     use_gpu: bool = False,
 ) -> Tuple[List[Dict], str]:
-    """Recognize text lines from an image using EasyOCR.
-
-    Parameters
-    ----------
-    image: PIL.Image
-        Image to process.
-    ignore_threshold: float
-        Lines with score below this value will be kept but marked as low score.
-    use_gpu: bool
-        Initialize OCR engine with GPU support if True.
-
-    Returns
-    -------
-    List[Dict]
-        Each dict contains ``text``, ``score`` and ``bbox``. Low confidence
-        entries have ``low_score`` set to ``True``.
-    """
+    """Распознать текст на изображении при помощи EasyOCR."""
 
     reader = _init_ocr(use_gpu)
     image = image.resize((image.width * 2, image.height * 2), Image.LANCZOS)
     result = reader.readtext(np.array(image))
-    # logging.debug("[OCR] RAW EasyOCR result: %s", result)
 
     lines: List[Dict] = []
     for bbox, text, score in result:
@@ -286,7 +185,7 @@ def run_ocr(
     return lines, meeting_type
 
 def extract_fields_from_text(texts, rooms_by_bz):
-    """Parse common fields from plain OCR text list."""
+    """Выделить основные поля из списка строк OCR."""
     name = ""
     bz = ""
     room = ""
@@ -340,7 +239,7 @@ def extract_fields_from_text(texts, rooms_by_bz):
 
 
 def recognize_from_clipboard(ctx: UIContext) -> None:
-    """Unified OCR workflow with fallback parsing."""
+    """Распознать встречу по изображению из буфера обмена."""
     img = get_image_from_clipboard()
     if img is None:
         QMessageBox.critical(ctx.window, "Ошибка", "Буфер обмена не содержит изображение.")
@@ -372,39 +271,13 @@ def recognize_from_clipboard(ctx: UIContext) -> None:
         from logic.generator import generate_message
         generate_message(ctx)
     
-def merge_split_lines(lines: List[Dict]) -> List[Dict]:
-    """Merge neighbouring OCR lines that likely belong to the same word."""
-    if not lines:
-        return []
-
-    lines = sorted(lines, key=lambda l: min(y for x, y in l["bbox"]))
-    merged: List[Dict] = []
-    for line in lines:
-        if merged:
-            prev = merged[-1]
-            prev_y = min(y for x, y in prev["bbox"])
-            line_y = min(y for x, y in line["bbox"])
-            if abs(line_y - prev_y) <= BBOX_Y_TOLERANCE:
-                prev_right = max(x for x, y in prev["bbox"])
-                line_left = min(x for x, y in line["bbox"])
-                if 0 <= line_left - prev_right <= SPLIT_TOKEN_MAX_GAP:
-                    new_text = f"{prev['text']} {line['text']}"
-                    logging.debug("[OCR] Merging '%s' + '%s' -> '%s'", prev['text'], line['text'], new_text)
-                    prev['text'] = new_text
-                    prev['score'] = min(prev['score'], line['score'])
-                    xs = [p[0] for p in prev['bbox']] + [p[0] for p in line['bbox']]
-                    ys = [p[1] for p in prev['bbox']] + [p[1] for p in line['bbox']]
-                    prev['bbox'] = [[min(xs), min(ys)], [max(xs), min(ys)], [max(xs), max(ys)], [min(xs), max(ys)]]
-                    continue
-        merged.append(dict(line))
-    return merged
-
 def is_label_like(text, label):
+    """Проверить схожесть текста с заданной меткой."""
     return SequenceMatcher(None, text.lower(), label.lower()).ratio() > 0.7
 
 
 def is_any_label(text: str, labels: List[str]) -> bool:
-    """Return True if text is similar to any label from the list."""
+    """Вернуть ``True``, если текст похож хотя бы на одну метку."""
     return any(is_label_like(text, lbl) for lbl in labels)
 
 def save_debug_ocr_image(
@@ -416,7 +289,7 @@ def save_debug_ocr_image(
     checkbox_bbox: Tuple[int, int, int, int] | None = None,
     checkbox_checked: bool | None = None,
 ):
-    """Save OCR debugging overlay and JSON info."""
+    """Сохранить изображение с разметкой и JSON для отладки."""
 
     if not lines:
         return
@@ -457,7 +330,7 @@ def save_debug_ocr_image(
 def detect_repeat_checkbox(
     image: Image.Image, lines: List[Dict]
 ) -> Tuple[str, Tuple[int, int, int, int] | None, Tuple[int, int, int, int] | None]:
-    """Detect meeting type based on checkbox near the 'Повторять' label."""
+    """Определить тип встречи по чекбоксу рядом с меткой 'Повторять'."""
     meeting_type = "Обычная"
     repeat_bbox = None
     checkbox_bbox = None
@@ -485,7 +358,7 @@ def detect_repeat_checkbox(
                 gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
                 _, thresh = cv2.threshold(gray, CHECKBOX_THRESHOLD, 255, cv2.THRESH_BINARY)         
                 dark_ratio = (gray < CHECKBOX_THRESHOLD).mean()
-                # 👇 ДЕБАГ
+                # ДЕБАГ
                 print(f"[DEBUG] dark_ratio = {dark_ratio:.4f}")
                 if dark_ratio > CHECKBOX_DARK_RATIO:
                     meeting_type = "Регулярная"
@@ -494,7 +367,7 @@ def detect_repeat_checkbox(
 
 
 def extract_bc_and_room(lines: List[Dict], known_bz: List[str]) -> Tuple[str, str]:
-    """Try to extract business center and room from OCR lines."""
+    """Попытаться найти БЦ и переговорку в тексте OCR."""
     bz_raw = ""
     room_raw = ""
 
@@ -528,15 +401,7 @@ def extract_bc_and_room(lines: List[Dict], known_bz: List[str]) -> Tuple[str, st
 # Основной парсер
 # -----------------------------------------------
 def parse_fields(ocr_lines: list, *, return_scores: bool = False):
-    """Parse OCR lines into structured fields.
-
-    Parameters
-    ----------
-    ocr_lines : list
-        Output from :func:`run_ocr`.
-    return_scores : bool
-        Also return confidence score for each field.
-    """
+    """Разобрать строки OCR в структурированные поля."""
 
     lines = []
     for l in ocr_lines:
@@ -594,7 +459,7 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
         if is_any_label(txt_norm, ["время", "время и дата", "дата и время"]):
             time_scores = []
             times = []
-            for j in range(i + 1, i + 5):  # allow for date line in between
+            for j in range(i + 1, i + 5):
                 if j >= len(lines):
                     break
                 t = normalize_time(lines[j]["raw_text"])
@@ -717,21 +582,6 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
 
 
 
-def _fuzzy_match(value: str, choices: List[str], threshold: float) -> Optional[str]:
-    best = None
-    best_ratio = 0.0
-    for choice in choices:
-        ratio = SequenceMatcher(None, value.lower(), choice.lower()).ratio()
-        if ratio > best_ratio:
-            best_ratio = ratio
-            best = choice
-    if best_ratio >= threshold:
-        logging.debug("[OCR] Fuzzy match '%s' -> '%s' (%.2f)", value, best, best_ratio)
-        return best
-    logging.warning("[OCR] Fuzzy match for '%s' below threshold (%.2f)", value, best_ratio)
-    return None
-
-
 def _room_token_ratio(room: str, candidate: str) -> float:
     cleanup = lambda t: [w for w in re.findall(r"\w+", t.lower()) if w not in {"этаж", "мест", "место", "этажей"} and not w.isdigit()]
     tokens_room = set(cleanup(room))
@@ -764,40 +614,32 @@ _OCR_ROOM_FIX = str.maketrans({
 })
 
 def clean_room_for_matching(text: str) -> str:
-    text = re.sub(r"\s*\d+\s*этаж.*", "", text, flags=re.IGNORECASE)  # Убираем этаж и мест
+    """Подготовить название переговорки для сравнения."""
+    text = re.sub(r"\s*\d+\s*этаж.*", "", text, flags=re.IGNORECASE)
     return text.strip()
 
 
 def _normalize_room(text: str) -> str:
-    """Prepare room text for fuzzy matching."""
-    # convert look-alike latin characters to cyrillic for better matching
+    """Привести название переговорки к виду для поиска."""
     text = normalize_russian(text)
     text = text.lower()
-    # keep both latin and cyrillic letters as well as digits
     text = re.sub(r"[^a-zа-я0-9]+", "", text)
     return text
 
 
 def _fix_ocr_room_chars(text: str) -> str:
-    """Replace common OCR misreads of latin letters as cyrillic."""
+    """Исправить типичные ошибки распознавания латиницы как кириллицы."""
     return text.translate(_OCR_ROOM_FIX)
 
 
 def _normalize_room_with_ocr_fixes(text: str) -> str:
+    """Нормализовать название переговорки с учётом OCR-исправлений."""
     return _normalize_room(_fix_ocr_room_chars(text))
 
 
 def _strip_prefix_for_match(text: str) -> str:
-    """Remove leading "<digit>[letter]." prefixes used for floor indexes."""
+    """Убрать префикс вида "<цифра>[буква]." в начале."""
     return re.sub(r"^[1-9][A-ZА-Яа-я]?\.", "", text).strip()
-
-
-from difflib import SequenceMatcher
-
-def best_match(target, candidates):
-    def score(a, b):
-        return SequenceMatcher(None, a.lower(), b.lower()).ratio()
-    return max(candidates, key=lambda c: score(target, c), default=None)
 
 
 def validate_with_rooms(
@@ -807,14 +649,12 @@ def validate_with_rooms(
     fuzzy_threshold: float = FUZZY_THRESHOLD,
     override_bz: str | None = None,
 ) -> Dict[str, str]:
-    """Validate and match BZ and room using fuzzy search."""
+    """Сопоставить БЦ и переговорку с использованием нечёткого поиска."""
 
     bz_raw = fields.get("bz_raw", "")
     room_raw = fields.get("room_raw", "")
 
-    logging.debug("[OCR] Raw room value: '%s'", room_raw)
     room_for_match = clean_room_for_matching(_strip_prefix_for_match(room_raw))
-    logging.debug("[OCR] Room value after prefix strip: '%s'", room_for_match)
 
     matched_bz = None
     for bz in rooms:
@@ -943,7 +783,7 @@ def update_gui_fields(
     scores: Dict[str, float] | None = None,
     meeting_type: str | None = None,
 ) -> None:
-    """Fill UI fields with parsed data."""
+    """Заполнить элементы интерфейса распознанными данными."""
     logging.info("[OCR] Updating GUI with: %s", data)
     if data.get("name") and "name" in ctx.fields:
         ctx.fields["name"].setText(data["name"])

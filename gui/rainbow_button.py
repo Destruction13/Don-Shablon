@@ -4,7 +4,7 @@ from PySide6.QtGui import QPainter, QPen, QColor, QBrush, QConicalGradient
 
 
 class RainbowButton(QPushButton):
-    """Button with animated rainbow border."""
+    """Кнопка с анимированной радужной рамкой."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -15,10 +15,12 @@ class RainbowButton(QPushButton):
         self.setCursor(Qt.PointingHandCursor)
 
     def _advance(self):
+        """Сдвинуть угол градиента и перерисовать кнопку."""
         self._angle = (self._angle + 5) % 360
         self.update()
 
     def paintEvent(self, event):
+        """Нарисовать рамку с радужным градиентом."""
         super().paintEvent(event)
         painter = QPainter(self)
         rect = self.rect().adjusted(2, 2, -2, -2)
