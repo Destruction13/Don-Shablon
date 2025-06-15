@@ -380,6 +380,8 @@ def weekday_to_plural(word: str) -> str:
 def update_fields(ctx: UIContext):
     clear_layout(ctx.fields_layout)
     ctx.fields.clear()
+    ctx.labels.clear()
+    ctx.field_containers.clear()
     typ = ctx.type_combo.currentText()
 
     if typ == "Актуализация":
