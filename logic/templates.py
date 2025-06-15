@@ -32,7 +32,7 @@ import re
 
 
 def fill_template(template: str, name: str, gender: str) -> str:
-    """Replace placeholders and gender endings."""
+    """Подставить имя и окончание по полу в шаблон."""
     text = template.replace("{имя}", name)
     def repl(match: re.Match):
         return match.group(1) if gender == "ж" else ""
@@ -40,7 +40,7 @@ def fill_template(template: str, name: str, gender: str) -> str:
 
 
 def generate_from_category(category: str, name: str, gender: str) -> str:
-    """Generate a phrase from the given category."""
+    """Сгенерировать фразу выбранной категории."""
     options = OTHER_TEMPLATES.get(category, [])
     if not options:
         return ""

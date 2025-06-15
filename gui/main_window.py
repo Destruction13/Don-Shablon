@@ -38,7 +38,9 @@ from gui import ToggleSwitch
 
 
 class MainWindow(QMainWindow):
+    """Главное окно генератора шаблонов."""
     def __init__(self, ctx: UIContext):
+        """Создать главное окно и настроить элементы интерфейса."""
         super().__init__()
         self.ctx = ctx
         ctx.window = self
@@ -332,6 +334,7 @@ class MainWindow(QMainWindow):
             self.bg_label.lower()
 
     def show_ls_dialog(self):
+        """Показать диалог настройки личного ассистента."""
         from PySide6.QtWidgets import (
             QDialog,
             QVBoxLayout,

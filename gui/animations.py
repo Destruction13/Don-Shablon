@@ -17,7 +17,9 @@ from PySide6.QtWidgets import (
 
 
 class HoverAnimationFilter(QObject):
+    """Фильтр событий, добавляющий анимацию при наведении."""
     def __init__(self, ctx):
+        """Сохранить контекст приложения."""
         super().__init__()
         self.ctx = ctx
         self._orig_geom = {}
@@ -29,7 +31,7 @@ class HoverAnimationFilter(QObject):
         self._active_effect = {}
 
     def _store_anim(self, obj, anim):
-        """Track running animations and clean up on finish."""
+        """Отслеживать запущенную анимацию и очищать после завершения."""
         self._animations[obj] = anim
         try:
             anim.finished.connect(lambda o=obj: self._animations.pop(o, None))
@@ -37,6 +39,7 @@ class HoverAnimationFilter(QObject):
             pass
 
     def eventFilter(self, obj, event):
+        """Обрабатывать события наведения мыши."""
         if event.type() == QEvent.Enter:
             if not getattr(self.ctx, "animations_enabled", False):
                 return False
@@ -50,6 +53,7 @@ class HoverAnimationFilter(QObject):
         return False
 
     def _apply_effect(self, obj, effect: str, intensity: int) -> None:
+        """Применить выбранный эффект к объекту."""
         if obj in self._animations:
             return
         if effect == "Glow":
@@ -203,6 +207,7 @@ class HoverAnimationFilter(QObject):
                 self._store_anim(obj, anim)
 
     def _clear_effect(self, obj, effect_name=None):
+        """Снять ранее применённый эффект."""
         anim = self._animations.pop(obj, None)
         if anim:
             anim.stop()
@@ -276,6 +281,7 @@ class HoverAnimationFilter(QObject):
             revert.start()
 
     def _remove_effect(self, obj, effect):
+        """Удалить графический эффект у объекта."""
         try:
             if obj and obj.graphicsEffect() is effect:
                 obj.setGraphicsEffect(None)
@@ -289,6 +295,7 @@ class HoverAnimationFilter(QObject):
         self._animations.pop(obj, None)
 
     def _update_cursor_offset(self, obj, effect, factor):
+        """Смещать тень в сторону курсора."""
         if not obj.underMouse():
             return
         pos = obj.mapFromGlobal(QCursor.pos())
@@ -298,6 +305,7 @@ class HoverAnimationFilter(QObject):
         effect.setOffset(dx * factor, dy * factor)
 
 def setup_animation(widget, ctx):
+    """Подключить фильтр анимации к виджету."""
     if not hasattr(ctx, "anim_filter"):
         ctx.anim_filter = HoverAnimationFilter(ctx)
     widget.installEventFilter(ctx.anim_filter)

@@ -5,9 +5,10 @@ from logic.user_settings import UserSettings
 
 
 class UIContext:
-    """Centralized storage for UI state and widgets."""
+    """Хранит состояние интерфейса и виджеты приложения."""
 
     def __init__(self):
+        """Создать контекст и загрузить пользовательские настройки."""
         self.app: QApplication | None = None
         self.window = None
         self.fields: dict[str, object] = {}
@@ -101,7 +102,7 @@ class UIContext:
         self.user_templates = UserTemplates(tpl_path)
 
     def refresh_music_files(self) -> None:
-        """Scan the music directory and populate available tracks."""
+        """Обновить список доступных музыкальных файлов."""
         if not os.path.isdir(self.music_dir):
             os.makedirs(self.music_dir, exist_ok=True)
         self.music_files = [

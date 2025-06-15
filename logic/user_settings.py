@@ -3,9 +3,10 @@ from pathlib import Path
 
 
 class UserSettings:
-    """Persist user-adjustable settings between runs."""
+    """Сохраняет пользовательские настройки между запусками программы."""
 
     def __init__(self, path: str | Path = "user_settings.json") -> None:
+        """Создать объект настроек и загрузить их из файла."""
         self.path = Path(path)
         self.theme = "Винтаж"
         self.ocr_mode = "CPU"
@@ -26,6 +27,7 @@ class UserSettings:
         self.load()
 
     def load(self) -> None:
+        """Загрузить настройки из файла."""
         if self.path.exists():
             try:
                 data = json.loads(self.path.read_text(encoding="utf-8"))
@@ -59,6 +61,7 @@ class UserSettings:
                 pass
 
     def save(self) -> None:
+        """Сохранить текущие настройки в файл."""
         data = {
             "theme": self.theme,
             "ocr_mode": self.ocr_mode,

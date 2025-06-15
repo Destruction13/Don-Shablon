@@ -3,7 +3,7 @@ from PySide6.QtCore import QSize, Qt, QRectF, QPoint
 from PySide6.QtGui import QPainter, QColor
 
 class ToggleSwitch(QCheckBox):
-    """Simple on/off switch widget with customizable tooltips."""
+    """Простой переключатель с настраиваемыми подсказками."""
 
     def __init__(self, tooltip_off: str = "Мужской", tooltip_on: str = "Женский", *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -15,16 +15,19 @@ class ToggleSwitch(QCheckBox):
         self._update_tooltip(self.isChecked())
 
     def _update_tooltip(self, checked: bool) -> None:
+        """Обновить подсказку в зависимости от состояния."""
         self.setToolTip(self.tooltip_on if checked else self.tooltip_off)
 
     def sizeHint(self) -> QSize:
+        """Минимальный рекомендуемый размер переключателя."""
         return QSize(50, 24)
 
     def hitButton(self, pos: QPoint) -> bool:  # pragma: no cover - UI behavior
-        """Make entire widget clickable regardless of painted area."""
+        """Делает кликабельной всю область виджета."""
         return True
 
     def paintEvent(self, event):
+        """Отрисовать переключатель."""
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         track_rect = self.rect().adjusted(1, 5, -1, -5)
