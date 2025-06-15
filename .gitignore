@@ -1,16 +1,26 @@
-# папки
+# Папки
 __pycache__/
 build/
 dist/
 .vscode/
 
-# сборочные файлы
+# Сборочные файлы
 *.spec
 
-# медиа
+# Медиа
 *.mp3
 *.png
 
-# временные файлы
+# Временные файлы
 *.log
 .env
+
+# Конкретные файлы, которые ХОТИМ ИГНОРИРОВАТЬ
+checkbox_roi.jpg
+ocr_debug_output.jpg
+ocr_debug_output.json
+template_history.json
+user_settings.json
+user_templates.json
+
+
