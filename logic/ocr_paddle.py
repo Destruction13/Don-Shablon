@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 from difflib import SequenceMatcher
 from rapidfuzz import fuzz, process
+import cv2
 
 import numpy as np
 from PIL import Image, ImageGrab, ImageQt, ImageDraw, ImageFont
@@ -41,6 +42,12 @@ BBOX_Y_TOLERANCE = 25
 SPLIT_TOKEN_MAX_GAP = 70
 # Force fuzzy matching even for low score items (debug)
 FORCE_FUZZY = True
+
+# Checkbox detection parameters
+CHECKBOX_X_OFFSET = 55  # pixels to the left from "Повторять" text
+CHECKBOX_SIZE = 37      # ROI size in pixels
+CHECKBOX_THRESHOLD = 170
+CHECKBOX_DARK_RATIO = 0.07
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -164,7 +171,12 @@ def _validate_room(fields: Dict[str, str]) -> None:
         fields["room"] = ""
 
 
-def _apply_fields(ctx: UIContext, fields: Dict[str, str]) -> None:
+def _apply_fields(
+    ctx: UIContext,
+    fields: Dict[str, str],
+    *,
+    meeting_type: str | None = None,
+) -> None:
     logging.info("[OCR] Parsed fields: %s", fields)
     if fields.get("name") and "name" in ctx.fields:
         ctx.fields["name"].setText(fields["name"])
@@ -199,7 +211,7 @@ def _apply_fields(ctx: UIContext, fields: Dict[str, str]) -> None:
         except Exception:
             pass
     if "regular" in ctx.fields:
-        ctx.fields["regular"].setCurrentText("Обычная")
+        ctx.fields["regular"].setCurrentText(meeting_type or "Обычная")
 
 
 def get_image_from_clipboard() -> Optional[Image.Image]:
@@ -225,7 +237,7 @@ def run_ocr(
     *,
     ignore_threshold: float = SCORE_IGNORE_THRESHOLD,
     use_gpu: bool = False,
-) -> List[Dict]:
+) -> Tuple[List[Dict], str]:
     """Recognize text lines from an image using EasyOCR.
 
     Parameters
@@ -263,8 +275,15 @@ def run_ocr(
             "low_score": low_score,
         })
 
-    save_debug_ocr_image(image, lines)
-    return lines
+    meeting_type, rep_bbox, cb_bbox = detect_repeat_checkbox(image, lines)
+    save_debug_ocr_image(
+        image,
+        lines,
+        repeat_bbox=rep_bbox,
+        checkbox_bbox=cb_bbox,
+        checkbox_checked=meeting_type == "Регулярная",
+    )
+    return lines, meeting_type
 
 def extract_fields_from_text(texts, rooms_by_bz):
     """Parse common fields from plain OCR text list."""
@@ -327,7 +346,7 @@ def recognize_from_clipboard(ctx: UIContext) -> None:
         QMessageBox.critical(ctx.window, "Ошибка", "Буфер обмена не содержит изображение.")
         return
 
-    lines = run_ocr(img, use_gpu=ctx.ocr_mode == "GPU")
+    lines, meeting_type = run_ocr(img, use_gpu=ctx.ocr_mode == "GPU")
     parsed, scores = parse_fields(lines, return_scores=True)
 
     need_fallback = not parsed.get("name") or scores.get("name", 1.0) < 0.5
@@ -348,7 +367,7 @@ def recognize_from_clipboard(ctx: UIContext) -> None:
             parsed["end"] = end
 
     validated = validate_with_rooms(parsed, rooms_by_bz, fuzzy_threshold=0.6)
-    update_gui_fields(validated, ctx, scores=scores)
+    update_gui_fields(validated, ctx, scores=scores, meeting_type=meeting_type)
     if getattr(ctx, "auto_generate_after_autofill", False):
         from logic.generator import generate_message
         generate_message(ctx)
@@ -388,7 +407,15 @@ def is_any_label(text: str, labels: List[str]) -> bool:
     """Return True if text is similar to any label from the list."""
     return any(is_label_like(text, lbl) for lbl in labels)
 
-def save_debug_ocr_image(image: Image.Image, lines: List[Dict], path="ocr_debug_output.jpg"):
+def save_debug_ocr_image(
+    image: Image.Image,
+    lines: List[Dict],
+    path: str = "ocr_debug_output.jpg",
+    *,
+    repeat_bbox: Tuple[int, int, int, int] | None = None,
+    checkbox_bbox: Tuple[int, int, int, int] | None = None,
+    checkbox_checked: bool | None = None,
+):
     """Save OCR debugging overlay and JSON info."""
 
     if not lines:
@@ -408,6 +435,14 @@ def save_debug_ocr_image(image: Image.Image, lines: List[Dict], path="ocr_debug_
         text = f"{line['text']} {line['score']:.2f}"
         draw.text((bbox[0][0], bbox[0][1] - 15), text, fill="red", font=font)
 
+    if repeat_bbox:
+        x, y, w, h = repeat_bbox
+        draw.rectangle([x, y, x + w, y + h], outline="blue", width=2)
+    if checkbox_bbox:
+        x, y, w, h = checkbox_bbox
+        color = "green" if checkbox_checked else "red"
+        draw.rectangle([x, y, x + w, y + h], outline=color, width=2)
+
     img_copy.save(path)
 
     debug_info = [
@@ -417,6 +452,45 @@ def save_debug_ocr_image(image: Image.Image, lines: List[Dict], path="ocr_debug_
     with open(Path(path).with_suffix(".json"), "w", encoding="utf-8") as f:
         import json
         json.dump(debug_info, f, ensure_ascii=False, indent=2)
+
+
+def detect_repeat_checkbox(
+    image: Image.Image, lines: List[Dict]
+) -> Tuple[str, Tuple[int, int, int, int] | None, Tuple[int, int, int, int] | None]:
+    """Detect meeting type based on checkbox near the 'Повторять' label."""
+    meeting_type = "Обычная"
+    repeat_bbox = None
+    checkbox_bbox = None
+    np_img = np.array(image)
+
+    for line in lines:
+        if "повторять" in normalize_russian(line["text"]).lower():
+            x1 = min(p[0] for p in line["bbox"])
+            y1 = min(p[1] for p in line["bbox"])
+            x2 = max(p[0] for p in line["bbox"])
+            y2 = max(p[1] for p in line["bbox"])
+            w = x2 - x1
+            h = y2 - y1
+            repeat_bbox = (x1, y1, w, h)
+
+            cb_x1 = max(x1 - CHECKBOX_X_OFFSET, 0)
+            cb_y1 = max(int(y1 + h / 2 - CHECKBOX_SIZE / 2), 0)
+            cb_x2 = min(cb_x1 + CHECKBOX_SIZE, np_img.shape[1])
+            cb_y2 = min(cb_y1 + CHECKBOX_SIZE, np_img.shape[0])
+            checkbox_bbox = (cb_x1, cb_y1, cb_x2 - cb_x1, cb_y2 - cb_y1)
+
+            roi = np_img[cb_y1:cb_y2, cb_x1:cb_x2]
+            if roi.size > 0:
+                cv2.imwrite("checkbox_roi.jpg", roi)
+                gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                _, thresh = cv2.threshold(gray, CHECKBOX_THRESHOLD, 255, cv2.THRESH_BINARY)         
+                dark_ratio = (gray < CHECKBOX_THRESHOLD).mean()
+                # 👇 ДЕБАГ
+                print(f"[DEBUG] dark_ratio = {dark_ratio:.4f}")
+                if dark_ratio > CHECKBOX_DARK_RATIO:
+                    meeting_type = "Регулярная"
+            break
+    return meeting_type, repeat_bbox, checkbox_bbox
 
 
 def extract_bc_and_room(lines: List[Dict], known_bz: List[str]) -> Tuple[str, str]:
@@ -867,6 +941,7 @@ def update_gui_fields(
     ctx: UIContext,
     *,
     scores: Dict[str, float] | None = None,
+    meeting_type: str | None = None,
 ) -> None:
     """Fill UI fields with parsed data."""
     logging.info("[OCR] Updating GUI with: %s", data)
@@ -904,7 +979,8 @@ def update_gui_fields(
         except Exception:
             pass
     if "regular" in ctx.fields:
-        ctx.fields["regular"].setCurrentText("Обычная")
+        value = meeting_type if meeting_type else "Обычная"
+        ctx.fields["regular"].setCurrentText(value)
 
 
 
