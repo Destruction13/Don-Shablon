@@ -44,10 +44,10 @@ SPLIT_TOKEN_MAX_GAP = 70
 FORCE_FUZZY = True
 
 # Checkbox detection parameters
-CHECKBOX_X_OFFSET = 45  # pixels to the left from "Повторять" text
-CHECKBOX_SIZE = 30      # ROI size in pixels
-CHECKBOX_THRESHOLD = 50
-CHECKBOX_DARK_RATIO = 0.17
+CHECKBOX_X_OFFSET = 55  # pixels to the left from "Повторять" text
+CHECKBOX_SIZE = 37      # ROI size in pixels
+CHECKBOX_THRESHOLD = 80
+CHECKBOX_DARK_RATIO = 0.09
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -171,7 +171,12 @@ def _validate_room(fields: Dict[str, str]) -> None:
         fields["room"] = ""
 
 
-def _apply_fields(ctx: UIContext, fields: Dict[str, str]) -> None:
+def _apply_fields(
+    ctx: UIContext,
+    fields: Dict[str, str],
+    *,
+    meeting_type: str | None = None,
+) -> None:
     logging.info("[OCR] Parsed fields: %s", fields)
     if fields.get("name") and "name" in ctx.fields:
         ctx.fields["name"].setText(fields["name"])
@@ -206,8 +211,7 @@ def _apply_fields(ctx: UIContext, fields: Dict[str, str]) -> None:
         except Exception:
             pass
     if "regular" in ctx.fields:
-        value = meeting_type if meeting_type else "Обычная"
-        ctx.fields["regular"].setCurrentText(value)
+        ctx.fields["regular"].setCurrentText(meeting_type or "Обычная")
 
 
 def get_image_from_clipboard() -> Optional[Image.Image]:
