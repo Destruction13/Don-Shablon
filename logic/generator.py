@@ -17,10 +17,12 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QApplication,
 )
+
 try:
     from PySide6.QtCore import QDate, Qt, QTime, QTimer, QEvent
     from PySide6.QtGui import QKeyEvent
 except Exception:  # test fallback
+
     class QDate:
         def __init__(self, *args, **kwargs):
             pass
@@ -29,6 +31,7 @@ except Exception:  # test fallback
         def __init__(self, h=0, m=0):
             self._h = h
             self._m = m
+
     class Qt:
         NoFocus = 0
         Key_F4 = 0
@@ -44,6 +47,7 @@ except Exception:  # test fallback
         @staticmethod
         def singleShot(msec, func):
             func()
+
 
 from logic.room_filter import FilteringComboBox
 
@@ -69,6 +73,42 @@ ICON_MAP = {
     "Название встречи": "📝",
 }
 
+# Help text for form fields
+HELP_TEXTS = {
+    "name": "Имя человека, к которому мы обращаемся с вопросом. Заполняется автоматически.",
+    "link": "Ссылка на встречу, по которой запрашиваем информацию",
+    "datetime": "Дата встречи. Заполняется автоматически.",
+    "start_time": "Время начала и окончания встречи. Заполняется автоматически.",
+    "bz": "Наименование БЦ. Заполняется автоматически.",
+    "room": "Наименование переговорной. Заполняется автоматически. Переговорные выводятся в соответствии с выбранным БЦ.",
+    "regular": "Выбор регулярности встречи",
+    "his_room": "Наименование переговорной человека, к которому обращаемся. Заполняется автоматически.",
+    "my_room": "Наименование переговорной, которую хотим предложить на обмен. Заполняется только вручную.",
+    "meeting_name": "Наименование названия встречи. Заполняется вручную.",
+    "duration": "Выбор продолжительности встречи",
+    "conflict1": "Ссылка на пересечение участника встречи",
+    "conflict2": "Ссылка на пересечение участника встречи",
+    "conflict3": "Ссылка на пересечение участника встречи",
+    "client_name": "Имя и фамилия заказчика в родительном падеже (Например: Артура Пирожкова, Синуса Косинова, Тангенса Катангенсова)",
+    "reg_count": "Выбор количества встреч (Пример: 1 раз, 2 раза, 3 раза, 4 раза)",
+    "reg_period": "Выбор периодичности (Пример: раз в неделю, раз в месяц)",
+    "reg_day": "Выбор дня недели для проведения встречи (Пример: по понедельникам, по вторникам)",
+}
+
+
+def add_help_icon(label: QLabel, help_text: str) -> QWidget:
+    """Return a widget combining label with a help icon."""
+    container = QWidget()
+    hl = QHBoxLayout(container)
+    hl.setContentsMargins(0, 0, 0, 0)
+    hl.addWidget(label)
+    btn = QToolButton()
+    btn.setText("❔")
+    btn.setToolTip(help_text)
+    hl.addWidget(btn)
+    return container
+
+
 def label_with_icon(text: str) -> QLabel:
     base = text.rstrip(":")
     emoji = None
@@ -92,6 +132,7 @@ class ClickableDateEdit(QDateEdit):
 
     def _open_calendar(self) -> None:
         """Open the calendar popup using the widget's built-in logic."""
+
         def trigger():
             evt = QKeyEvent(QEvent.KeyPress, Qt.Key_F4, Qt.NoModifier)
             QApplication.postEvent(self, evt)
@@ -141,7 +182,13 @@ def clear_layout(layout):
             widget.deleteLater()
 
 
-def add_field(label: str, name: str, ctx: UIContext, builtin_clear: bool = False):
+def add_field(
+    label: str,
+    name: str,
+    ctx: UIContext,
+    builtin_clear: bool = False,
+    help_text: str | None = None,
+):
     edit = QLineEdit()
     if builtin_clear:
         try:
@@ -156,13 +203,14 @@ def add_field(label: str, name: str, ctx: UIContext, builtin_clear: bool = False
     ctx.field_containers[name] = container
     lab = label_with_icon(label)
     ctx.labels[name] = lab
-    ctx.fields_layout.addRow(lab, container)
+    label_widget = add_help_icon(lab, help_text) if help_text else lab
+    ctx.fields_layout.addRow(label_widget, container)
     setup_animation(edit, ctx)
     if name == "link":
         edit.textChanged.connect(lambda _: on_link_change(ctx))
 
 
-def add_name_field(ctx: UIContext):
+def add_name_field(ctx: UIContext, help_text: str | None = None):
     edit = QLineEdit()
     container = QWidget()
     hl = QHBoxLayout(container)
@@ -172,7 +220,8 @@ def add_name_field(ctx: UIContext):
     ctx.field_containers["name"] = container
     lab = label_with_icon("Имя:")
     ctx.labels["name"] = lab
-    ctx.fields_layout.addRow(lab, container)
+    label_widget = add_help_icon(lab, help_text) if help_text else lab
+    ctx.fields_layout.addRow(label_widget, container)
     setup_animation(edit, ctx)
 
 
@@ -185,24 +234,37 @@ def add_checkbox(label: str, name: str, ctx: UIContext):
     return cb
 
 
-def add_combo(label: str, name: str, values: list[str], ctx: UIContext):
+def add_combo(
+    label: str,
+    name: str,
+    values: list[str],
+    ctx: UIContext,
+    help_text: str | None = None,
+):
     combo = QComboBox()
     combo.addItems(values)
     ctx.fields[name] = combo
     lab = label_with_icon(label)
     ctx.labels[name] = lab
-    ctx.fields_layout.addRow(lab, combo)
+    label_widget = add_help_icon(lab, help_text) if help_text else lab
+    ctx.fields_layout.addRow(label_widget, combo)
     setup_animation(combo, ctx)
 
 
-def add_room_field(label: str, name: str, bz_name: str, ctx: UIContext):
+def add_room_field(
+    label: str,
+    name: str,
+    bz_name: str,
+    ctx: UIContext,
+    help_text: str | None = None,
+):
     container = QWidget()
     hl = QHBoxLayout(container)
     hl.setContentsMargins(0, 0, 0, 0)
     combo = FilteringComboBox()
 
     def update_rooms():
-        bz = ctx.fields.get(bz_name).currentText() if bz_name in ctx.fields else ''
+        bz = ctx.fields.get(bz_name).currentText() if bz_name in ctx.fields else ""
         rooms = rooms_by_bz.get(bz, [])
         combo.set_items(rooms)
 
@@ -219,12 +281,13 @@ def add_room_field(label: str, name: str, bz_name: str, ctx: UIContext):
     ctx.fields[name] = combo
     lab = label_with_icon(label)
     ctx.labels[name] = lab
-    ctx.fields_layout.addRow(lab, container)
+    label_widget = add_help_icon(lab, help_text) if help_text else lab
+    ctx.fields_layout.addRow(label_widget, container)
     setup_animation(combo, ctx)
     setup_animation(btn, ctx)
 
 
-def add_date(name: str, ctx: UIContext):
+def add_date(name: str, ctx: UIContext, help_text: str | None = None):
     date_edit = ClickableDateEdit()
     date_edit.setCalendarPopup(True)
     date_edit.setDisplayFormat("dd.MM.yyyy")
@@ -232,11 +295,17 @@ def add_date(name: str, ctx: UIContext):
     ctx.fields[name] = date_edit
     lab = label_with_icon("Дата:")
     ctx.labels[name] = lab
-    ctx.fields_layout.addRow(lab, date_edit)
+    label_widget = add_help_icon(lab, help_text) if help_text else lab
+    ctx.fields_layout.addRow(label_widget, date_edit)
     setup_animation(date_edit, ctx)
 
 
-def add_time_range(start_name: str, end_name: str, ctx: UIContext):
+def add_time_range(
+    start_name: str,
+    end_name: str,
+    ctx: UIContext,
+    help_text: str | None = None,
+):
     start_edit = TimeInput()
     end_edit = TimeInput()
     start_edit.setTime(QTime(8, 0))
@@ -245,7 +314,7 @@ def add_time_range(start_name: str, end_name: str, ctx: UIContext):
     container = QWidget()
     hl = QHBoxLayout(container)
     hl.setContentsMargins(0, 0, 0, 0)
-    hl.addWidget(QLabel("\u23F1\ufe0f \u0441"))
+    hl.addWidget(QLabel("\u23f1\ufe0f \u0441"))
     hl.addWidget(start_edit)
     hl.addWidget(QLabel("\u0434\u043e"))
     hl.addWidget(end_edit)
@@ -254,7 +323,8 @@ def add_time_range(start_name: str, end_name: str, ctx: UIContext):
     ctx.fields[end_name] = end_edit
     lab = label_with_icon("Время:")
     ctx.labels[start_name] = lab
-    ctx.fields_layout.addRow(lab, container)
+    label_widget = add_help_icon(lab, help_text) if help_text else lab
+    ctx.fields_layout.addRow(label_widget, container)
     setup_animation(start_edit, ctx)
     setup_animation(end_edit, ctx)
 
@@ -307,51 +377,105 @@ def weekday_to_plural(word: str) -> str:
     return mapping.get(word.lower(), word)
 
 
-
-
-
 def update_fields(ctx: UIContext):
     clear_layout(ctx.fields_layout)
     ctx.fields.clear()
     typ = ctx.type_combo.currentText()
 
     if typ == "Актуализация":
-        add_name_field(ctx)
-        add_field("Ссылка:", "link", ctx, builtin_clear=True)
-        add_date("datetime", ctx)
-        add_time_range("start_time", "end_time", ctx)
-        add_combo("БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
-        add_room_field("Переговорка:", "room", "bz", ctx)
-        add_combo("Тип встречи:", "regular", ["Обычная", "Регулярная"], ctx)
+        add_name_field(ctx, HELP_TEXTS["name"])
+        add_field(
+            "Ссылка:", "link", ctx, builtin_clear=True, help_text=HELP_TEXTS["link"]
+        )
+        add_date("datetime", ctx, help_text=HELP_TEXTS["datetime"])
+        add_time_range(
+            "start_time", "end_time", ctx, help_text=HELP_TEXTS["start_time"]
+        )
+        add_combo(
+            "БЦ:", "bz", list(rooms_by_bz.keys()), ctx, help_text=HELP_TEXTS["bz"]
+        )
+        add_room_field("Переговорка:", "room", "bz", ctx, help_text=HELP_TEXTS["room"])
+        add_combo(
+            "Тип встречи:",
+            "regular",
+            ["Обычная", "Регулярная"],
+            ctx,
+            help_text=HELP_TEXTS["regular"],
+        )
     elif typ == "Обмен":
-        add_name_field(ctx)
-        add_field("Ссылка:", "link", ctx, builtin_clear=True)
-        add_date("datetime", ctx)
-        add_time_range("start_time", "end_time", ctx)
-        add_combo("БЦ:", "bz", list(rooms_by_bz.keys()), ctx)
-        add_room_field("Его переговорка:", "his_room", "bz", ctx)
-        add_room_field("Твоя переговорка:", "my_room", "bz", ctx)
-        add_combo("Тип встречи:", "regular", ["Обычная", "Регулярная"], ctx)
+        add_name_field(ctx, HELP_TEXTS["name"])
+        add_field(
+            "Ссылка:", "link", ctx, builtin_clear=True, help_text=HELP_TEXTS["link"]
+        )
+        add_date("datetime", ctx, help_text=HELP_TEXTS["datetime"])
+        add_time_range(
+            "start_time", "end_time", ctx, help_text=HELP_TEXTS["start_time"]
+        )
+        add_combo(
+            "БЦ:", "bz", list(rooms_by_bz.keys()), ctx, help_text=HELP_TEXTS["bz"]
+        )
+        add_room_field(
+            "Его переговорка:", "his_room", "bz", ctx, help_text=HELP_TEXTS["his_room"]
+        )
+        add_room_field(
+            "Твоя переговорка:", "my_room", "bz", ctx, help_text=HELP_TEXTS["my_room"]
+        )
+        add_combo(
+            "Тип встречи:",
+            "regular",
+            ["Обычная", "Регулярная"],
+            ctx,
+            help_text=HELP_TEXTS["regular"],
+        )
     elif typ == "Организация встречи":
-        add_name_field(ctx)
-        add_field("Ссылка:", "link", ctx, builtin_clear=True)
-        add_field("Название встречи:", "meeting_name", ctx)
+        add_name_field(ctx, HELP_TEXTS["name"])
+        add_field(
+            "Ссылка:", "link", ctx, builtin_clear=True, help_text=HELP_TEXTS["link"]
+        )
+        add_field(
+            "Название встречи:",
+            "meeting_name",
+            ctx,
+            help_text=HELP_TEXTS["meeting_name"],
+        )
         add_combo(
             "Продолжительность встречи:",
             "duration",
             ["30 минут", "1 час", "1.5 часа", "2 часа"],
             ctx,
+            help_text=HELP_TEXTS["duration"],
         )
-        add_date("datetime", ctx)
-        add_time_range("start_time", "end_time", ctx)
-        add_field("Ссылка на пересечение №1:", "conflict1", ctx, builtin_clear=True)
+        add_date("datetime", ctx, help_text=HELP_TEXTS["datetime"])
+        add_time_range(
+            "start_time", "end_time", ctx, help_text=HELP_TEXTS["start_time"]
+        )
+        add_field(
+            "Ссылка на пересечение №1:",
+            "conflict1",
+            ctx,
+            builtin_clear=True,
+            help_text=HELP_TEXTS["conflict1"],
+        )
         cb = add_checkbox("Несколько пересечений", "multi_conflicts", ctx)
-        add_field("Ссылка на пересечение №2:", "conflict2", ctx, builtin_clear=True)
-        add_field("Ссылка на пересечение №3:", "conflict3", ctx, builtin_clear=True)
+        add_field(
+            "Ссылка на пересечение №2:",
+            "conflict2",
+            ctx,
+            builtin_clear=True,
+            help_text=HELP_TEXTS["conflict2"],
+        )
+        add_field(
+            "Ссылка на пересечение №3:",
+            "conflict3",
+            ctx,
+            builtin_clear=True,
+            help_text=HELP_TEXTS["conflict3"],
+        )
         add_field(
             "Имя и фамилия заказчика (в род. падеже):",
             "client_name",
             ctx,
+            help_text=HELP_TEXTS["client_name"],
         )
         # hide extra conflict links until checkbox checked
         ctx.field_containers["conflict2"].setVisible(False)
@@ -376,6 +500,7 @@ def update_fields(ctx: UIContext):
             QFormLayout,
             QHBoxLayout,
         )
+
         info_box = QGroupBox()
         info_box.setStyleSheet(
             "QGroupBox { border: 2px solid gray; border-radius: 6px; margin-top: 6px; }"
@@ -487,6 +612,7 @@ def on_link_change(ctx: UIContext):
 
 def generate_message(ctx: UIContext):
     typ = ctx.type_combo.currentText()
+
     def get(name: str):
         widget = ctx.fields.get(name)
         if isinstance(widget, QLineEdit):
@@ -496,6 +622,7 @@ def generate_message(ctx: UIContext):
         if hasattr(widget, "time"):
             return widget.time().toString("HH:mm")
         return ""
+
     start = get("start_time")
     end = get("end_time")
     if start and end:
@@ -505,7 +632,10 @@ def generate_message(ctx: UIContext):
     else:
         time_part = ""
     name = get("name")
-    if not name or ((typ == "Актуализация" and not get("room")) or (typ == "Обмен" and (not get("his_room") or not get("my_room")))):
+    if not name or (
+        (typ == "Актуализация" and not get("room"))
+        or (typ == "Обмен" and (not get("his_room") or not get("my_room")))
+    ):
         QMessageBox.warning(ctx.window, "Предупреждение", "Заполните имя и переговорку")
         return
     if "datetime" not in ctx.fields:
@@ -517,7 +647,9 @@ def generate_message(ctx: UIContext):
     link_part = f" ({link})" if link else ""
     greeting = f"Привет, {name}!"
     if ctx.ls_active and ctx.ls_saved:
-        greeting = f"Привет, {name}! Я {ctx.user_name}, ассистент. Приятно познакомиться!"
+        greeting = (
+            f"Привет, {name}! Я {ctx.user_name}, ассистент. Приятно познакомиться!"
+        )
         gender = ctx.user_gender
     elif ctx.asya_mode:
         greeting = f"Привет, {name}! Я Ася, ассистент. Приятно познакомиться!"
@@ -529,8 +661,12 @@ def generate_message(ctx: UIContext):
     if typ == "Актуализация":
         room = get("room")
         regular = get("regular")
-        is_regular = "регулярная встреча" if regular.lower() == "регулярная" else "встреча"
-        share_word = "разово поделиться" if regular.lower() == "регулярная" else "поделиться"
+        is_regular = (
+            "регулярная встреча" if regular.lower() == "регулярная" else "встреча"
+        )
+        share_word = (
+            "разово поделиться" if regular.lower() == "регулярная" else "поделиться"
+        )
         msg = f"""{greeting}
 
 У тебя {formatted}{time_part} состоится {is_regular}{link_part} в переговорной {room}.
@@ -543,8 +679,12 @@ def generate_message(ctx: UIContext):
         his_room = get("his_room")
         my_room = get("my_room")
         regular = get("regular")
-        is_regular = "регулярная встреча" if regular.lower() == "регулярная" else "встреча"
-        share_word = "разово обменяться" if regular.lower() == "регулярная" else "обменяться"
+        is_regular = (
+            "регулярная встреча" if regular.lower() == "регулярная" else "встреча"
+        )
+        share_word = (
+            "разово обменяться" if regular.lower() == "регулярная" else "обменяться"
+        )
         msg = f"""{greeting}
 
 У тебя {formatted}{time_part} состоится {is_regular}{link_part} в переговорной {his_room}.
@@ -564,11 +704,15 @@ def generate_message(ctx: UIContext):
             conflict_text = ""
             plural = False
         elif len(conflict_links) == 1:
-            conflict_text = f"У тебя образуется пересечение с этой встречей: {conflict_links[0]}"
+            conflict_text = (
+                f"У тебя образуется пересечение с этой встречей: {conflict_links[0]}"
+            )
             plural = False
         else:
             lines = "\n".join(f"{i+1}) {c}" for i, c in enumerate(conflict_links))
-            conflict_text = "У тебя образуются пересечения с несколькими встречами:\n" + lines
+            conflict_text = (
+                "У тебя образуются пересечения с несколькими встречами:\n" + lines
+            )
             plural = True
         single_variants = [
             f"Уточни, пожалуйста, получится ли перенести свою встречу и быть на встрече {first_name} в это время?",
@@ -636,12 +780,12 @@ def generate_message(ctx: UIContext):
     except Exception:
         pass
 
-
     ctx.output_text.setPlainText(msg)
     if getattr(ctx, "auto_copy_enabled", False):
         copy_generated_text(ctx)
     if getattr(ctx, "auto_report_enabled", False):
         show_auto_report_dialog(ctx)
+
 
 def generate_other_category(ctx: UIContext, category: str) -> None:
     """Generate text for the "Другое" tab."""
@@ -664,6 +808,7 @@ def _format_short_date(date_str: str) -> str:
     try:
         from datetime import datetime
         from .utils import months
+
         dt = datetime.strptime(date_str, "%d.%m.%Y")
         return f"{dt.day} {months[dt.month - 1]}"
     except Exception:
@@ -753,9 +898,9 @@ def show_actuality_dialog(ctx: UIContext) -> None:
     ch = "Ася" if asya_radio.isChecked() else "ЛС"
     pref = "Уточняю с Аси" if ch == "Ася" else "Уточняю с ЛС"
     text = (
-    f"{pref} актуальность по [встрече]({link}), которая пройдёт {date} " 
-    f"в {time} в переговорной **{room}** у @{login}"
-    f"\n[Моё сообщение в Telegram]({tg}).\nОтвет:"
+        f"{pref} актуальность по [встрече]({link}), которая пройдёт {date} "
+        f"в {time} в переговорной **{room}** у @{login}"
+        f"\n[Моё сообщение в Telegram]({tg}).\nОтвет:"
     )
     ctx.output_text.setPlainText(text)
     if getattr(ctx, "auto_copy_enabled", False):
@@ -900,16 +1045,36 @@ def show_auto_report_dialog(ctx: UIContext) -> None:
     link = link_edit.text().strip()
     tg = tg_edit.text().strip()
 
-    date = ctx.fields["datetime"].date().toString("dd.MM.yyyy") if "datetime" in ctx.fields else ""
-    start = ctx.fields["start_time"].time().toString("HH:mm") if "start_time" in ctx.fields else ""
-    end = ctx.fields["end_time"].time().toString("HH:mm") if "end_time" in ctx.fields else ""
+    date = (
+        ctx.fields["datetime"].date().toString("dd.MM.yyyy")
+        if "datetime" in ctx.fields
+        else ""
+    )
+    start = (
+        ctx.fields["start_time"].time().toString("HH:mm")
+        if "start_time" in ctx.fields
+        else ""
+    )
+    end = (
+        ctx.fields["end_time"].time().toString("HH:mm")
+        if "end_time" in ctx.fields
+        else ""
+    )
     time = f"{start} — {end}" if start and end else start
 
     if typ == "Обмен":
         his_room = ctx.fields.get("his_room")
         my_room = ctx.fields.get("my_room")
-        his_room_val = his_room.currentText() if hasattr(his_room, "currentText") else getattr(his_room, "text", lambda: "")()
-        my_room_val = my_room.currentText() if hasattr(my_room, "currentText") else getattr(my_room, "text", lambda: "")()
+        his_room_val = (
+            his_room.currentText()
+            if hasattr(his_room, "currentText")
+            else getattr(his_room, "text", lambda: "")()
+        )
+        my_room_val = (
+            my_room.currentText()
+            if hasattr(my_room, "currentText")
+            else getattr(my_room, "text", lambda: "")()
+        )
         text = (
             f"Предлагаю обмен по [встрече]({link}), которая пройдёт {date}, в {time} "
             f"в переговорной **{his_room_val}** на свою **{my_room_val}**. Пишу @{login}\n"
@@ -917,7 +1082,11 @@ def show_auto_report_dialog(ctx: UIContext) -> None:
         )
     else:  # Актуализация
         room = ctx.fields.get("room")
-        room_val = room.currentText() if hasattr(room, "currentText") else getattr(room, "text", lambda: "")()
+        room_val = (
+            room.currentText()
+            if hasattr(room, "currentText")
+            else getattr(room, "text", lambda: "")()
+        )
         text = (
             f"Уточняю актуальность по [встрече]({link}), которая пройдёт {date} "
             f"в {time} в переговорной **{room_val}** у @{login}\n"
@@ -1039,7 +1208,12 @@ def show_user_templates_dialog(ctx: UIContext) -> None:
             hl.addStretch()
             del_btn = QToolButton()
             del_btn.setText("🗑")
-            del_btn.clicked.connect(lambda _=False, i=idx: (ctx.user_templates.remove_template(i), refresh()))
+            del_btn.clicked.connect(
+                lambda _=False, i=idx: (
+                    ctx.user_templates.remove_template(i),
+                    refresh(),
+                )
+            )
             hl.addWidget(del_btn)
             vbox.addWidget(row)
         vbox.addStretch()

@@ -1,7 +1,21 @@
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QPushButton,
-    QTextEdit, QComboBox, QMessageBox, QToolButton, QFormLayout,
-    QScrollArea, QSpinBox, QGroupBox, QSizePolicy, QSlider, QCheckBox
+    QMainWindow,
+    QWidget,
+    QLabel,
+    QVBoxLayout,
+    QHBoxLayout,
+    QPushButton,
+    QTextEdit,
+    QComboBox,
+    QMessageBox,
+    QToolButton,
+    QFormLayout,
+    QScrollArea,
+    QSpinBox,
+    QGroupBox,
+    QSizePolicy,
+    QSlider,
+    QCheckBox,
 )
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt, QTimer
@@ -10,12 +24,17 @@ import os
 import pygame
 
 from logic.app_state import UIContext
-from logic.generator import update_fields, generate_message
+from logic.generator import (
+    update_fields,
+    generate_message,
+    add_help_icon,
+    label_with_icon,
+    HELP_TEXTS,
+)
 from logic.utils import copy_generated_text, copy_report_text, translate_to_english
 from gui.themes import apply_theme
 from gui.animations import setup_animation
 from gui import ToggleSwitch
-
 
 
 class MainWindow(QMainWindow):
@@ -78,7 +97,13 @@ class MainWindow(QMainWindow):
         self.track_timer.setInterval(1000)
         self.track_timer.timeout.connect(self.check_music)
 
-        for btn in (self.prev_btn, self.play_btn, self.next_btn, self.volume_btn, self.settings_btn):
+        for btn in (
+            self.prev_btn,
+            self.play_btn,
+            self.next_btn,
+            self.volume_btn,
+            self.settings_btn,
+        ):
             setup_animation(btn, ctx)
 
         header.addWidget(self.prev_btn)
@@ -91,12 +116,14 @@ class MainWindow(QMainWindow):
 
         # meeting type selector
         self.type_combo = QComboBox()
-        self.type_combo.addItems([
-            "Актуализация",
-            "Обмен",
-            "Организация встречи",
-            "Другое",
-        ])
+        self.type_combo.addItems(
+            [
+                "Актуализация",
+                "Обмен",
+                "Организация встречи",
+                "Другое",
+            ]
+        )
         self.main_layout.addWidget(self.type_combo)
         ctx.type_combo = self.type_combo
         self.type_combo.currentTextChanged.connect(lambda _: update_fields(ctx))
@@ -119,16 +146,20 @@ class MainWindow(QMainWindow):
         self.reg_period_combo = QComboBox()
         self.reg_period_combo.addItems(["неделю", "месяц"])
         self.reg_day_combo = QComboBox()
-        self.reg_day_combo.addItems([
-            "понедельник",
-            "вторник",
-            "среда",
-            "четверг",
-            "пятница"
-        ])
-        self.regular_layout.addRow(QLabel("Количество:"), self.reg_spin)
-        self.regular_layout.addRow(QLabel("Период:"), self.reg_period_combo)
-        self.regular_layout.addRow(QLabel("День недели:"), self.reg_day_combo)
+        self.reg_day_combo.addItems(
+            ["понедельник", "вторник", "среда", "четверг", "пятница"]
+        )
+        lab_count = label_with_icon("Количество:")
+        lab_count_w = add_help_icon(lab_count, HELP_TEXTS["reg_count"])
+        self.regular_layout.addRow(lab_count_w, self.reg_spin)
+
+        lab_period = label_with_icon("Период:")
+        lab_period_w = add_help_icon(lab_period, HELP_TEXTS["reg_period"])
+        self.regular_layout.addRow(lab_period_w, self.reg_period_combo)
+
+        lab_day = label_with_icon("День недели:")
+        lab_day_w = add_help_icon(lab_day, HELP_TEXTS["reg_day"])
+        self.regular_layout.addRow(lab_day_w, self.reg_day_combo)
         self.regular_group.setVisible(False)
         self.main_layout.addWidget(self.regular_group)
         ctx.regular_count = self.reg_spin
@@ -152,6 +183,7 @@ class MainWindow(QMainWindow):
         # buttons
         clipboard_row = QHBoxLayout()
         from gui.rainbow_button import RainbowButton
+
         cv_btn = RainbowButton("Автозаполнение полей")
         cv_btn.setObjectName("pasteButton")
         cv_btn.clicked.connect(self.handle_clipboard_ocr)
@@ -182,7 +214,7 @@ class MainWindow(QMainWindow):
         self.asya_mode_sw = ToggleSwitch(tooltip_off="Выкл", tooltip_on="Вкл")
         self.asya_mode_sw.setObjectName("asyaButton")
         self.asya_mode_sw.setChecked(ctx.asya_mode)
-        self.asya_mode_sw.toggled.connect(lambda val: setattr(ctx, 'asya_mode', val))
+        self.asya_mode_sw.toggled.connect(lambda val: setattr(ctx, "asya_mode", val))
         setup_animation(self.asya_mode_sw, ctx)
 
         ctx.btn_ls = self.ls_sw
@@ -208,10 +240,14 @@ class MainWindow(QMainWindow):
 
         self.auto_copy_sw = ToggleSwitch(tooltip_off="Выкл", tooltip_on="Вкл")
         self.auto_copy_sw.setChecked(ctx.auto_copy_enabled)
-        self.auto_copy_sw.toggled.connect(lambda val: setattr(ctx, "auto_copy_enabled", bool(val)))
+        self.auto_copy_sw.toggled.connect(
+            lambda val: setattr(ctx, "auto_copy_enabled", bool(val))
+        )
         self.auto_gen_sw = ToggleSwitch(tooltip_off="Выкл", tooltip_on="Вкл")
         self.auto_gen_sw.setChecked(ctx.auto_generate_after_autofill)
-        self.auto_gen_sw.toggled.connect(lambda val: setattr(ctx, "auto_generate_after_autofill", bool(val)))
+        self.auto_gen_sw.toggled.connect(
+            lambda val: setattr(ctx, "auto_generate_after_autofill", bool(val))
+        )
         self.auto_report_sw = ToggleSwitch(tooltip_off="Выкл", tooltip_on="Вкл")
         self.auto_report_sw.setChecked(ctx.auto_report_enabled)
         self.auto_report_sw.toggled.connect(self.toggle_auto_report)
@@ -288,13 +324,24 @@ class MainWindow(QMainWindow):
         pix = QPixmap(self.ctx.bg_path)
         if not pix.isNull():
             self.bg_label.setGeometry(self.rect())
-            self.bg_label.setPixmap(pix.scaled(self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation))
+            self.bg_label.setPixmap(
+                pix.scaled(
+                    self.size(), Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation
+                )
+            )
             self.bg_label.lower()
 
     def show_ls_dialog(self):
         from PySide6.QtWidgets import (
-            QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QRadioButton, QPushButton
+            QDialog,
+            QVBoxLayout,
+            QHBoxLayout,
+            QLabel,
+            QLineEdit,
+            QRadioButton,
+            QPushButton,
         )
+
         dlg = QDialog(self)
         dlg.setWindowTitle("Личный ассистент")
         v = QVBoxLayout(dlg)
@@ -337,10 +384,12 @@ class MainWindow(QMainWindow):
 
     def handle_clipboard_ocr(self):
         from logic.ocr_paddle import recognize_from_clipboard
+
         recognize_from_clipboard(self.ctx)
 
     def show_settings_dialog(self):
         from gui.settings_window import SettingsDialog
+
         dlg = SettingsDialog(self.ctx, self)
         dlg.exec()
 
@@ -351,6 +400,7 @@ class MainWindow(QMainWindow):
                 QMessageBox.information(self, "Музыка", "Папка с музыкой пуста")
                 return
             from PySide6.QtWidgets import QMenu
+
             menu = QMenu(self)
             for idx, path in enumerate(ctx.music_files):
                 action = menu.addAction(os.path.basename(path))
@@ -424,5 +474,3 @@ class MainWindow(QMainWindow):
         self.ctx.auto_report_enabled = bool(val)
         if hasattr(self, "report_block"):
             self.report_block.setVisible(bool(val))
-
-
