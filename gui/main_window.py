@@ -150,15 +150,15 @@ class MainWindow(QMainWindow):
             ["понедельник", "вторник", "среда", "четверг", "пятница"]
         )
         lab_count = label_with_icon("Количество:")
-        lab_count_w = add_help_icon(lab_count, HELP_TEXTS["reg_count"])
+        lab_count_w = add_help_icon(lab_count, HELP_TEXTS["reg_count"], ctx)
         self.regular_layout.addRow(lab_count_w, self.reg_spin)
 
         lab_period = label_with_icon("Период:")
-        lab_period_w = add_help_icon(lab_period, HELP_TEXTS["reg_period"])
+        lab_period_w = add_help_icon(lab_period, HELP_TEXTS["reg_period"], ctx)
         self.regular_layout.addRow(lab_period_w, self.reg_period_combo)
 
         lab_day = label_with_icon("День недели:")
-        lab_day_w = add_help_icon(lab_day, HELP_TEXTS["reg_day"])
+        lab_day_w = add_help_icon(lab_day, HELP_TEXTS["reg_day"], ctx)
         self.regular_layout.addRow(lab_day_w, self.reg_day_combo)
         self.regular_group.setVisible(False)
         self.main_layout.addWidget(self.regular_group)

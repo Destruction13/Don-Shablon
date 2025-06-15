@@ -3,8 +3,10 @@ from PySide6.QtWidgets import QApplication
 from logic.template_history import TemplateHistory
 from logic.user_settings import UserSettings
 
+
 class UIContext:
     """Centralized storage for UI state and widgets."""
+
     def __init__(self):
         self.app: QApplication | None = None
         self.window = None
@@ -14,11 +16,11 @@ class UIContext:
         self.asya_mode = False
         self.custom_asya_saved = False
         self.custom_asya_on = False
-        self.asya_name = ''
-        self.asya_gender = ''
+        self.asya_name = ""
+        self.asya_gender = ""
         # personal assistant settings for "ЛС" button
-        self.user_name = ''
-        self.user_gender = ''
+        self.user_name = ""
+        self.user_gender = ""
         self.ls_saved = False
         self.ls_active = False
         self.music_dir = os.path.join(
@@ -67,6 +69,7 @@ class UIContext:
         self.auto_report_enabled = (
             self.settings.auto_report if self.settings.save_auto_report else False
         )
+        self.show_help_icons = self.settings.show_help_icons
         self.report_text = None
         self.labels: dict[str, object] = {}
         self.regular_meeting_enabled = False
@@ -84,12 +87,17 @@ class UIContext:
         self.animation_intensity = 50
 
         # history of generated templates
-        hist_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "template_history.json")
+        hist_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), "template_history.json"
+        )
         self.history = TemplateHistory(hist_path)
 
         # user-defined templates
-        tpl_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "user_templates.json")
+        tpl_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), "user_templates.json"
+        )
         from .user_templates import UserTemplates
+
         self.user_templates = UserTemplates(tpl_path)
 
     def refresh_music_files(self) -> None:

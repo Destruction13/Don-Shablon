@@ -86,9 +86,6 @@ HELP_TEXTS = {
     "my_room": "Наименование переговорной, которую хотим предложить на обмен. Заполняется только вручную.",
     "meeting_name": "Наименование названия встречи. Заполняется вручную.",
     "duration": "Выбор продолжительности встречи",
-    "conflict1": "Ссылка на пересечение участника встречи",
-    "conflict2": "Ссылка на пересечение участника встречи",
-    "conflict3": "Ссылка на пересечение участника встречи",
     "client_name": "Имя и фамилия заказчика в родительном падеже (Например: Артура Пирожкова, Синуса Косинова, Тангенса Катангенсова)",
     "reg_count": "Выбор количества встреч (Пример: 1 раз, 2 раза, 3 раза, 4 раза)",
     "reg_period": "Выбор периодичности (Пример: раз в неделю, раз в месяц)",
@@ -96,8 +93,11 @@ HELP_TEXTS = {
 }
 
 
-def add_help_icon(label: QLabel, help_text: str) -> QWidget:
-    """Return a widget combining label with a help icon."""
+def add_help_icon(label: QLabel, help_text: str, ctx: UIContext) -> QWidget:
+    """Return a widget combining label with a help icon if enabled."""
+    if not getattr(ctx, "show_help_icons", True):
+        return label
+
     container = QWidget()
     hl = QHBoxLayout(container)
     hl.setContentsMargins(0, 0, 0, 0)
@@ -203,7 +203,7 @@ def add_field(
     ctx.field_containers[name] = container
     lab = label_with_icon(label)
     ctx.labels[name] = lab
-    label_widget = add_help_icon(lab, help_text) if help_text else lab
+    label_widget = add_help_icon(lab, help_text, ctx) if help_text else lab
     ctx.fields_layout.addRow(label_widget, container)
     setup_animation(edit, ctx)
     if name == "link":
@@ -220,7 +220,7 @@ def add_name_field(ctx: UIContext, help_text: str | None = None):
     ctx.field_containers["name"] = container
     lab = label_with_icon("Имя:")
     ctx.labels["name"] = lab
-    label_widget = add_help_icon(lab, help_text) if help_text else lab
+    label_widget = add_help_icon(lab, help_text, ctx) if help_text else lab
     ctx.fields_layout.addRow(label_widget, container)
     setup_animation(edit, ctx)
 
@@ -246,7 +246,7 @@ def add_combo(
     ctx.fields[name] = combo
     lab = label_with_icon(label)
     ctx.labels[name] = lab
-    label_widget = add_help_icon(lab, help_text) if help_text else lab
+    label_widget = add_help_icon(lab, help_text, ctx) if help_text else lab
     ctx.fields_layout.addRow(label_widget, combo)
     setup_animation(combo, ctx)
 
@@ -281,7 +281,7 @@ def add_room_field(
     ctx.fields[name] = combo
     lab = label_with_icon(label)
     ctx.labels[name] = lab
-    label_widget = add_help_icon(lab, help_text) if help_text else lab
+    label_widget = add_help_icon(lab, help_text, ctx) if help_text else lab
     ctx.fields_layout.addRow(label_widget, container)
     setup_animation(combo, ctx)
     setup_animation(btn, ctx)
@@ -295,7 +295,7 @@ def add_date(name: str, ctx: UIContext, help_text: str | None = None):
     ctx.fields[name] = date_edit
     lab = label_with_icon("Дата:")
     ctx.labels[name] = lab
-    label_widget = add_help_icon(lab, help_text) if help_text else lab
+    label_widget = add_help_icon(lab, help_text, ctx) if help_text else lab
     ctx.fields_layout.addRow(label_widget, date_edit)
     setup_animation(date_edit, ctx)
 
@@ -323,7 +323,7 @@ def add_time_range(
     ctx.fields[end_name] = end_edit
     lab = label_with_icon("Время:")
     ctx.labels[start_name] = lab
-    label_widget = add_help_icon(lab, help_text) if help_text else lab
+    label_widget = add_help_icon(lab, help_text, ctx) if help_text else lab
     ctx.fields_layout.addRow(label_widget, container)
     setup_animation(start_edit, ctx)
     setup_animation(end_edit, ctx)
@@ -454,7 +454,6 @@ def update_fields(ctx: UIContext):
             "conflict1",
             ctx,
             builtin_clear=True,
-            help_text=HELP_TEXTS["conflict1"],
         )
         cb = add_checkbox("Несколько пересечений", "multi_conflicts", ctx)
         add_field(
@@ -462,14 +461,12 @@ def update_fields(ctx: UIContext):
             "conflict2",
             ctx,
             builtin_clear=True,
-            help_text=HELP_TEXTS["conflict2"],
         )
         add_field(
             "Ссылка на пересечение №3:",
             "conflict3",
             ctx,
             builtin_clear=True,
-            help_text=HELP_TEXTS["conflict3"],
         )
         add_field(
             "Имя и фамилия заказчика (в род. падеже):",
