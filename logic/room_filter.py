@@ -1,9 +1,8 @@
-# Filtering utilities and combo box widget for meeting rooms
 from PySide6.QtWidgets import QComboBox, QCompleter
 from PySide6.QtCore import QStringListModel, Qt, QEvent
 
 
-# Mapping from English keyboard layout to Russian
+
 _EN_TO_RU = {
     'q': 'й', 'w': 'ц', 'e': 'у', 'r': 'к', 't': 'е', 'y': 'н', 'u': 'г',
     'i': 'ш', 'o': 'щ', 'p': 'з', '[': 'х', ']': 'ъ',
@@ -13,7 +12,7 @@ _EN_TO_RU = {
     ',': 'б', '.': 'ю', '`': 'ё', '/': '.',
     '<': 'Б', '>': 'Ю',
 }
-# add uppercase mapping
+
 _EN_TO_RU.update({k.upper(): v.upper() for k, v in list(_EN_TO_RU.items())})
 
 
@@ -49,7 +48,6 @@ class FilteringComboBox(QComboBox):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setEditable(True)
-        # Keep focus in the line edit so Tab doesn't jump to the next widget
         line_edit = self.lineEdit()
         if hasattr(line_edit, "setTabChangesFocus"):
             line_edit.setTabChangesFocus(False)
@@ -61,14 +59,12 @@ class FilteringComboBox(QComboBox):
         self._completer.setCompletionMode(QCompleter.PopupCompletion)
         self.setCompleter(self._completer)
         self._popup = self._completer.popup()
-        # Give the popup a predictable object name so themes can target it
         try:
             self._popup.setObjectName("completerPopup")
         except Exception:
             pass
         self.lineEdit().textEdited.connect(self._on_text_edited)
         self.lineEdit().installEventFilter(self)
-        # listen on the combo box and popup so Tab from any focus widget is handled
         self.installEventFilter(self)
         self._popup.installEventFilter(self)
 

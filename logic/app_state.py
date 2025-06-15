@@ -19,7 +19,7 @@ class UIContext:
         self.custom_asya_on = False
         self.asya_name = ""
         self.asya_gender = ""
-        # personal assistant settings for "ЛС" button
+        
         self.user_name = ""
         self.user_gender = ""
         self.ls_saved = False
@@ -38,7 +38,7 @@ class UIContext:
             "playing": False,
             "paused": False,
         }
-        # persistent settings
+        
         settings_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), "user_settings.json"
         )
@@ -55,12 +55,12 @@ class UIContext:
         self.bg_path = None
         self.btn_ls = None
         self.btn_asya_plus = None
-        # OCR settings
+        
         self.ocr_mode = (
             self.settings.ocr_mode if self.settings.save_ocr_mode else "CPU"
-        )  # "CPU" or "GPU"
+        )  # "CPU" или "GPU"
 
-        # generation helpers
+        
         self.auto_copy_enabled = (
             self.settings.auto_copy if self.settings.save_auto_copy else False
         )
@@ -78,7 +78,7 @@ class UIContext:
         self.regular_period = None
         self.regular_day = None
 
-        # animation settings
+        
         self.animations_enabled = True
         self.animation_effect = (
             self.settings.animation_effect
@@ -87,13 +87,13 @@ class UIContext:
         )
         self.animation_intensity = 50
 
-        # history of generated templates
+        
         hist_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), "template_history.json"
         )
         self.history = TemplateHistory(hist_path)
 
-        # user-defined templates
+        
         tpl_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), "user_templates.json"
         )

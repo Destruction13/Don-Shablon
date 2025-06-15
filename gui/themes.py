@@ -286,10 +286,6 @@ TOOLTIP_LIGHT_QSS = """
     QToolTip { background-color: #ffffff; color: #000000; border: 1px solid #bfbfbf; }
 """
 
-# Additional styling for combo box dropdowns. Dark themes need explicit text
-# colors because QAbstractItemView defaults to system colors which may render
-# white text on a light background. These snippets are appended dynamically in
-# ``apply_theme``.
 COMBO_DARK_QSS = """
     QComboBox QAbstractItemView,
     QListView,
@@ -312,7 +308,6 @@ COMBO_LIGHT_QSS = """
     }
 """
 
-# Calendar popup styling so dates match the selected theme
 CAL_DARK_QSS = """
     QCalendarWidget QWidget { background-color: #2e2e2e; color: #f0f0f0; }
     QCalendarWidget QAbstractItemView {
@@ -339,7 +334,6 @@ CAL_LIGHT_QSS = """
     }
 """
 
-# Names of themes that use dark color schemes
 DARK_THEMES = {
     "Футуризм",
     "Готика",
@@ -348,9 +342,6 @@ DARK_THEMES = {
     "Моно",
 }
 
-# Mapping from theme names to background image paths located in the ``assets``
-# directory. These are applied via ``apply_theme`` when a matching theme is
-# selected.
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 THEME_BACKGROUNDS = {
     "Стандартная": ASSETS_DIR / "white.jpg",
@@ -367,7 +358,7 @@ THEME_BACKGROUNDS = {
 
 
 def apply_theme(app, name: str, ctx: Optional[UIContext] = None) -> None:
-    """Apply theme stylesheet to the QApplication."""
+    """Применить тему"""
     if not name or name == "Стандартная":
         theme = DEFAULT_QSS
         combo = COMBO_LIGHT_QSS
@@ -386,7 +377,6 @@ def apply_theme(app, name: str, ctx: Optional[UIContext] = None) -> None:
             cal = CAL_LIGHT_QSS
             menu = MENU_LIGHT_QSS
             tip = TOOLTIP_LIGHT_QSS
-    # Always append dialog overrides and extra rules
     dialog = DIALOG_DARK_QSS if name in DARK_THEMES else DIALOG_LIGHT_QSS
     app.setStyleSheet(theme + combo + cal + menu + tip + EXTRA_QSS + dialog)
     if ctx is not None:

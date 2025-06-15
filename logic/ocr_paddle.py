@@ -12,7 +12,7 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QMessageBox
 try:
     from PySide6.QtCore import QDate, QTime
-except Exception:  # Fallbacks for headless test environment
+except Exception:
     class QDate:
         def __init__(self, *args, **kwargs):
             pass
@@ -29,23 +29,17 @@ from logic.app_state import UIContext
 from logic.utils import run_in_thread
 
 
-# --- OCR configuration ---
-# Threshold below which OCR results are ignored
+# --- OCR конфигурация ---
 SCORE_IGNORE_THRESHOLD = 0.7
-# Threshold for accepting a value without fuzzy matching
 SCORE_THRESHOLD = 0.82
-# Fuzzy matching acceptance level
 FUZZY_THRESHOLD = 0.75
-# How far in pixels two boxes may be on Y to be considered on one line
 BBOX_Y_TOLERANCE = 25
-# Maximum horizontal gap between splitted tokens
 SPLIT_TOKEN_MAX_GAP = 70
-# Force fuzzy matching even for low score items (debug)
 FORCE_FUZZY = True
 
-# Checkbox detection parameters
-CHECKBOX_X_OFFSET = 55  # pixels to the left from "Повторять" text
-CHECKBOX_SIZE = 37      # ROI size in pixels
+# Checkbox конфигурация
+CHECKBOX_X_OFFSET = 55
+CHECKBOX_SIZE = 37
 CHECKBOX_THRESHOLD = 170
 CHECKBOX_DARK_RATIO = 0.07
 
@@ -165,7 +159,6 @@ def run_ocr(
     reader = _init_ocr(use_gpu)
     image = image.resize((image.width * 2, image.height * 2), Image.LANCZOS)
     result = reader.readtext(np.array(image))
-    # logging.debug("[OCR] RAW EasyOCR result: %s", result)
 
     lines: List[Dict] = []
     for bbox, text, score in result:
@@ -365,7 +358,7 @@ def detect_repeat_checkbox(
                 gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
                 _, thresh = cv2.threshold(gray, CHECKBOX_THRESHOLD, 255, cv2.THRESH_BINARY)         
                 dark_ratio = (gray < CHECKBOX_THRESHOLD).mean()
-                # 👇 ДЕБАГ
+                # ДЕБАГ
                 print(f"[DEBUG] dark_ratio = {dark_ratio:.4f}")
                 if dark_ratio > CHECKBOX_DARK_RATIO:
                     meeting_type = "Регулярная"
@@ -466,7 +459,7 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
         if is_any_label(txt_norm, ["время", "время и дата", "дата и время"]):
             time_scores = []
             times = []
-            for j in range(i + 1, i + 5):  # allow for date line in between
+            for j in range(i + 1, i + 5):
                 if j >= len(lines):
                     break
                 t = normalize_time(lines[j]["raw_text"])
@@ -628,10 +621,8 @@ def clean_room_for_matching(text: str) -> str:
 
 def _normalize_room(text: str) -> str:
     """Привести название переговорки к виду для поиска."""
-    # convert look-alike latin characters to cyrillic for better matching
     text = normalize_russian(text)
     text = text.lower()
-    # keep both latin and cyrillic letters as well as digits
     text = re.sub(r"[^a-zа-я0-9]+", "", text)
     return text
 
@@ -663,9 +654,7 @@ def validate_with_rooms(
     bz_raw = fields.get("bz_raw", "")
     room_raw = fields.get("room_raw", "")
 
-    logging.debug("[OCR] Raw room value: '%s'", room_raw)
     room_for_match = clean_room_for_matching(_strip_prefix_for_match(room_raw))
-    logging.debug("[OCR] Room value after prefix strip: '%s'", room_for_match)
 
     matched_bz = None
     for bz in rooms:

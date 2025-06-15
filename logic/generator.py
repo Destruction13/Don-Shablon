@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 try:
     from PySide6.QtCore import QDate, Qt, QTime, QTimer, QEvent
     from PySide6.QtGui import QKeyEvent
-except Exception:  # test fallback
+except Exception:
 
     class QDate:
         def __init__(self, *args, **kwargs):
@@ -73,7 +73,6 @@ ICON_MAP = {
     "Название встречи": "📝",
 }
 
-# Help text for form fields
 HELP_TEXTS = {
     "name": "Имя человека, к которому мы обращаемся с вопросом. Заполняется автоматически.",
     "link": "Ссылка на встречу, по которой запрашиваем информацию",
@@ -127,7 +126,7 @@ class ClickableDateEdit(QDateEdit):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        # Ensure the popup is enabled and capture clicks inside the line edit
+        
         self.setCalendarPopup(True)
         self.lineEdit().installEventFilter(self)
 
@@ -588,7 +587,6 @@ def update_fields(ctx: UIContext):
         custom_layout.addWidget(my_btn)
         ctx.fields_layout.addRow(custom_box)
 
-    # rename fields depending on type
     if "client_name" in ctx.fields:
         lab = ctx.labels.get("client_name")
         if lab:
@@ -1204,8 +1202,6 @@ def show_user_templates_dialog(ctx: UIContext) -> None:
 
     dlg = QDialog(ctx.window)
     dlg.setWindowTitle("Мои шаблоны")
-    # Make the dialog large enough to show several templates without
-    # additional resizing from the user.
     dlg.resize(600, 400)
     layout = QVBoxLayout(dlg)
     top = QHBoxLayout()
@@ -1245,7 +1241,6 @@ def show_user_templates_dialog(ctx: UIContext) -> None:
             )
             hl.addWidget(btn)
 
-            # Information button that shows template text on hover
             info_btn = QToolButton()
             info_btn.setText("?")
             info_btn.setToolTip(tpl.get("text", ""))

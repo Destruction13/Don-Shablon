@@ -36,14 +36,14 @@ class _Task(QRunnable):
 
     @Slot()
     def run(self):
-        logging.debug("[POOL] Task running")
+        logging.debug("[POOL] Задача запущена")
         result = None
         error = None
         try:
             result = self.func()
         except Exception as e:
             error = e
-        logging.debug("[POOL] Task done")
+        logging.debug("[POOL] Задача завершена")
         QTimer.singleShot(
             0,
             QApplication.instance(),
@@ -53,7 +53,7 @@ class _Task(QRunnable):
 
 def run_in_thread(func, callback):
     """Запустить функцию в отдельном потоке."""
-    logging.debug("[POOL] Submitting task to thread pool")
+    logging.debug("[POOL] Запуск в отдельном потоке")
     _threadpool.start(_Task(func, callback))
 
 

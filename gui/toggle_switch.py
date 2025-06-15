@@ -22,7 +22,7 @@ class ToggleSwitch(QCheckBox):
         """Минимальный рекомендуемый размер переключателя."""
         return QSize(50, 24)
 
-    def hitButton(self, pos: QPoint) -> bool:  # pragma: no cover - UI behavior
+    def hitButton(self, pos: QPoint) -> bool:
         """Делает кликабельной всю область виджета."""
         return True
 
