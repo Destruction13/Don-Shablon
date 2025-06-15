@@ -110,6 +110,7 @@ def add_help_icon(label: QLabel, help_text: str, ctx: UIContext) -> QWidget:
 
 
 def label_with_icon(text: str) -> QLabel:
+    """Создать QLabel с иконкой-эмодзи в начале текста."""
     base = text.rstrip(":")
     emoji = None
     for key, ico in ICON_MAP.items():
@@ -173,6 +174,7 @@ class TimeInput(QLineEdit):
 
 
 def clear_layout(layout):
+    """Удалить все виджеты и вложенные слои из макета."""
     while layout.count():
         item = layout.takeAt(0)
         if item.layout():
@@ -189,6 +191,7 @@ def add_field(
     builtin_clear: bool = False,
     help_text: str | None = None,
 ):
+    """Добавить текстовое поле в форму и вернуть его."""
     edit = QLineEdit()
     if builtin_clear:
         try:
@@ -211,6 +214,7 @@ def add_field(
 
 
 def add_name_field(ctx: UIContext, help_text: str | None = None):
+    """Добавить поле для имени пользователя."""
     edit = QLineEdit()
     container = QWidget()
     hl = QHBoxLayout(container)
@@ -226,6 +230,7 @@ def add_name_field(ctx: UIContext, help_text: str | None = None):
 
 
 def add_checkbox(label: str, name: str, ctx: UIContext):
+    """Создать и добавить флажок."""
     cb = QCheckBox(label)
     ctx.fields[name] = cb
     ctx.field_containers[name] = cb
@@ -241,6 +246,7 @@ def add_combo(
     ctx: UIContext,
     help_text: str | None = None,
 ):
+    """Добавить выпадающий список с заданными значениями."""
     combo = QComboBox()
     combo.addItems(values)
     ctx.fields[name] = combo
@@ -258,6 +264,7 @@ def add_room_field(
     ctx: UIContext,
     help_text: str | None = None,
 ):
+    """Добавить поле выбора переговорной с очисткой."""
     container = QWidget()
     hl = QHBoxLayout(container)
     hl.setContentsMargins(0, 0, 0, 0)
@@ -288,6 +295,7 @@ def add_room_field(
 
 
 def add_date(name: str, ctx: UIContext, help_text: str | None = None):
+    """Добавить поле выбора даты."""
     date_edit = ClickableDateEdit()
     date_edit.setCalendarPopup(True)
     date_edit.setDisplayFormat("dd.MM.yyyy")
@@ -306,6 +314,7 @@ def add_time_range(
     ctx: UIContext,
     help_text: str | None = None,
 ):
+    """Добавить два поля для ввода времени начала и конца."""
     start_edit = TimeInput()
     end_edit = TimeInput()
     start_edit.setTime(QTime(8, 0))
@@ -346,6 +355,7 @@ def add_time_range(
 
 
 def number_to_words(n: int) -> str:
+    """Вернуть словесное представление числа от 1 до 5."""
     return {
         1: "один",
         2: "два",
@@ -356,6 +366,7 @@ def number_to_words(n: int) -> str:
 
 
 def plural_raz(n: int) -> str:
+    """Склонение слова 'раз' по числу."""
     if n == 1:
         return "раз"
     elif 2 <= n <= 4:
@@ -365,6 +376,7 @@ def plural_raz(n: int) -> str:
 
 
 def weekday_to_plural(word: str) -> str:
+    """Вернуть форму дня недели во множественном числе."""
     mapping = {
         "понедельник": "понедельникам",
         "вторник": "вторникам",
@@ -378,6 +390,7 @@ def weekday_to_plural(word: str) -> str:
 
 
 def update_fields(ctx: UIContext):
+    """Перестроить набор полей в зависимости от выбранного типа."""
     clear_layout(ctx.fields_layout)
     ctx.fields.clear()
     ctx.labels.clear()
@@ -590,6 +603,7 @@ def update_fields(ctx: UIContext):
 
 
 def on_link_change(ctx: UIContext):
+    """Обновить дату и время по ссылке из Яндекс.Календаря."""
     url_widget = ctx.fields.get("link")
     if not url_widget:
         return
@@ -609,158 +623,191 @@ def on_link_change(ctx: UIContext):
             pass
 
 
+def _get_value(ctx: UIContext, name: str) -> str:
+    """Вернуть строковое значение виджета по его имени."""
+    widget = ctx.fields.get(name)
+    if isinstance(widget, QLineEdit):
+        return widget.text()
+    if isinstance(widget, QComboBox):
+        return widget.currentText()
+    if hasattr(widget, "time"):
+        return widget.time().toString("HH:mm")
+    return ""
+
+
+def _build_greeting(ctx: UIContext, name: str) -> tuple[str, str]:
+    """Сформировать приветствие и пол в зависимости от настроек."""
+    greeting = f"Привет, {name}!"
+    gender = "ж"
+    if ctx.ls_active and ctx.ls_saved:
+        greeting = f"Привет, {name}! Я {ctx.user_name}, ассистент. Приятно познакомиться!"
+        gender = ctx.user_gender
+    elif ctx.asya_mode:
+        greeting = f"Привет, {name}! Я Ася, ассистент. Приятно познакомиться!"
+        gender = "ж"
+    return greeting, gender
+
+
+def _make_time_part(start: str, end: str) -> str:
+    """Сформировать текстовую часть со временем встречи."""
+    if start and end:
+        return f", в {start} — {end}"
+    if start:
+        return f", в {start}"
+    return ""
+
+
+def _generate_actualization(greeting: str, formatted: str, time_part: str, link_part: str,
+                            room: str, regular: str, thanks_word: str, myself_word: str) -> str:
+    """Собрать сообщение для запроса актуальности."""
+    is_regular = "регулярная встреча" if regular.lower() == "регулярная" else "встреча"
+    share_word = "разово поделиться" if regular.lower() == "регулярная" else "поделиться"
+    return (
+        f"{greeting}\n\n"
+        f"У тебя {formatted}{time_part} состоится {is_regular}{link_part} в переговорной {room}.\n\n"
+        f"Уточни, пожалуйста, сможешь ли {share_word} переговорной?\n"
+        f"Буду очень {thanks_word}!\n\n"
+        f"Если сможешь, то сделаю всё {myself_word}. Только не удаляй её из встречи, чтобы не потерять :)"
+    )
+
+
+def _generate_exchange(greeting: str, formatted: str, time_part: str, link_part: str,
+                       his_room: str, my_room: str, regular: str,
+                       thanks_word: str, myself_word: str) -> str:
+    """Собрать сообщение для предложения обмена."""
+    is_regular = "регулярная встреча" if regular.lower() == "регулярная" else "встреча"
+    share_word = "разово обменяться" if regular.lower() == "регулярная" else "обменяться"
+    return (
+        f"{greeting}\n\n"
+        f"У тебя {formatted}{time_part} состоится {is_regular}{link_part} в переговорной {his_room}.\n\n"
+        f"Уточни, пожалуйста, сможем ли {share_word} на {my_room}?\n"
+        f"Буду тебе очень {thanks_word}!\n\n"
+        f"Если сможем, то я всё сделаю {myself_word} :)"
+    )
+
+
+def _generate_meeting(ctx: UIContext, greeting: str, formatted: str, time_part: str,
+                      link_part: str, meeting_name: str, duration: str,
+                      client_name: str, conflict_links: list[str],
+                      thanks_word: str, myself_word: str) -> str:
+    """Собрать текст для организации встречи."""
+    first_name = client_name.split()[0] if client_name else "клиент"
+    conflicts = [c for c in conflict_links if c]
+    if len(conflicts) == 0:
+        conflict_text = ""
+        plural = False
+    elif len(conflicts) == 1:
+        conflict_text = f"У тебя образуется пересечение с этой встречей: {conflicts[0]}"
+        plural = False
+    else:
+        lines = "\n".join(f"{i+1}) {c}" for i, c in enumerate(conflicts))
+        conflict_text = "У тебя образуются пересечения с несколькими встречами:\n" + lines
+        plural = True
+
+    single_variants = [
+        f"Уточни, пожалуйста, получится ли перенести свою встречу и быть на встрече {first_name} в это время?",
+        f"Сможешь ли освободить это время и присоединиться к встрече {first_name}?",
+        f"Есть возможность освободить слот и поучаствовать во встрече {first_name}?",
+        f"Получится ли освободить время и присутствовать на встрече {first_name}?",
+        f"Дай знать, если сможешь подвинуть свою встречу и быть у {first_name}.",
+        f"Будет супер, если найдёшь возможность быть на встрече {first_name}.",
+    ]
+    multi_variants = [
+        f"Сможешь ли освободить это время и быть на встрече {first_name}?",
+        f"Есть шанс, что удастся разрулить пересечения и поучаствовать во встрече {first_name}?",
+        f"Сможешь ли освободиться и поучаствовать во встрече у {first_name}?",
+        f"Если появится свободное окно — очень выручишь, если подключишься к встрече {first_name}.",
+        f"Понимаю, что пересечений много — но если удастся выкроить время на встречу {first_name}, это будет огонь.",
+    ]
+    conclusion = random.choice(multi_variants if plural else single_variants)
+    regular_one = regular_two = ""
+    if ctx.regular_meeting_enabled:
+        count = ctx.regular_count.value()
+        count_word = number_to_words(count)
+        raz_form = plural_raz(count)
+        period = ctx.regular_period.currentText().strip().lower()
+        day = ctx.regular_day.currentText().strip().lower()
+        plural_day = weekday_to_plural(day)
+        regular_one = (
+            f"Она будет проводиться регулярно {count_word} {raz_form} в {period} "
+            f"по {plural_day}."
+        )
+        regular_two = (
+            f"Если всё устроит, встреча будет повторяться {count_word} {raz_form} "
+            f"в {period} в это же время."
+        )
+
+    return (
+        f"{greeting}\n\n"
+        f"Подбираю оптимальное время для проведения встречи {client_name} «{meeting_name}»{link_part} продолжительностью в {duration}.\n"
+        f"{regular_one}\n\n"
+        f"Сейчас она стоит {formatted}{time_part}\n"
+        f"{regular_two}\n\n"
+        f"{conflict_text}\n\n"
+        f"{conclusion}"
+    )
+
+
 def generate_message(ctx: UIContext):
+    """Сформировать текст сообщения на основе заполненных полей."""
     typ = ctx.type_combo.currentText()
 
-    def get(name: str):
-        widget = ctx.fields.get(name)
-        if isinstance(widget, QLineEdit):
-            return widget.text()
-        if isinstance(widget, QComboBox):
-            return widget.currentText()
-        if hasattr(widget, "time"):
-            return widget.time().toString("HH:mm")
-        return ""
-
-    start = get("start_time")
-    end = get("end_time")
-    if start and end:
-        time_part = f", в {start} — {end}"
-    elif start:
-        time_part = f", в {start}"
-    else:
-        time_part = ""
-    name = get("name")
+    start = _get_value(ctx, "start_time")
+    end = _get_value(ctx, "end_time")
+    time_part = _make_time_part(start, end)
+    name = _get_value(ctx, "name")
     if not name or (
-        (typ == "Актуализация" and not get("room"))
-        or (typ == "Обмен" and (not get("his_room") or not get("my_room")))
+        (typ == "Актуализация" and not _get_value(ctx, "room"))
+        or (typ == "Обмен" and (not _get_value(ctx, "his_room") or not _get_value(ctx, "my_room")))
     ):
         QMessageBox.warning(ctx.window, "Предупреждение", "Заполните имя и переговорку")
         return
     if "datetime" not in ctx.fields:
         QMessageBox.critical(ctx.window, "Ошибка", "Сначала выберите тип встречи")
         return
+
     raw_date = ctx.fields["datetime"].date().toPython()
     formatted = format_date_ru(raw_date)
-    link = get("link")
+    link = _get_value(ctx, "link")
     link_part = f" ({link})" if link else ""
-    greeting = f"Привет, {name}!"
-    if ctx.ls_active and ctx.ls_saved:
-        greeting = (
-            f"Привет, {name}! Я {ctx.user_name}, ассистент. Приятно познакомиться!"
-        )
-        gender = ctx.user_gender
-    elif ctx.asya_mode:
-        greeting = f"Привет, {name}! Я Ася, ассистент. Приятно познакомиться!"
-        gender = "ж"
-    else:
-        gender = "ж"
+    greeting, gender = _build_greeting(ctx, name)
     thanks_word = "признательна" if gender == "ж" else "признателен"
     myself_word = "сама" if gender == "ж" else "сам"
+
     if typ == "Актуализация":
-        room = get("room")
-        regular = get("regular")
-        is_regular = (
-            "регулярная встреча" if regular.lower() == "регулярная" else "встреча"
-        )
-        share_word = (
-            "разово поделиться" if regular.lower() == "регулярная" else "поделиться"
-        )
-        msg = f"""{greeting}
-
-У тебя {formatted}{time_part} состоится {is_regular}{link_part} в переговорной {room}.
-
-Уточни, пожалуйста, сможешь ли {share_word} переговорной?
-Буду очень {thanks_word}!
-
-Если сможешь, то сделаю всё {myself_word}. Только не удаляй её из встречи, чтобы не потерять :)"""
+        room = _get_value(ctx, "room")
+        regular = _get_value(ctx, "regular")
+        msg = _generate_actualization(greeting, formatted, time_part, link_part, room, regular, thanks_word, myself_word)
     elif typ == "Обмен":
-        his_room = get("his_room")
-        my_room = get("my_room")
-        regular = get("regular")
-        is_regular = (
-            "регулярная встреча" if regular.lower() == "регулярная" else "встреча"
-        )
-        share_word = (
-            "разово обменяться" if regular.lower() == "регулярная" else "обменяться"
-        )
-        msg = f"""{greeting}
-
-У тебя {formatted}{time_part} состоится {is_regular}{link_part} в переговорной {his_room}.
-
-Уточни, пожалуйста, сможем ли {share_word} на {my_room}?
-Буду тебе очень {thanks_word}!
-
-Если сможем, то я всё сделаю {myself_word} :)"""
+        his_room = _get_value(ctx, "his_room")
+        my_room = _get_value(ctx, "my_room")
+        regular = _get_value(ctx, "regular")
+        msg = _generate_exchange(greeting, formatted, time_part, link_part, his_room, my_room, regular, thanks_word, myself_word)
     elif typ == "Организация встречи":
-        meeting_name = get("meeting_name")
-        duration = get("duration")
-        client_name = get("client_name")
-        first_name = client_name.split()[0] if client_name else "клиент"
-        conflict_links = [get("conflict1"), get("conflict2"), get("conflict3")]
-        conflict_links = [c for c in conflict_links if c]
-        if len(conflict_links) == 0:
-            conflict_text = ""
-            plural = False
-        elif len(conflict_links) == 1:
-            conflict_text = (
-                f"У тебя образуется пересечение с этой встречей: {conflict_links[0]}"
-            )
-            plural = False
-        else:
-            lines = "\n".join(f"{i+1}) {c}" for i, c in enumerate(conflict_links))
-            conflict_text = (
-                "У тебя образуются пересечения с несколькими встречами:\n" + lines
-            )
-            plural = True
-        single_variants = [
-            f"Уточни, пожалуйста, получится ли перенести свою встречу и быть на встрече {first_name} в это время?",
-            f"Сможешь ли освободить это время и присоединиться к встрече {first_name}?",
-            f"Есть возможность освободить слот и поучаствовать во встрече {first_name}?",
-            f"Получится ли освободить время и присутствовать на встрече {first_name}?",
-            f"Дай знать, если сможешь подвинуть свою встречу и быть у {first_name}.",
-            f"Будет супер, если найдёшь возможность быть на встрече {first_name}.",
+        meeting_name = _get_value(ctx, "meeting_name")
+        duration = _get_value(ctx, "duration")
+        client_name = _get_value(ctx, "client_name")
+        conflicts = [
+            _get_value(ctx, "conflict1"),
+            _get_value(ctx, "conflict2"),
+            _get_value(ctx, "conflict3"),
         ]
-        multi_variants = [
-            f"Сможешь ли освободить это время и быть на встрече {first_name}?",
-            f"Есть шанс, что удастся разрулить пересечения и поучаствовать во встрече {first_name}?",
-            f"Сможешь ли освободиться и поучаствовать во встрече у {first_name}?",
-            f"Если появится свободное окно — очень выручишь, если подключишься к встрече {first_name}.",
-            f"Понимаю, что пересечений много — но если удастся выкроить время на встречу {first_name}, это будет огонь.",
-        ]
-        conclusion = random.choice(multi_variants if plural else single_variants)
-        regular_one = regular_two = ""
-        if ctx.regular_meeting_enabled:
-            count = ctx.regular_count.value()
-            count_word = number_to_words(count)
-            raz_form = plural_raz(count)
-            period = ctx.regular_period.currentText().strip().lower()
-            day = ctx.regular_day.currentText().strip().lower()
-            plural_day = weekday_to_plural(day)
-            regular_one = (
-                f"Она будет проводиться регулярно {count_word} {raz_form} в {period} "
-                f"по {plural_day}."
-            )
-            regular_two = (
-                f"Если всё устроит, встреча будет повторяться {count_word} {raz_form} "
-                f"в {period} в это же время."
-            )
-
-        msg = f"""{greeting}
-
-Подбираю оптимальное время для проведения встречи {client_name} «{meeting_name}»{link_part} продолжительностью в {duration}.
-{regular_one}
-
-Сейчас она стоит {formatted}{time_part}
-{regular_two}
-
-{conflict_text}
-
-{conclusion}"""
+        msg = _generate_meeting(
+            ctx,
+            greeting,
+            formatted,
+            time_part,
+            link_part,
+            meeting_name,
+            duration,
+            client_name,
+            conflicts,
+            thanks_word,
+            myself_word,
+        )
     else:
         msg = "Тип встречи не выбран"
 
-    # save history for supported types
     try:
         date_str = ctx.fields["datetime"].date().toString("dd.MM.yyyy")
         record = {

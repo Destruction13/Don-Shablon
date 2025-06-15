@@ -9,7 +9,7 @@ logging.getLogger().setLevel(logging.DEBUG)
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(message)s",
-    force=True  # 💥 Вот это критично
+    force=True
 )
 
 if __name__ == "__main__":
