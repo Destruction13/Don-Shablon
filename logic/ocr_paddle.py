@@ -199,7 +199,10 @@ def _apply_fields(ctx: UIContext, fields: Dict[str, str]) -> None:
         except Exception:
             pass
     if "regular" in ctx.fields:
-        ctx.fields["regular"].setCurrentText("Обычная")
+        if data.get("is_regular") is True:
+            ctx.fields["regular"].setCurrentText("Регулярная")
+        else:
+            ctx.fields["regular"].setCurrentText("Обычная")
 
 
 def get_image_from_clipboard() -> Optional[Image.Image]:
@@ -329,6 +332,9 @@ def recognize_from_clipboard(ctx: UIContext) -> None:
 
     lines = run_ocr(img, use_gpu=ctx.ocr_mode == "GPU")
     parsed, scores = parse_fields(lines, return_scores=True)
+    repeat_state = detect_repeat_checkbox(img, lines)
+    if repeat_state is not None:
+        parsed["is_regular"] = repeat_state
 
     need_fallback = not parsed.get("name") or scores.get("name", 1.0) < 0.5
     if need_fallback:
@@ -417,6 +423,32 @@ def save_debug_ocr_image(image: Image.Image, lines: List[Dict], path="ocr_debug_
     with open(Path(path).with_suffix(".json"), "w", encoding="utf-8") as f:
         import json
         json.dump(debug_info, f, ensure_ascii=False, indent=2)
+
+
+def detect_repeat_checkbox(image: Image.Image, lines: List[Dict], threshold: float = 0.04) -> bool | None:
+    """Return True if the checkbox left of 'Повторять' looks checked."""
+    bbox = None
+    for line in lines:
+        if normalize_generic(line.get("text", "")) == "повторять":
+            bbox = line["bbox"]
+            break
+    if not bbox:
+        return None
+
+    xs = [p[0] for p in bbox]
+    ys = [p[1] for p in bbox]
+    left, top = min(xs), min(ys)
+    height = max(ys) - top
+    size = height or 1
+    cb_right = left - 5
+    cb_left = max(0, cb_right - size)
+    cb_top = max(0, top)
+    cb_bottom = cb_top + size
+    region = image.crop((cb_left, cb_top, cb_right, cb_bottom)).convert("L")
+    arr = np.array(region)
+    dark_frac = float((arr < 128).mean())
+    logging.debug("[OCR] Checkbox dark fraction %.3f", dark_frac)
+    return bool(dark_frac > threshold)
 
 
 def extract_bc_and_room(lines: List[Dict], known_bz: List[str]) -> Tuple[str, str]:
@@ -858,6 +890,7 @@ def validate_with_rooms(
         "end": fields.get("end", ""),
         "bz": matched_bz or "",
         "room": matched_room or "",
+        "is_regular": fields.get("is_regular"),
     }
 
 
