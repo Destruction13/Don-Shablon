@@ -523,44 +523,35 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
                 room_parts.append(candidate_text)
                 room_scores.append(lines[j]["score"])
             if room_parts:
-                text = " ".join(room_parts)
-                score = min(room_scores)
-                first = room_parts[0].strip()
-
-                selected_idx = 0
                 clean = lambda t: re.sub(r"[\s.\-–—]+", "", t.lower())
-                first_norm = clean(first)
-                best_len = len(first)
-                for idx2, cand in enumerate(room_parts[1:], 1):
+                base_text = room_parts[0].strip()
+                base_norm = clean(base_text)
+
+                combined = " ".join(room_parts)
+
+                best_text = combined
+                best_score = min(room_scores)
+                best_len = len(combined)
+
+                for idx2, cand in enumerate(room_parts):
                     cand_norm = clean(cand)
-                    if cand_norm.startswith(first_norm) and len(cand) > best_len:
-                        selected_idx = idx2
+                    if cand_norm.startswith(base_norm) and len(cand) > best_len:
+                        best_text = cand.strip()
+                        best_score = room_scores[idx2]
                         best_len = len(cand)
 
-                if selected_idx != 0:
-                    text = room_parts[selected_idx].strip()
-                    score = room_scores[selected_idx]
-
-                # Попробуем найти самое длинное совпадение в оставшихся строках
-                base_norm = clean(text)
-                best_text = text
-                best_score = score
-                best_len = len(text)
                 for k in range(i + len(room_parts) + 1, len(lines)):
                     cand = lines[k]["text"].strip()
                     if not cand:
                         continue
                     cand_norm = clean(cand)
                     if cand_norm.startswith(base_norm) and len(cand) > best_len:
-                        best_len = len(cand)
                         best_text = cand
                         best_score = lines[k]["score"]
+                        best_len = len(cand)
 
-                text = best_text
-                score = best_score
-
-                fields["room_raw"] = text
-                scores["room_raw"] = score
+                fields["room_raw"] = best_text
+                scores["room_raw"] = best_score
             continue
 
 
