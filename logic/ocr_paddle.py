@@ -544,6 +544,24 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
                     text = room_parts[selected_idx].strip()
                     score = room_scores[selected_idx]
 
+                # Попробуем найти более длинное совпадение в последующих строках
+                clean = lambda t: re.sub(r"[\s.\-–—]+", "", t.lower())
+                base_norm = clean(text)
+                best_text = text
+                best_score = score
+                for k in range(i + len(room_parts) + 1, len(lines)):
+                    cand = lines[k]["text"].strip()
+                    if not cand or len(cand) <= len(best_text):
+                        continue
+                    cand_norm = clean(cand)
+                    if cand_norm.startswith(base_norm):
+                        best_text = cand
+                        best_score = lines[k]["score"]
+                        break
+
+                text = best_text
+                score = best_score
+
                 fields["room_raw"] = text
                 scores["room_raw"] = score
             continue
