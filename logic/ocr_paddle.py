@@ -528,36 +528,33 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
                 first = room_parts[0].strip()
 
                 selected_idx = 0
-                if (first.endswith("...") or first.endswith("…")) and len(room_parts) > 1:
-                    selected_idx = 1
-                else:
-                    clean = lambda t: re.sub(r"[\s.\-–—]+", "", t.lower())
-                    first_norm = clean(first)
-                    best_len = len(first)
-                    for idx2, cand in enumerate(room_parts[1:], 1):
-                        cand_norm = clean(cand)
-                        if cand_norm.startswith(first_norm) and len(cand) > best_len:
-                            selected_idx = idx2
-                            best_len = len(cand)
+                clean = lambda t: re.sub(r"[\s.\-–—]+", "", t.lower())
+                first_norm = clean(first)
+                best_len = len(first)
+                for idx2, cand in enumerate(room_parts[1:], 1):
+                    cand_norm = clean(cand)
+                    if cand_norm.startswith(first_norm) and len(cand) > best_len:
+                        selected_idx = idx2
+                        best_len = len(cand)
 
                 if selected_idx != 0:
                     text = room_parts[selected_idx].strip()
                     score = room_scores[selected_idx]
 
-                # Попробуем найти более длинное совпадение в последующих строках
-                clean = lambda t: re.sub(r"[\s.\-–—]+", "", t.lower())
+                # Попробуем найти самое длинное совпадение в оставшихся строках
                 base_norm = clean(text)
                 best_text = text
                 best_score = score
+                best_len = len(text)
                 for k in range(i + len(room_parts) + 1, len(lines)):
                     cand = lines[k]["text"].strip()
-                    if not cand or len(cand) <= len(best_text):
+                    if not cand:
                         continue
                     cand_norm = clean(cand)
-                    if cand_norm.startswith(base_norm):
+                    if cand_norm.startswith(base_norm) and len(cand) > best_len:
+                        best_len = len(cand)
                         best_text = cand
                         best_score = lines[k]["score"]
-                        break
 
                 text = best_text
                 score = best_score
