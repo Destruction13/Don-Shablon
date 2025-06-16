@@ -526,9 +526,26 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
                 text = " ".join(room_parts)
                 score = min(room_scores)
                 first = room_parts[0].strip()
+
+                selected_idx = 0
                 if (first.endswith("...") or first.endswith("…")) and len(room_parts) > 1:
-                    text = room_parts[1].strip()
-                    score = room_scores[1]
+                    selected_idx = 1
+                else:
+                    first_norm = re.sub(r"\s+", "", first.lower().rstrip("."))
+                    longest_idx = max(range(len(room_parts)), key=lambda i: len(room_parts[i]))
+                    candidate = room_parts[longest_idx].strip()
+                    cand_norm = re.sub(r"\s+", "", candidate.lower())
+                    if (
+                        longest_idx != 0
+                        and len(candidate) > len(first) + 2
+                        and cand_norm.startswith(first_norm)
+                    ):
+                        selected_idx = longest_idx
+
+                if selected_idx != 0:
+                    text = room_parts[selected_idx].strip()
+                    score = room_scores[selected_idx]
+
                 fields["room_raw"] = text
                 scores["room_raw"] = score
             continue
