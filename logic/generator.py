@@ -825,10 +825,10 @@ def generate_message(ctx: UIContext):
         pass
 
     ctx.output_text.setPlainText(msg)
-    if getattr(ctx, "auto_copy_enabled", False):
-        copy_generated_text(ctx)
     if getattr(ctx, "auto_report_enabled", False):
         show_auto_report_dialog(ctx)
+    elif getattr(ctx, "auto_copy_enabled", False):
+        copy_generated_text(ctx)
 
 
 def generate_other_category(ctx: UIContext, category: str) -> None:

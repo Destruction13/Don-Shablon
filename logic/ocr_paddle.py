@@ -335,9 +335,12 @@ def detect_repeat_checkbox(
     repeat_bbox = None
     checkbox_bbox = None
     np_img = np.array(image)
+    found_repeat_label = False
 
-    for line in lines:
-        if "повторять" in normalize_russian(line["text"]).lower():
+    for idx, line in enumerate(lines):
+        norm_text = normalize_russian(line["text"]).lower()
+        if any(part in norm_text for part in ["повтор", "повт", "торять"]):
+            found_repeat_label = True
             x1 = min(p[0] for p in line["bbox"])
             y1 = min(p[1] for p in line["bbox"])
             x2 = max(p[0] for p in line["bbox"])
@@ -363,6 +366,10 @@ def detect_repeat_checkbox(
                 if dark_ratio > CHECKBOX_DARK_RATIO:
                     meeting_type = "Регулярная"
             break
+
+    if not found_repeat_label:
+        meeting_type = "Регулярная"
+
     return meeting_type, repeat_bbox, checkbox_bbox
 
 
@@ -516,8 +523,14 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
                 room_parts.append(candidate_text)
                 room_scores.append(lines[j]["score"])
             if room_parts:
-                fields["room_raw"] = " ".join(room_parts)
-                scores["room_raw"] = min(room_scores)
+                text = " ".join(room_parts)
+                score = min(room_scores)
+                first = room_parts[0].strip()
+                if (first.endswith("...") or first.endswith("…")) and len(room_parts) > 1:
+                    text = room_parts[1].strip()
+                    score = room_scores[1]
+                fields["room_raw"] = text
+                scores["room_raw"] = score
             continue
 
 
