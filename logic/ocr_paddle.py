@@ -531,16 +531,14 @@ def parse_fields(ocr_lines: list, *, return_scores: bool = False):
                 if (first.endswith("...") or first.endswith("…")) and len(room_parts) > 1:
                     selected_idx = 1
                 else:
-                    first_norm = re.sub(r"\s+", "", first.lower().rstrip("."))
-                    longest_idx = max(range(len(room_parts)), key=lambda i: len(room_parts[i]))
-                    candidate = room_parts[longest_idx].strip()
-                    cand_norm = re.sub(r"\s+", "", candidate.lower())
-                    if (
-                        longest_idx != 0
-                        and len(candidate) > len(first) + 2
-                        and cand_norm.startswith(first_norm)
-                    ):
-                        selected_idx = longest_idx
+                    clean = lambda t: re.sub(r"[\s.\-–—]+", "", t.lower())
+                    first_norm = clean(first)
+                    best_len = len(first)
+                    for idx2, cand in enumerate(room_parts[1:], 1):
+                        cand_norm = clean(cand)
+                        if cand_norm.startswith(first_norm) and len(cand) > best_len:
+                            selected_idx = idx2
+                            best_len = len(cand)
 
                 if selected_idx != 0:
                     text = room_parts[selected_idx].strip()
