@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QHBoxLayout,
+    QGridLayout,
     QLabel,
     QLineEdit,
     QTextEdit,
@@ -22,7 +23,8 @@ from PySide6.QtWidgets import (
     QWidget,
     QToolButton,
     QGraphicsDropShadowEffect,
-    QSizePolicy
+    QSizePolicy,
+    QColorDialog
 )
 from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt, QTimer
@@ -45,10 +47,11 @@ COLOR_SCHEMES = {
 
 
 class TaskItemWidget(QWidget):
-    def __init__(self, task: dict, edit_cb, delete_cb, ctx=None):
+    def __init__(self, task: dict, edit_cb, delete_cb, star_cb, ctx=None):
         super().__init__()
         self.setObjectName("taskBlock")
         self.task = task
+        self.star_cb = star_cb
         outer = QVBoxLayout(self)
         outer.setContentsMargins(8, 8, 8, 8)
         self.setMinimumHeight(80)
@@ -107,6 +110,23 @@ class TaskItemWidget(QWidget):
         self.time_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         row.addWidget(self.time_label)
 
+        self.star_btn = QToolButton()
+        self.star_btn.setText("⭐" if task.get("starred", False) else "☆")
+        self.star_btn.setCheckable(True)
+        self.star_btn.setChecked(task.get("starred", False))
+        self.star_btn.setStyleSheet(
+            "QToolButton{min-height:24px;padding:4px 8px;border-radius:4px;}"
+            "QToolButton:hover{background-color:qlineargradient(x1:0,y1:0,x2:0,y2:1,"
+            " stop:0 #5a5a5a, stop:1 #3a3a3a);}"
+        )
+        self.star_btn.toggled.connect(
+            lambda checked: self.star_btn.setText("⭐" if checked else "☆")
+        )
+        self.star_btn.clicked.connect(lambda checked: self.star_cb(checked))
+        if ctx:
+            setup_animation(self.star_btn, ctx)
+        row.addWidget(self.star_btn)
+
         edit_btn = QToolButton()
         edit_btn.setText("✏️")
         edit_btn.setStyleSheet(
@@ -142,24 +162,27 @@ class TaskItemWidget(QWidget):
                 if b == color_val:
                     fg = f
                     break
-        base = (
+        base = [
             "background-color: rgba(255,255,255,0.06);"
             "border: 1px solid rgba(255,255,255,0.15);"
             "border-radius: 10px;"
             "padding: 12px 16px;"
-        )
+        ]
 
 
-        style = base
+        style = " ".join(base)
         if bg:
             color = QColor(bg)
-            style = (
-                f"background-color:{color.name()};"
-                f"color:{fg};"
-                "border:1px solid rgba(255,255,255,0.15);"
-                "border-radius:10px;"
-                "padding:12px 16px;"
-            )
+            if not fg:
+                brightness = 0.299 * color.red() + 0.587 * color.green() + 0.114 * color.blue()
+                fg = "#000000" if brightness > 186 else "#ffffff"
+            style = " ".join([
+                f"background-color:{color.name()};",
+                f"color:{fg};",
+                "border:1px solid rgba(255,255,255,0.15);",
+                "border-radius:10px;",
+                "padding:12px 16px;",
+            ])
 
         self.setStyleSheet(style)
 
@@ -233,16 +256,40 @@ class TaskEditDialog(QDialog):
         layout.addWidget(QLabel("Цветовая метка"))
         self.color_combo = QComboBox()
         self.color_combo.addItems(COLOR_SCHEMES.keys())
+
         current = self._task.get("color", "")
-        for name, (bg, _fg) in COLOR_SCHEMES.items():
-            if bg == current:
-                self.color_combo.setCurrentText(name)
-                break
+        self.custom_color = ""
+        if current:
+            if current in COLOR_SCHEMES:
+                self.color_combo.setCurrentText(current)
+            else:
+                for name, (bg, _fg) in COLOR_SCHEMES.items():
+                    if bg == current:
+                        self.color_combo.setCurrentText(name)
+                        break
+                else:
+                    self.custom_color = current
+
         layout.addWidget(self.color_combo)
+
+        self.color_btn = QPushButton("🎨 Выбрать цвет")
+        self.color_btn.clicked.connect(self.choose_color)
+        layout.addWidget(self.color_btn)
+        self.color_combo.currentIndexChanged.connect(self.reset_custom_color)
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+
+    def choose_color(self):
+        color = QColorDialog.getColor(QColor(self.custom_color or "#ffffff"), self, "Выбор цвета")
+        if color.isValid():
+            self.custom_color = color.name()
+            self.color_btn.setStyleSheet(f"background-color:{self.custom_color};")
+
+    def reset_custom_color(self, *_):
+        self.custom_color = ""
+        self.color_btn.setStyleSheet("")
 
     @property
     def data(self) -> dict:
@@ -250,7 +297,8 @@ class TaskEditDialog(QDialog):
             "link": self.link_edit.text().strip(),
             "desc": self.desc_edit.toPlainText().strip(),
             "minutes": self.min_spin.value(),
-            "color": COLOR_SCHEMES.get(self.color_combo.currentText(), ("", ""))[0],
+            "color": self.custom_color
+            or COLOR_SCHEMES.get(self.color_combo.currentText(), ("", ""))[0],
         }
 
 IS_DARK_THEME = True
@@ -282,8 +330,22 @@ class TasksDialog(QDialog):
                                         }
                                     """)
 
+        self.add_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         setup_animation(self.add_btn, ctx)
-        layout.addWidget(self.add_btn)
+
+        header_widget = QWidget()
+        header_layout = QGridLayout(header_widget)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.addWidget(self.add_btn, 0, 0)
+
+        self.notify_btn = QToolButton()
+        self.notify_btn.setText("🔔" if self.manager.notifications_enabled else "🔇")
+        self.notify_btn.setCheckable(True)
+        self.notify_btn.setChecked(self.manager.notifications_enabled)
+        self.notify_btn.clicked.connect(self.toggle_notifications)
+        header_layout.addWidget(self.notify_btn, 0, 0, Qt.AlignRight | Qt.AlignTop)
+
+        layout.addWidget(header_widget)
         self.list = QListWidget()
         self.list.setStyleSheet(
             "QListWidget::item{border:none;margin:0;padding:0;}"
@@ -298,13 +360,17 @@ class TasksDialog(QDialog):
 
     def refresh(self):
         self.list.clear()
-        for task in sorted(self.manager.tasks, key=lambda t: t["remind_at"]):
+        for task in sorted(
+            self.manager.tasks,
+            key=lambda t: (not t.get("starred", False), t["remind_at"]),
+        ):
             item = QListWidgetItem()
             item.setData(Qt.UserRole, task["id"])
             widget = TaskItemWidget(
                 task,
                 lambda tid=task["id"]: self.edit_task_by_id(tid),
                 lambda tid=task["id"]: self.confirm_delete_task(tid),
+                lambda checked, tid=task["id"]: self.manager.star_task(tid, checked),
                 ctx=self.ctx,
             )
             self.list.addItem(item)
@@ -357,6 +423,10 @@ class TasksDialog(QDialog):
         if action == delete_act:
             tid = item.data(Qt.UserRole)
             self.confirm_delete_task(tid)
+
+    def toggle_notifications(self, checked: bool):
+        self.manager.set_notifications_enabled(checked)
+        self.notify_btn.setText("🔔" if checked else "🔇")
 
 
 def show_task_notification(ctx, manager, task):
