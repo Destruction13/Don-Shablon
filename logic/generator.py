@@ -825,10 +825,12 @@ def generate_message(ctx: UIContext):
         pass
 
     ctx.output_text.setPlainText(msg)
-    if getattr(ctx, "auto_copy_enabled", False):
-        copy_generated_text(ctx)
     if getattr(ctx, "auto_report_enabled", False):
-        show_auto_report_dialog(ctx)
+        result = show_auto_report_dialog(ctx)
+        if result is None and getattr(ctx, "auto_copy_enabled", False):
+            copy_generated_text(ctx)
+    elif getattr(ctx, "auto_copy_enabled", False):
+        copy_generated_text(ctx)
 
 
 def generate_other_category(ctx: UIContext, category: str) -> None:
@@ -1050,8 +1052,12 @@ def show_exchange_dialog(ctx: UIContext) -> None:
         copy_generated_text(ctx)
 
 
-def show_auto_report_dialog(ctx: UIContext) -> None:
-    """Диалог автозаполнения отчёта после генерации текста."""
+def show_auto_report_dialog(ctx: UIContext) -> bool | None:
+    """Диалог автозаполнения отчёта после генерации текста.
+
+    Возвращает ``True`` если отчёт подтверждён, ``False`` при отмене и ``None``
+    если окно не было показано (тип шаблона не поддерживается).
+    """
     from PySide6.QtWidgets import (
         QDialog,
         QVBoxLayout,
@@ -1062,7 +1068,7 @@ def show_auto_report_dialog(ctx: UIContext) -> None:
 
     typ = ctx.type_combo.currentText()
     if typ not in {"Обмен", "Актуализация"}:
-        return
+        return None
 
     dlg = QDialog(ctx.window)
     dlg.setWindowTitle("Авто-отчёт")
@@ -1083,7 +1089,7 @@ def show_auto_report_dialog(ctx: UIContext) -> None:
     layout.addWidget(ok_btn)
 
     if dlg.exec() != QDialog.Accepted:
-        return
+        return False
 
     login = login_edit.text().strip()
     link = link_edit.text().strip()
@@ -1142,6 +1148,7 @@ def show_auto_report_dialog(ctx: UIContext) -> None:
         ctx.report_text.setVisible(True)
     if getattr(ctx, "auto_copy_enabled", False):
         copy_generated_text(ctx)
+    return True
 
 
 def add_user_template_dialog(ctx: UIContext, parent=None) -> bool:
