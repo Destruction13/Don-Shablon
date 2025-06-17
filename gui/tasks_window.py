@@ -113,17 +113,26 @@ class TaskItemWidget(QWidget):
             if b == bg:
                 fg = f
                 break
-        style = (
-            "#taskBlock{" "border:1px solid #555;border-radius:6px;padding:6px;}"
-            "#taskBlock:hover{border:1px solid #00ffff;}"
+        base = (
+            "#taskBlock{background-color:rgba(255,255,255,0.02);"
+            "border:1px solid rgba(255,255,255,0.1);border-radius:8px;"
+            "padding:12px 16px;box-shadow:0 0 8px rgba(0,255,255,0.1);"
+            "transition:box-shadow 0.3s,background-color 0.3s;}"
+            "#taskBlock:hover{box-shadow:0 0 12px rgba(0,255,255,0.3);"
+            "background-color:rgba(255,255,255,0.04);}"
         )
+
+        style = base
         if bg:
             color = QColor(bg)
             darker = color.darker(110)
             style = (
                 f"#taskBlock{{background-color:{darker.name()};color:{fg};"
-                "border:1px solid #555;border-radius:6px;padding:6px;}}"
-                "#taskBlock:hover{border:1px solid #00ffff;}"
+                "border:1px solid rgba(255,255,255,0.1);border-radius:8px;"
+                "padding:12px 16px;box-shadow:0 0 8px rgba(0,255,255,0.1);"
+                "transition:box-shadow 0.3s,background-color 0.3s;}}"
+                "#taskBlock:hover{box-shadow:0 0 12px rgba(0,255,255,0.3);"
+                "background-color:rgba(255,255,255,0.04);}"
             )
         self.setStyleSheet(style)
         if ctx:
@@ -216,9 +225,9 @@ class TasksDialog(QDialog):
         layout.addWidget(self.add_btn)
         self.list = QListWidget()
         self.list.setStyleSheet(
-            "QListWidget::item{border:none;border-radius:6px;margin:4px;padding:10px;}"
+            "QListWidget::item{border:none;margin:0;padding:0;}"
         )
-        self.list.setSpacing(6)
+        self.list.setSpacing(12)
         self.list.itemDoubleClicked.connect(self.edit_task)
         self.list.setContextMenuPolicy(Qt.CustomContextMenu)
         self.list.customContextMenuRequested.connect(self.show_menu)
