@@ -62,7 +62,7 @@ class TaskItemWidget(QWidget):
         link_btn.setText("🔗 Перейти по ссылке")
         link_btn.setStyleSheet(
             "QToolButton{min-height:24px;padding:4px 8px;border-radius:4px;}"
-            "QToolButton:hover{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,"
+            "QToolButton:hover{background-color:qlineargradient(x1:0,y1:0,x2:0,y2:1,"
             " stop:0 #5a5a5a, stop:1 #3a3a3a);}"
         )
         link_btn.clicked.connect(lambda: self.open_link())
@@ -87,7 +87,7 @@ class TaskItemWidget(QWidget):
         edit_btn.setText("✏️")
         edit_btn.setStyleSheet(
             "QToolButton{min-height:24px;padding:4px 8px;border-radius:4px;}"
-            "QToolButton:hover{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,"
+            "QToolButton:hover{background-color:qlineargradient(x1:0,y1:0,x2:0,y2:1,"
             " stop:0 #5a5a5a, stop:1 #3a3a3a);}"
         )
         edit_btn.clicked.connect(lambda _=False: edit_cb())
@@ -99,7 +99,7 @@ class TaskItemWidget(QWidget):
         del_btn.setText("🗑️")
         del_btn.setStyleSheet(
             "QToolButton{min-height:24px;padding:4px 8px;border-radius:4px;}"
-            "QToolButton:hover{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,"
+            "QToolButton:hover{background-color:qlineargradient(x1:0,y1:0,x2:0,y2:1,"
             " stop:0 #5a5a5a, stop:1 #3a3a3a);}"
         )
         del_btn.clicked.connect(lambda _=False: delete_cb())
@@ -108,15 +108,19 @@ class TaskItemWidget(QWidget):
         row.addWidget(del_btn)
         outer.addLayout(row)
 
-        bg = task.get("color", "")
+        color_val = task.get("color", "")
+        bg = color_val
         fg = ""
-        for _name, (b, f) in COLOR_SCHEMES.items():
-            if b == bg:
-                fg = f
-                break
+        if color_val in COLOR_SCHEMES:
+            bg, fg = COLOR_SCHEMES[color_val]
+        else:
+            for _name, (b, f) in COLOR_SCHEMES.items():
+                if b == color_val:
+                    fg = f
+                    break
         base = (
             "#taskBlock{background-color:rgba(255,255,255,0.06);"
-            "border:1px solid rgba(255,255,255,0.3);border-radius:10px;"
+            "border:1px solid rgba(255,255,255,0.7);border-radius:10px;"
             "padding:12px 16px;}"
         )
 
@@ -125,7 +129,7 @@ class TaskItemWidget(QWidget):
             color = QColor(bg)
             style = (
                 f"#taskBlock{{background-color:{color.name()};color:{fg};"
-                "border:1px solid rgba(255,255,255,0.3);border-radius:10px;"
+                "border:1px solid rgba(255,255,255,0.7);border-radius:10px;"
                 "padding:12px 16px;}"
             )
         self.setStyleSheet(style)
@@ -233,7 +237,7 @@ class TasksDialog(QDialog):
         self.add_btn.clicked.connect(self.add_task)
         self.add_btn.setStyleSheet(
             "min-height:36px;padding:8px 12px;font-size:14px;border-radius:6px;"
-            "QPushButton:hover{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,"
+            "QPushButton:hover{background-color:qlineargradient(x1:0,y1:0,x2:0,y2:1,"
             " stop:0 #5a5a5a, stop:1 #3a3a3a);}"
         )
         setup_animation(self.add_btn, ctx)
