@@ -20,7 +20,6 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QMenu,
     QWidget,
-    QProgressBar,
     QToolButton,
 )
 from PySide6.QtGui import QColor
@@ -48,7 +47,9 @@ class TaskItemWidget(QWidget):
         super().__init__()
         self.task = task
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(4, 2, 4, 2)
+        layout.setContentsMargins(8, 6, 8, 6)
+        self.setMinimumHeight(40)
+
         link_btn = QToolButton()
         link_btn.setText("🔗")
         link_btn.clicked.connect(lambda: self.open_link())
@@ -59,25 +60,28 @@ class TaskItemWidget(QWidget):
         desc = QLabel(task["desc"])
         layout.addWidget(desc)
         layout.addStretch()
-        self.progress = QProgressBar()
-        self.progress.setFixedWidth(80)
-        self.progress.setTextVisible(True)
-        layout.addWidget(self.progress)
+
+        self.time_label = QLabel()
+        self.time_label.setFixedWidth(60)
+        self.time_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        layout.addWidget(self.time_label)
+
         edit_btn = QToolButton()
-        edit_btn.setText('✏️')
-        edit_btn.clicked.connect(edit_cb)
+        edit_btn.setText("✏️")
+        edit_btn.clicked.connect(lambda _=False: edit_cb())
         if ctx:
             setup_animation(edit_btn, ctx)
         layout.addWidget(edit_btn)
+
         del_btn = QToolButton()
-        del_btn.setText('🗑️')
-        del_btn.clicked.connect(delete_cb)
+        del_btn.setText("🗑️")
+        del_btn.clicked.connect(lambda _=False: delete_cb())
         if ctx:
             setup_animation(del_btn, ctx)
         layout.addWidget(del_btn)
 
-        bg = task.get('color', '')
-        fg = ''
+        bg = task.get("color", "")
+        fg = ""
         for _name, (b, f) in COLOR_SCHEMES.items():
             if b == bg:
                 fg = f
@@ -88,24 +92,23 @@ class TaskItemWidget(QWidget):
             self.setStyleSheet(
                 f"background-color:{darker.name()};color:{fg};border:1px solid #555;border-radius:6px;"
             )
-        self._duration = task.get('duration', max(1, int(task['remind_at'] - time.time())))
+
+        self._duration = task.get("duration", max(1, int(task["remind_at"] - time.time())))
         self._timer = QTimer(self)
         self._timer.setInterval(1000)
-        self._timer.timeout.connect(self.update_progress)
-        self.update_progress()
+        self._timer.timeout.connect(self.update_timer)
+        self.update_timer()
         self._timer.start()
 
     def open_link(self):
         if self.task.get("link"):
             webbrowser.open(self.task["link"])
 
-    def update_progress(self):
-        remaining = max(0, int(self.task['remind_at'] - time.time()))
-        elapsed = self._duration - remaining
-        self.progress.setMaximum(self._duration)
-        self.progress.setValue(elapsed)
-        minutes = max(0, remaining // 60)
-        self.progress.setFormat(f"{minutes}м")
+    def update_timer(self):
+        remaining = max(0, int(self.task["remind_at"] - time.time()))
+        minutes = remaining // 60
+        seconds = remaining % 60
+        self.time_label.setText(f"{minutes:02d}:{seconds:02d}")
         if remaining <= 0:
             self._timer.stop()
 
@@ -173,8 +176,9 @@ class TasksDialog(QDialog):
         layout.addWidget(self.add_btn)
         self.list = QListWidget()
         self.list.setStyleSheet(
-            "QListWidget::item{border:none;border-radius:6px;margin:2px;padding:4px;}"
+            "QListWidget::item{border:none;border-radius:6px;margin:4px;padding:10px;}"
         )
+        self.list.setSpacing(6)
         self.list.itemDoubleClicked.connect(self.edit_task)
         self.list.setContextMenuPolicy(Qt.CustomContextMenu)
         self.list.customContextMenuRequested.connect(self.show_menu)
