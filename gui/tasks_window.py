@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QHBoxLayout,
+    QFrame,
     QLabel,
     QLineEdit,
     QTextEdit,
@@ -46,39 +47,53 @@ class TaskItemWidget(QWidget):
     def __init__(self, task: dict, edit_cb, delete_cb, ctx=None):
         super().__init__()
         self.task = task
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(8, 6, 8, 6)
-        self.setMinimumHeight(40)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(8, 6, 8, 6)
+        self.setMinimumHeight(60)
 
+        title_row = QHBoxLayout()
+        self.link_label = QLabel(f"<b>{task['link']}</b>")
+        self.link_label.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        self.link_label.setOpenExternalLinks(True)
+        title_row.addWidget(self.link_label)
+        title_row.addStretch()
         link_btn = QToolButton()
         link_btn.setText("🔗")
         link_btn.clicked.connect(lambda: self.open_link())
         if ctx:
             setup_animation(link_btn, ctx)
-        layout.addWidget(link_btn)
+        title_row.addWidget(link_btn)
+        outer.addLayout(title_row)
 
-        desc = QLabel(task["desc"])
-        layout.addWidget(desc)
-        layout.addStretch()
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        outer.addWidget(line)
+
+        row = QHBoxLayout()
+        self.desc_label = QLabel(task["desc"])
+        row.addWidget(self.desc_label)
+        row.addStretch()
 
         self.time_label = QLabel()
         self.time_label.setFixedWidth(60)
         self.time_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        layout.addWidget(self.time_label)
+        row.addWidget(self.time_label)
 
         edit_btn = QToolButton()
         edit_btn.setText("✏️")
         edit_btn.clicked.connect(lambda _=False: edit_cb())
         if ctx:
             setup_animation(edit_btn, ctx)
-        layout.addWidget(edit_btn)
+        row.addWidget(edit_btn)
 
         del_btn = QToolButton()
         del_btn.setText("🗑️")
         del_btn.clicked.connect(lambda _=False: delete_cb())
         if ctx:
             setup_animation(del_btn, ctx)
-        layout.addWidget(del_btn)
+        row.addWidget(del_btn)
+        outer.addLayout(row)
 
         bg = task.get("color", "")
         fg = ""
@@ -86,12 +101,12 @@ class TaskItemWidget(QWidget):
             if b == bg:
                 fg = f
                 break
+        style = "border:1px solid #555;border-radius:6px;"
         if bg:
             color = QColor(bg)
             darker = color.darker(110)
-            self.setStyleSheet(
-                f"background-color:{darker.name()};color:{fg};border:1px solid #555;border-radius:6px;"
-            )
+            style = f"background-color:{darker.name()};color:{fg};" + style
+        self.setStyleSheet(style)
 
         self._duration = task.get("duration", max(1, int(task["remind_at"] - time.time())))
         self._timer = QTimer(self)
