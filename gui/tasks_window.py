@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QMenu,
     QWidget,
     QToolButton,
+    QGraphicsDropShadowEffect,
 )
 from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt, QTimer
@@ -114,12 +115,9 @@ class TaskItemWidget(QWidget):
                 fg = f
                 break
         base = (
-            "#taskBlock{background-color:rgba(255,255,255,0.02);"
-            "border:1px solid rgba(255,255,255,0.1);border-radius:8px;"
-            "padding:12px 16px;box-shadow:0 0 8px rgba(0,255,255,0.1);"
-            "transition:box-shadow 0.3s,background-color 0.3s;}"
-            "#taskBlock:hover{box-shadow:0 0 12px rgba(0,255,255,0.3);"
-            "background-color:rgba(255,255,255,0.04);}"
+            "#taskBlock{background-color:rgba(255,255,255,0.06);"
+            "border:1px solid rgba(255,255,255,0.15);border-radius:8px;"
+            "padding:12px 16px;}"
         )
 
         style = base
@@ -128,13 +126,17 @@ class TaskItemWidget(QWidget):
             darker = color.darker(110)
             style = (
                 f"#taskBlock{{background-color:{darker.name()};color:{fg};"
-                "border:1px solid rgba(255,255,255,0.1);border-radius:8px;"
-                "padding:12px 16px;box-shadow:0 0 8px rgba(0,255,255,0.1);"
-                "transition:box-shadow 0.3s,background-color 0.3s;}}"
-                "#taskBlock:hover{box-shadow:0 0 12px rgba(0,255,255,0.3);"
-                "background-color:rgba(255,255,255,0.04);}"
+                "border:1px solid rgba(255,255,255,0.15);border-radius:8px;"
+                "padding:12px 16px;}"
             )
         self.setStyleSheet(style)
+
+        self.shadow = QGraphicsDropShadowEffect(self)
+        self.shadow.setBlurRadius(18)
+        self.shadow.setOffset(0, 0)
+        self.shadow.setColor(QColor(0, 255, 255, 60))
+        self.shadow.setEnabled(False)
+        self.setGraphicsEffect(self.shadow)
         if ctx:
             setup_animation(self, ctx)
 
@@ -148,6 +150,14 @@ class TaskItemWidget(QWidget):
     def open_link(self):
         if self.task.get("link"):
             webbrowser.open(self.task["link"])
+
+    def enterEvent(self, event):
+        self.shadow.setEnabled(True)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.shadow.setEnabled(False)
+        super().leaveEvent(event)
 
     def update_timer(self):
         remaining = max(0, int(self.task["remind_at"] - time.time()))
@@ -227,7 +237,7 @@ class TasksDialog(QDialog):
         self.list.setStyleSheet(
             "QListWidget::item{border:none;margin:0;padding:0;}"
         )
-        self.list.setSpacing(12)
+        self.list.setSpacing(16)
         self.list.itemDoubleClicked.connect(self.edit_task)
         self.list.setContextMenuPolicy(Qt.CustomContextMenu)
         self.list.customContextMenuRequested.connect(self.show_menu)
