@@ -19,6 +19,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt, QTimer
+
+from gui.tasks_window import TasksDialog
 import logging
 import os
 import pygame
@@ -72,6 +74,10 @@ class MainWindow(QMainWindow):
         self.settings_btn.setText("⚙")
         self.settings_btn.clicked.connect(self.show_settings_dialog)
 
+        self.tasks_btn = QToolButton()
+        self.tasks_btn.setText("📝")
+        self.tasks_btn.clicked.connect(self.show_tasks_dialog)
+
         self.prev_btn = QToolButton()
         self.prev_btn.setText("⏮")
         self.prev_btn.clicked.connect(self.play_prev_track)
@@ -104,6 +110,7 @@ class MainWindow(QMainWindow):
             self.play_btn,
             self.next_btn,
             self.volume_btn,
+            self.tasks_btn,
             self.settings_btn,
         ):
             setup_animation(btn, ctx)
@@ -113,6 +120,7 @@ class MainWindow(QMainWindow):
         header.addWidget(self.next_btn)
         header.addWidget(self.volume_btn)
         header.addWidget(self.volume_slider)
+        header.addWidget(self.tasks_btn)
         header.addWidget(self.settings_btn)
         self.main_layout.addLayout(header)
 
@@ -389,6 +397,10 @@ class MainWindow(QMainWindow):
         from gui.settings_window import SettingsDialog
 
         dlg = SettingsDialog(self.ctx, self)
+        dlg.exec()
+
+    def show_tasks_dialog(self):
+        dlg = TasksDialog(self.ctx, self.ctx.task_manager, self)
         dlg.exec()
 
     def handle_play_button(self):
