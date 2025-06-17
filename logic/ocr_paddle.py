@@ -341,8 +341,11 @@ def detect_repeat_checkbox(
     checkbox_bbox = None
     np_img = np.array(image)
 
+    found_repeat = False
+
     for line in lines:
         if "повторять" in normalize_russian(line["text"]).lower():
+            found_repeat = True
             x1 = min(p[0] for p in line["bbox"])
             y1 = min(p[1] for p in line["bbox"])
             x2 = max(p[0] for p in line["bbox"])
@@ -361,13 +364,44 @@ def detect_repeat_checkbox(
             if roi.size > 0:
                 cv2.imwrite("checkbox_roi.jpg", roi)
                 gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-                _, thresh = cv2.threshold(gray, CHECKBOX_THRESHOLD, 255, cv2.THRESH_BINARY)         
+                _, thresh = cv2.threshold(gray, CHECKBOX_THRESHOLD, 255, cv2.THRESH_BINARY)
                 dark_ratio = (gray < CHECKBOX_THRESHOLD).mean()
                 # ДЕБАГ
                 print(f"[DEBUG] dark_ratio = {dark_ratio:.4f}")
                 if dark_ratio > CHECKBOX_DARK_RATIO:
                     meeting_type = "Регулярная"
             break
+
+    if not found_repeat:
+        # Поле "Повторять" отсутствует. Это может означать, что встреча регулярная
+        # Проверяем блок справа от "Весь день" на наличие текста "Повторять" и его фрагментов
+        all_day_boxes = []
+        for line in lines:
+            norm = normalize_russian(line["text"]).lower()
+            if "весь" in norm and "день" in norm:
+                all_day_boxes.append(line["bbox"])
+
+        fragments = ["повт", "торят", "повтор"]
+
+        for box in all_day_boxes:
+            x_right = max(p[0] for p in box)
+            y_top = min(p[1] for p in box)
+            y_bottom = max(p[1] for p in box)
+            fragment_found = False
+            for ln in lines:
+                lx1 = min(p[0] for p in ln["bbox"])
+                lx2 = max(p[0] for p in ln["bbox"])
+                ly1 = min(p[1] for p in ln["bbox"])
+                ly2 = max(p[1] for p in ln["bbox"])
+                if lx1 >= x_right and ly1 <= y_bottom and ly2 >= y_top:
+                    txt_norm = normalize_russian(ln["text"]).lower()
+                    if any(frag in txt_norm for frag in fragments):
+                        fragment_found = True
+                        break
+            if not fragment_found:
+                meeting_type = "Регулярная"
+                break
+
     return meeting_type, repeat_bbox, checkbox_bbox
 
 
