@@ -247,6 +247,7 @@ def recognize_from_clipboard(ctx: UIContext) -> None:
 
     lines, meeting_type = run_ocr(img, use_gpu=ctx.ocr_mode == "GPU")
     parsed, scores = parse_fields(lines, return_scores=True)
+    print("[DEBUG] OCR lines:", [l["text"] for l in lines])
 
     need_fallback = not parsed.get("name") or scores.get("name", 1.0) < 0.5
     if need_fallback:
@@ -264,6 +265,10 @@ def recognize_from_clipboard(ctx: UIContext) -> None:
             parsed["start"] = start
         if end and not parsed.get("end"):
             parsed["end"] = end
+
+    if parsed.get("room_raw"):
+        texts_all = [l["text"] for l in lines]
+        parsed["room_raw"] = choose_longer_room(parsed["room_raw"], texts_all)
 
     validated = validate_with_rooms(parsed, rooms_by_bz, fuzzy_threshold=0.6)
     update_gui_fields(validated, ctx, scores=scores, meeting_type=meeting_type)
@@ -640,6 +645,27 @@ def _normalize_room_with_ocr_fixes(text: str) -> str:
 def _strip_prefix_for_match(text: str) -> str:
     """Убрать префикс вида "<цифра>[буква]." в начале."""
     return re.sub(r"^[1-9][A-ZА-Яа-я]?\.", "", text).strip()
+
+
+def choose_longer_room(base: str, texts: List[str]) -> str:
+    """Вернуть более длинное совпадение названия переговорки из ``texts``.
+
+    Если в ``texts`` встречается строка, начинающаяся с ``base`` (с учётом
+    нормализации) и она длиннее ``base``, будет возвращена эта строка.
+    В противном случае возвращается ``base``.
+    """
+
+    base_norm = _normalize_room_with_ocr_fixes(base)
+    best = base
+    for t in texts:
+        if len(t) <= len(best):
+            continue
+        norm = _normalize_room_with_ocr_fixes(t)
+        if norm.startswith(base_norm):
+            best = t
+    if best != base:
+        print(f"[DEBUG] choose_longer_room: '{base}' -> '{best}'")
+    return best
 
 
 def validate_with_rooms(
