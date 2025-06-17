@@ -247,6 +247,7 @@ def recognize_from_clipboard(ctx: UIContext) -> None:
 
     lines, meeting_type = run_ocr(img, use_gpu=ctx.ocr_mode == "GPU")
     parsed, scores = parse_fields(lines, return_scores=True)
+    print("[DEBUG] OCR lines:", [l["text"] for l in lines])
 
     need_fallback = not parsed.get("name") or scores.get("name", 1.0) < 0.5
     if need_fallback:
@@ -649,9 +650,9 @@ def _strip_prefix_for_match(text: str) -> str:
 def choose_longer_room(base: str, texts: List[str]) -> str:
     """Вернуть более длинное совпадение названия переговорки из ``texts``.
 
-    Если в списке ``texts`` встречается строка, начинающаяся с ``base`` (с учётом
-    нормализации) и она длиннее ``base``, возвращается эта более длинная строка.
-    В противном случае возвращается ``base`` без изменений.
+    Если в ``texts`` встречается строка, начинающаяся с ``base`` (с учётом
+    нормализации) и она длиннее ``base``, будет возвращена эта строка.
+    В противном случае возвращается ``base``.
     """
 
     base_norm = _normalize_room_with_ocr_fixes(base)
@@ -662,6 +663,8 @@ def choose_longer_room(base: str, texts: List[str]) -> str:
         norm = _normalize_room_with_ocr_fixes(t)
         if norm.startswith(base_norm):
             best = t
+    if best != base:
+        print(f"[DEBUG] choose_longer_room: '{base}' -> '{best}'")
     return best
 
 
