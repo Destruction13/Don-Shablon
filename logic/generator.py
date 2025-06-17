@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QApplication,
 )
+import webbrowser
 
 try:
     from PySide6.QtCore import QDate, Qt, QTime, QTimer, QEvent
@@ -1148,6 +1149,8 @@ def show_auto_report_dialog(ctx: UIContext) -> bool | None:
         ctx.report_text.setVisible(True)
     if getattr(ctx, "auto_copy_enabled", False):
         copy_generated_text(ctx)
+    if tg:
+        webbrowser.open(tg)
     return True
 
 
