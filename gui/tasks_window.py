@@ -116,17 +116,16 @@ class TaskItemWidget(QWidget):
                 break
         base = (
             "#taskBlock{background-color:rgba(255,255,255,0.06);"
-            "border:1px solid rgba(255,255,255,0.15);border-radius:8px;"
+            "border:1px solid rgba(255,255,255,0.3);border-radius:10px;"
             "padding:12px 16px;}"
         )
 
         style = base
         if bg:
             color = QColor(bg)
-            darker = color.darker(110)
             style = (
-                f"#taskBlock{{background-color:{darker.name()};color:{fg};"
-                "border:1px solid rgba(255,255,255,0.15);border-radius:8px;"
+                f"#taskBlock{{background-color:{color.name()};color:{fg};"
+                "border:1px solid rgba(255,255,255,0.3);border-radius:10px;"
                 "padding:12px 16px;}"
             )
         self.setStyleSheet(style)
@@ -137,8 +136,8 @@ class TaskItemWidget(QWidget):
         self.shadow.setColor(QColor(0, 255, 255, 60))
         self.shadow.setEnabled(False)
         self.setGraphicsEffect(self.shadow)
-        if ctx:
-            setup_animation(self, ctx)
+        # Do not apply hover animations to the whole widget
+        # to avoid replacing our drop shadow effect
 
         self._duration = task.get("duration", max(1, int(task["remind_at"] - time.time())))
         self._timer = QTimer(self)
@@ -152,11 +151,17 @@ class TaskItemWidget(QWidget):
             webbrowser.open(self.task["link"])
 
     def enterEvent(self, event):
-        self.shadow.setEnabled(True)
+        try:
+            self.shadow.setEnabled(True)
+        except RuntimeError:
+            pass
         super().enterEvent(event)
 
     def leaveEvent(self, event):
-        self.shadow.setEnabled(False)
+        try:
+            self.shadow.setEnabled(False)
+        except RuntimeError:
+            pass
         super().leaveEvent(event)
 
     def update_timer(self):
