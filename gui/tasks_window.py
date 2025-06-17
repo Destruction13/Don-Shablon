@@ -49,7 +49,14 @@ class TaskItemWidget(QWidget):
         self.task = task
         layout = QHBoxLayout(self)
         layout.setContentsMargins(4, 2, 4, 2)
-        desc = QLabel(f"{task['desc']} ({task['link']})")
+        link_btn = QToolButton()
+        link_btn.setText("🔗")
+        link_btn.clicked.connect(lambda: self.open_link())
+        if ctx:
+            setup_animation(link_btn, ctx)
+        layout.addWidget(link_btn)
+
+        desc = QLabel(task["desc"])
         layout.addWidget(desc)
         layout.addStretch()
         self.progress = QProgressBar()
@@ -87,6 +94,10 @@ class TaskItemWidget(QWidget):
         self._timer.timeout.connect(self.update_progress)
         self.update_progress()
         self._timer.start()
+
+    def open_link(self):
+        if self.task.get("link"):
+            webbrowser.open(self.task["link"])
 
     def update_progress(self):
         remaining = max(0, int(self.task['remind_at'] - time.time()))
@@ -153,6 +164,7 @@ class TasksDialog(QDialog):
         self.ctx = ctx
         self.manager = manager
         self.setWindowTitle("Мои задачи")
+        self.resize(800, 1000)
         layout = QVBoxLayout(self)
         self.add_btn = QPushButton("＋ Добавить задачу")
         self.add_btn.clicked.connect(self.add_task)
@@ -161,7 +173,7 @@ class TasksDialog(QDialog):
         layout.addWidget(self.add_btn)
         self.list = QListWidget()
         self.list.setStyleSheet(
-            "QListWidget::item{border:1px solid #888;border-radius:6px;margin:2px;padding:4px;}"
+            "QListWidget::item{border:none;border-radius:6px;margin:2px;padding:4px;}"
         )
         self.list.itemDoubleClicked.connect(self.edit_task)
         self.list.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -178,7 +190,7 @@ class TasksDialog(QDialog):
             widget = TaskItemWidget(
                 task,
                 lambda tid=task["id"]: self.edit_task_by_id(tid),
-                lambda tid=task["id"]: self.manager.remove_task(tid),
+                lambda tid=task["id"]: self.confirm_delete_task(tid),
                 ctx=self.ctx,
             )
             self.list.addItem(item)
@@ -210,6 +222,17 @@ class TasksDialog(QDialog):
                 return
             self.manager.update_task(tid, data["link"], data["desc"], data["minutes"], data["color"])
 
+    def confirm_delete_task(self, tid: int):
+        reply = QMessageBox.question(
+            self,
+            "Удаление",
+            "Вы точно хотите удалить эту задачу?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if reply == QMessageBox.Yes:
+            self.manager.remove_task(tid)
+
     def show_menu(self, pos):
         item = self.list.itemAt(pos)
         if not item:
@@ -219,7 +242,7 @@ class TasksDialog(QDialog):
         action = menu.exec(self.list.mapToGlobal(pos))
         if action == delete_act:
             tid = item.data(Qt.UserRole)
-            self.manager.remove_task(tid)
+            self.confirm_delete_task(tid)
 
 
 def show_task_notification(ctx, manager, task):
