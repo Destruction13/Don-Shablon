@@ -18,6 +18,7 @@ class TaskManager(QObject):
         self.path = os.path.join(os.path.dirname(os.path.dirname(__file__)), path)
         self.tasks: List[Dict[str, Any]] = []
         self.timers: Dict[int, QTimer] = {}
+        self.notifications_enabled: bool = True
         self.load()
 
     def load(self) -> None:
@@ -32,6 +33,7 @@ class TaskManager(QObject):
             self.tasks = []
         for task in self.tasks:
             task.setdefault("duration", max(1, int(task["remind_at"] - time.time())))
+            task.setdefault("starred", False)
             self._schedule(task)
 
     def save(self) -> None:
@@ -51,6 +53,7 @@ class TaskManager(QObject):
             "remind_at": time.time() + duration,
             "color": color,
             "duration": duration,
+            "starred": False,
         }
         self.tasks.append(task)
         self.save()
@@ -84,6 +87,18 @@ class TaskManager(QObject):
                 self._schedule(task)
                 break
 
+    def star_task(self, task_id: int, starred: bool) -> None:
+        for task in self.tasks:
+            if task["id"] == task_id:
+                task["starred"] = starred
+                self.save()
+                self.task_changed.emit()
+                break
+
+    def set_notifications_enabled(self, enabled: bool) -> None:
+        self.notifications_enabled = enabled
+        self.task_changed.emit()
+
     def remove_task(self, task_id: int) -> None:
         self.tasks = [t for t in self.tasks if t["id"] != task_id]
         timer = self.timers.pop(task_id, None)
@@ -108,6 +123,8 @@ class TaskManager(QObject):
         timer.start(delay)
 
     def _notify(self, task_id: int) -> None:
+        if not self.notifications_enabled:
+            return
         task = next((t for t in self.tasks if t["id"] == task_id), None)
         if not task:
             return
