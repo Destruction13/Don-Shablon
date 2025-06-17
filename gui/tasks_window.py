@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QToolButton,
     QGraphicsDropShadowEffect,
+    QSizePolicy
 )
 from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt, QTimer
@@ -51,35 +52,58 @@ class TaskItemWidget(QWidget):
         outer = QVBoxLayout(self)
         outer.setContentsMargins(8, 8, 8, 8)
         self.setMinimumHeight(80)
+        self.setAutoFillBackground(True)
+        self.setAttribute(Qt.WA_StyledBackground, True)
+
 
         title_row = QHBoxLayout()
         self.link_label = QLabel(f"<b>{task['link']}</b>")
         self.link_label.setTextInteractionFlags(Qt.TextBrowserInteraction)
         self.link_label.setOpenExternalLinks(True)
+        self.link_label.setStyleSheet("""
+                                        QLabel {
+                                            padding: 6px 10px;
+                                            background-color: rgba(255,255,255,0.07);
+                                            border: 1px solid rgba(255,255,255,0.2);
+                                            border-radius: 6px;
+                                            color: #5ddcff;
+                                            font-weight: bold;
+                                            text-decoration: underline;
+                                        }
+                                        QLabel:hover {
+                                            color: #00ffff;
+                                            background-color: rgba(0,255,255,0.1);
+                                        }
+                                    """)
+
+        
+        self.link_label.mousePressEvent = lambda event: webbrowser.open(task["link"])
+        self.link_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.link_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         title_row.addWidget(self.link_label)
         title_row.addStretch()
-        link_btn = QToolButton()
-        link_btn.setText("🔗 Перейти по ссылке")
-        link_btn.setStyleSheet(
-            "QToolButton{min-height:24px;padding:4px 8px;border-radius:4px;}"
-            "QToolButton:hover{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,"
-            " stop:0 #5a5a5a, stop:1 #3a3a3a);}"
-        )
-        link_btn.clicked.connect(lambda: self.open_link())
-        if ctx:
-            setup_animation(link_btn, ctx)
-        title_row.addWidget(link_btn)
         outer.addLayout(title_row)
 
 
 
         row = QHBoxLayout()
         self.desc_label = QLabel(task["desc"])
+        self.desc_label = QLabel(task["desc"])
+        self.desc_label.setWordWrap(True)
+        self.desc_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.desc_label.setStyleSheet("""
+            QLabel {
+                padding: 6px 10px;
+                background-color: rgba(255,255,255,0.07);
+                border: 1px solid rgba(255,255,255,0.2);
+                border-radius: 6px;
+            }
+        """)
         row.addWidget(self.desc_label)
         row.addStretch()
 
         self.time_label = QLabel()
-        self.time_label.setFixedWidth(60)
+        self.time_label.setFixedWidth(80)
         self.time_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         row.addWidget(self.time_label)
 
@@ -87,7 +111,7 @@ class TaskItemWidget(QWidget):
         edit_btn.setText("✏️")
         edit_btn.setStyleSheet(
             "QToolButton{min-height:24px;padding:4px 8px;border-radius:4px;}"
-            "QToolButton:hover{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,"
+            "QToolButton:hover{background-color:qlineargradient(x1:0,y1:0,x2:0,y2:1,"
             " stop:0 #5a5a5a, stop:1 #3a3a3a);}"
         )
         edit_btn.clicked.connect(lambda _=False: edit_cb())
@@ -99,7 +123,7 @@ class TaskItemWidget(QWidget):
         del_btn.setText("🗑️")
         del_btn.setStyleSheet(
             "QToolButton{min-height:24px;padding:4px 8px;border-radius:4px;}"
-            "QToolButton:hover{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,"
+            "QToolButton:hover{background-color:qlineargradient(x1:0,y1:0,x2:0,y2:1,"
             " stop:0 #5a5a5a, stop:1 #3a3a3a);}"
         )
         del_btn.clicked.connect(lambda _=False: delete_cb())
@@ -108,27 +132,35 @@ class TaskItemWidget(QWidget):
         row.addWidget(del_btn)
         outer.addLayout(row)
 
-        bg = task.get("color", "")
+        color_val = task.get("color", "")
+        bg = color_val
         fg = ""
-        for _name, (b, f) in COLOR_SCHEMES.items():
-            if b == bg:
-                fg = f
-                break
+        if color_val in COLOR_SCHEMES:
+            bg, fg = COLOR_SCHEMES[color_val]
+        else:
+            for _name, (b, f) in COLOR_SCHEMES.items():
+                if b == color_val:
+                    fg = f
+                    break
         base = (
-            "#taskBlock{background-color:rgba(255,255,255,0.06);"
-            "border:1px solid rgba(255,255,255,0.15);border-radius:8px;"
-            "padding:12px 16px;}"
+            "background-color: rgba(255,255,255,0.06);"
+            "border: 1px solid rgba(255,255,255,0.15);"
+            "border-radius: 10px;"
+            "padding: 12px 16px;"
         )
+
 
         style = base
         if bg:
             color = QColor(bg)
-            darker = color.darker(110)
             style = (
-                f"#taskBlock{{background-color:{darker.name()};color:{fg};"
-                "border:1px solid rgba(255,255,255,0.15);border-radius:8px;"
-                "padding:12px 16px;}"
+                f"background-color:{color.name()};"
+                f"color:{fg};"
+                "border:1px solid rgba(255,255,255,0.15);"
+                "border-radius:10px;"
+                "padding:12px 16px;"
             )
+
         self.setStyleSheet(style)
 
         self.shadow = QGraphicsDropShadowEffect(self)
@@ -137,8 +169,8 @@ class TaskItemWidget(QWidget):
         self.shadow.setColor(QColor(0, 255, 255, 60))
         self.shadow.setEnabled(False)
         self.setGraphicsEffect(self.shadow)
-        if ctx:
-            setup_animation(self, ctx)
+        # Do not apply hover animations to the whole widget
+        # to avoid replacing our drop shadow effect
 
         self._duration = task.get("duration", max(1, int(task["remind_at"] - time.time())))
         self._timer = QTimer(self)
@@ -152,11 +184,17 @@ class TaskItemWidget(QWidget):
             webbrowser.open(self.task["link"])
 
     def enterEvent(self, event):
-        self.shadow.setEnabled(True)
+        try:
+            self.shadow.setEnabled(True)
+        except RuntimeError:
+            pass
         super().enterEvent(event)
 
     def leaveEvent(self, event):
-        self.shadow.setEnabled(False)
+        try:
+            self.shadow.setEnabled(False)
+        except RuntimeError:
+            pass
         super().leaveEvent(event)
 
     def update_timer(self):
@@ -215,7 +253,7 @@ class TaskEditDialog(QDialog):
             "color": COLOR_SCHEMES.get(self.color_combo.currentText(), ("", ""))[0],
         }
 
-
+IS_DARK_THEME = True
 class TasksDialog(QDialog):
     def __init__(self, ctx, manager, parent=None):
         super().__init__(parent)
@@ -225,12 +263,25 @@ class TasksDialog(QDialog):
         self.resize(800, 1000)
         layout = QVBoxLayout(self)
         self.add_btn = QPushButton("＋ Добавить задачу")
+        self.add_btn.setMinimumHeight(40)
         self.add_btn.clicked.connect(self.add_task)
-        self.add_btn.setStyleSheet(
-            "min-height:36px;padding:8px 12px;font-size:14px;border-radius:6px;"
-            "QPushButton:hover{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,"
-            " stop:0 #5a5a5a, stop:1 #3a3a3a);}"
-        )
+        self.add_btn.setStyleSheet("""
+                                        QPushButton {
+                                            min-height: 26px;
+                                            padding: 8px 12px;
+                                            font-size: 30px;
+                                            border: 2px solid rgba(130, 40, 10, 0.5);
+                                            border-radius: 16px;
+                                        }
+                                        QPushButton:hover {
+                                            background-color: qlineargradient(
+                                                x1:0, y1:0, x2:0, y2:1,
+                                                stop:0 #5a5a5a,
+                                                stop:1 #3a3a3a
+                                            );
+                                        }
+                                    """)
+
         setup_animation(self.add_btn, ctx)
         layout.addWidget(self.add_btn)
         self.list = QListWidget()
@@ -313,7 +364,11 @@ def show_task_notification(ctx, manager, task):
     dlg.setWindowTitle("Напоминание")
     dlg.setWindowFlag(Qt.WindowStaysOnTopHint)
     layout = QVBoxLayout(dlg)
-    layout.addWidget(QLabel(f"Напоминание по задаче: {task['desc']} ({task['link']})"))
+    msg_label = QLabel(f"Напоминание по задаче:\n{task['desc']}\n\n{task['link']}")
+    msg_label.setWordWrap(True)
+    msg_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+    msg_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+    layout.addWidget(msg_label)
     btn_row = QHBoxLayout()
     open_btn = QPushButton("Открыть задачу")
     postpone_btn = QPushButton("Отложить на 5 минут")
