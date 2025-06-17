@@ -31,6 +31,7 @@ class TaskManager(QObject):
         else:
             self.tasks = []
         for task in self.tasks:
+            task.setdefault("duration", max(1, int(task["remind_at"] - time.time())))
             self._schedule(task)
 
     def save(self) -> None:
@@ -42,12 +43,14 @@ class TaskManager(QObject):
 
     def add_task(self, link: str, desc: str, minutes: int, color: str = "") -> Dict[str, Any]:
         task_id = int(time.time() * 1000)
+        duration = minutes * 60
         task = {
             "id": task_id,
             "link": link,
             "desc": desc,
-            "remind_at": time.time() + minutes * 60,
+            "remind_at": time.time() + duration,
             "color": color,
+            "duration": duration,
         }
         self.tasks.append(task)
         self.save()
@@ -58,11 +61,13 @@ class TaskManager(QObject):
     def update_task(self, task_id: int, link: str, desc: str, minutes: int, color: str) -> None:
         for task in self.tasks:
             if task["id"] == task_id:
+                duration = minutes * 60
                 task.update({
                     "link": link,
                     "desc": desc,
-                    "remind_at": time.time() + minutes * 60,
+                    "remind_at": time.time() + duration,
                     "color": color,
+                    "duration": duration,
                 })
                 self.save()
                 self._schedule(task)
@@ -72,7 +77,9 @@ class TaskManager(QObject):
     def postpone_task(self, task_id: int, minutes: int) -> None:
         for task in self.tasks:
             if task["id"] == task_id:
-                task["remind_at"] = time.time() + minutes * 60
+                duration = minutes * 60
+                task["remind_at"] = time.time() + duration
+                task["duration"] = duration
                 self.save()
                 self._schedule(task)
                 break
