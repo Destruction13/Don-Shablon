@@ -67,7 +67,7 @@ def _init_ocr(use_gpu: bool = False):
         except Exception as e:
             logging.error("[OCR] Failed to import EasyOCR: %s", e)
             raise
-        _ocr_instance = easyocr.Reader(['ru'], gpu=use_gpu)
+        _ocr_instance = easyocr.Reader(['ru', 'en'], gpu=use_gpu)
         _ocr_gpu = use_gpu
         logging.debug("[OCR] EasyOCR successfully initialized")
 
