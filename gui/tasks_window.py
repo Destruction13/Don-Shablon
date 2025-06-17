@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QHBoxLayout,
+    QGridLayout,
     QLabel,
     QLineEdit,
     QTextEdit,
@@ -161,24 +162,27 @@ class TaskItemWidget(QWidget):
                 if b == color_val:
                     fg = f
                     break
-        base = (
+        base = [
             "background-color: rgba(255,255,255,0.06);"
             "border: 1px solid rgba(255,255,255,0.15);"
             "border-radius: 10px;"
             "padding: 12px 16px;"
-        )
+        ]
 
 
-        style = base
+        style = " ".join(base)
         if bg:
             color = QColor(bg)
-            style = (
-                f"background-color:{color.name()};"
-                f"color:{fg};"
-                "border:1px solid rgba(255,255,255,0.15);"
-                "border-radius:10px;"
-                "padding:12px 16px;"
-            )
+            if not fg:
+                brightness = 0.299 * color.red() + 0.587 * color.green() + 0.114 * color.blue()
+                fg = "#000000" if brightness > 186 else "#ffffff"
+            style = " ".join([
+                f"background-color:{color.name()};",
+                f"color:{fg};",
+                "border:1px solid rgba(255,255,255,0.15);",
+                "border-radius:10px;",
+                "padding:12px 16px;",
+            ])
 
         self.setStyleSheet(style)
 
@@ -252,16 +256,26 @@ class TaskEditDialog(QDialog):
         layout.addWidget(QLabel("Цветовая метка"))
         self.color_combo = QComboBox()
         self.color_combo.addItems(COLOR_SCHEMES.keys())
+
         current = self._task.get("color", "")
-        for name, (bg, _fg) in COLOR_SCHEMES.items():
-            if bg == current:
-                self.color_combo.setCurrentText(name)
-                break
+        self.custom_color = ""
+        if current:
+            if current in COLOR_SCHEMES:
+                self.color_combo.setCurrentText(current)
+            else:
+                for name, (bg, _fg) in COLOR_SCHEMES.items():
+                    if bg == current:
+                        self.color_combo.setCurrentText(name)
+                        break
+                else:
+                    self.custom_color = current
+
         layout.addWidget(self.color_combo)
-        self.custom_color = self._task.get("color", "") if current and current not in COLOR_SCHEMES else ""
+
         self.color_btn = QPushButton("🎨 Выбрать цвет")
         self.color_btn.clicked.connect(self.choose_color)
         layout.addWidget(self.color_btn)
+        self.color_combo.currentIndexChanged.connect(self.reset_custom_color)
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
@@ -272,6 +286,10 @@ class TaskEditDialog(QDialog):
         if color.isValid():
             self.custom_color = color.name()
             self.color_btn.setStyleSheet(f"background-color:{self.custom_color};")
+
+    def reset_custom_color(self, *_):
+        self.custom_color = ""
+        self.color_btn.setStyleSheet("")
 
     @property
     def data(self) -> dict:
@@ -312,17 +330,22 @@ class TasksDialog(QDialog):
                                         }
                                     """)
 
+        self.add_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         setup_animation(self.add_btn, ctx)
-        header_row = QHBoxLayout()
-        header_row.addWidget(self.add_btn)
-        header_row.addStretch()
+
+        header_widget = QWidget()
+        header_layout = QGridLayout(header_widget)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.addWidget(self.add_btn, 0, 0)
+
         self.notify_btn = QToolButton()
         self.notify_btn.setText("🔔" if self.manager.notifications_enabled else "🔇")
         self.notify_btn.setCheckable(True)
         self.notify_btn.setChecked(self.manager.notifications_enabled)
         self.notify_btn.clicked.connect(self.toggle_notifications)
-        header_row.addWidget(self.notify_btn)
-        layout.addLayout(header_row)
+        header_layout.addWidget(self.notify_btn, 0, 0, Qt.AlignRight | Qt.AlignTop)
+
+        layout.addWidget(header_widget)
         self.list = QListWidget()
         self.list.setStyleSheet(
             "QListWidget::item{border:none;margin:0;padding:0;}"
