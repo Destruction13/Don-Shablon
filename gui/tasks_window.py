@@ -48,8 +48,8 @@ class TaskItemWidget(QWidget):
         super().__init__()
         self.task = task
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(8, 6, 8, 6)
-        self.setMinimumHeight(60)
+        outer.setContentsMargins(8, 8, 8, 8)
+        self.setMinimumHeight(80)
 
         title_row = QHBoxLayout()
         self.link_label = QLabel(f"<b>{task['link']}</b>")
@@ -58,7 +58,7 @@ class TaskItemWidget(QWidget):
         title_row.addWidget(self.link_label)
         title_row.addStretch()
         link_btn = QToolButton()
-        link_btn.setText("🔗")
+        link_btn.setText("🔗 Перейти по ссылке")
         link_btn.clicked.connect(lambda: self.open_link())
         if ctx:
             setup_animation(link_btn, ctx)
@@ -107,6 +107,8 @@ class TaskItemWidget(QWidget):
             darker = color.darker(110)
             style = f"background-color:{darker.name()};color:{fg};" + style
         self.setStyleSheet(style)
+        if ctx:
+            setup_animation(self, ctx)
 
         self._duration = task.get("duration", max(1, int(task["remind_at"] - time.time())))
         self._timer = QTimer(self)
