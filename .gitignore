@@ -22,5 +22,6 @@ ocr_debug_output.json
 template_history.json
 user_settings.json
 user_templates.json
+tasks.json
 
 
