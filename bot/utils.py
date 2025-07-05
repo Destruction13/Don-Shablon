@@ -40,17 +40,29 @@ async def process_image(data: bytes) -> Tuple[Dict[str, str], str]:
     return validated, meeting_type
 
 
-def build_greeting(name: str) -> Tuple[str, str]:
-    """Simplified greeting builder returning greeting and gender (always male)."""
-    greeting = f"Привет, {name}!"
-    gender = "м"
+def build_greeting(
+    name: str, speaker_name: str | None = None, speaker_gender: str | None = None
+) -> Tuple[str, str]:
+    """Return greeting text and gender using optional speaker info."""
+    if speaker_name:
+        greeting = f"Привет, {name}! Я {speaker_name}, ассистент. Приятно познакомиться!"
+        gender = speaker_gender or "ж"
+    else:
+        greeting = f"Привет, {name}!"
+        gender = "ж"
     return greeting, gender
 
 
 def build_actualization_message(
-    fields: Dict[str, str], meeting_type: str, meeting_link: str | None
+    fields: Dict[str, str],
+    meeting_type: str,
+    meeting_link: str | None,
+    speaker_name: str | None = None,
+    speaker_gender: str | None = None,
 ) -> str:
-    greeting, gender = build_greeting(fields.get("name", ""))
+    greeting, gender = build_greeting(
+        fields.get("name", ""), speaker_name, speaker_gender
+    )
     thanks_word = "признателен" if gender == "м" else "признательна"
     myself_word = "сам" if gender == "м" else "сама"
 
@@ -78,9 +90,16 @@ def build_actualization_message(
 
 
 def build_exchange_message(
-    fields: Dict[str, str], meeting_type: str, my_room: str, meeting_link: str | None
+    fields: Dict[str, str],
+    meeting_type: str,
+    my_room: str,
+    meeting_link: str | None,
+    speaker_name: str | None = None,
+    speaker_gender: str | None = None,
 ) -> str:
-    greeting, gender = build_greeting(fields.get("name", ""))
+    greeting, gender = build_greeting(
+        fields.get("name", ""), speaker_name, speaker_gender
+    )
     thanks_word = "признателен" if gender == "м" else "признательна"
     myself_word = "сам" if gender == "м" else "сама"
 

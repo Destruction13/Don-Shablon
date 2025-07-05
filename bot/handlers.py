@@ -60,13 +60,8 @@ async def set_auto_login(message: types.Message) -> None:
     session = sessions.get(message.from_user.id)
     session.organizer_login = message.text.strip().lstrip("@")
     session.awaiting_auto_login = False
-    if not session.organizer_tg:
-        session.awaiting_auto_tg = True
-        await message.answer("Введите ссылку на Telegram организатора")
-    elif session.pending_fields:
-        report = build_report(session.pending_fields, session.pending_type, session)
-        await message.answer(report, parse_mode=None)
-        sessions.reset(message.from_user.id)
+    session.awaiting_auto_tg = True
+    await message.answer("Введите ссылку на Telegram организатора")
 
 
 @router.message(lambda m: sessions.get(m.from_user.id).awaiting_auto_tg and m.text)
@@ -74,6 +69,20 @@ async def set_auto_tg(message: types.Message) -> None:
     session = sessions.get(message.from_user.id)
     session.organizer_tg = message.text.strip()
     session.awaiting_auto_tg = False
+    if session.main_message_id:
+        markup = InlineKeyboardMarkup(
+            inline_keyboard=[[
+                InlineKeyboardButton(text="Написать организатору", url=session.organizer_tg)
+            ]]
+        )
+        try:
+            await message.bot.edit_message_reply_markup(
+                chat_id=message.chat.id,
+                message_id=session.main_message_id,
+                reply_markup=markup,
+            )
+        except Exception:
+            pass
     if session.pending_fields:
         report = build_report(session.pending_fields, session.pending_type, session)
         await message.answer(report, parse_mode=None)
@@ -129,37 +138,105 @@ async def handle_image(message: types.Message) -> None:
     file_bytes = await message.bot.download(file.file_id)
     data = file_bytes.getvalue()
     fields, meeting_type = await process_image(data)
+    session.pending_fields = fields
+    session.pending_type = meeting_type
+    session.awaiting_mode = True
+    markup = InlineKeyboardMarkup(
+        inline_keyboard=[[
+            InlineKeyboardButton(text="Ася", callback_data="mode_asya"),
+            InlineKeyboardButton(text="Личное сообщение", callback_data="mode_ls"),
+        ]]
+    )
+    await message.answer("Выберите стиль сообщения:", reply_markup=markup)
+
+
+@router.callback_query(lambda c: c.data in {"mode_asya", "mode_ls"})
+async def choose_mode(callback: types.CallbackQuery) -> None:
+    await callback.answer()
+    session = sessions.get(callback.from_user.id)
+    if not session.pending_fields:
+        await callback.message.answer("Данные не найдены, отправь скриншот заново")
+        return
+    asya = callback.data == "mode_asya"
+    speaker_name = None
+    speaker_gender = None
+    if not asya:
+        if session.user_gender is None:
+            session.awaiting_gender = True
+            markup = InlineKeyboardMarkup(
+                inline_keyboard=[[
+                    InlineKeyboardButton(text="Мужской", callback_data="gender_m"),
+                    InlineKeyboardButton(text="Женский", callback_data="gender_f"),
+                ]]
+            )
+            await callback.message.answer(
+                "Выберите свой пол:", reply_markup=markup
+            )
+            return
+        speaker_name = callback.from_user.first_name
+        speaker_gender = session.user_gender
+    fields = session.pending_fields
+    meeting_type = session.pending_type
     if session.theme == "Актуализация":
-        text = build_actualization_message(fields, meeting_type, session.meeting_link)
+        text = build_actualization_message(
+            fields,
+            meeting_type,
+            session.meeting_link,
+            speaker_name,
+            speaker_gender,
+        )
     elif session.theme == "Обмен":
         text = build_exchange_message(
-            fields, meeting_type, session.my_room or "", session.meeting_link
+            fields,
+            meeting_type,
+            session.my_room or "",
+            session.meeting_link,
+            speaker_name,
+            speaker_gender,
         )
     else:
         text = "Эта тема пока не поддерживается"
-    buttons: list[InlineKeyboardButton] = []
-    if session.auto_enabled and session.organizer_tg:
-        buttons.append(
-            InlineKeyboardButton(text="Написать организатору", url=session.organizer_tg)
-        )
-    markup = InlineKeyboardMarkup(inline_keyboard=[buttons]) if buttons else None
-    await message.answer(text, reply_markup=markup, parse_mode="Markdown")
+    sent = await callback.message.answer(text, parse_mode="Markdown")
+    session.main_message_id = sent.message_id
     if session.auto_enabled:
-        if session.organizer_login and session.organizer_tg:
-            report = build_report(fields, meeting_type, session)
-            await message.answer(report, parse_mode=None)
-            sessions.reset(message.from_user.id)
-        else:
-            session.pending_fields = fields
-            session.pending_type = meeting_type
-            if not session.organizer_login:
-                session.awaiting_auto_login = True
-                await message.answer("Введите логин организатора")
-            else:
-                session.awaiting_auto_tg = True
-                await message.answer("Введите ссылку на Telegram организатора")
+        session.awaiting_auto_login = True
+        await callback.message.answer("Введите логин организатора")
     else:
-        sessions.reset(message.from_user.id)
+        sessions.reset(callback.from_user.id)
+
+
+@router.callback_query(lambda c: c.data in {"gender_m", "gender_f"})
+async def set_gender(callback: types.CallbackQuery) -> None:
+    await callback.answer()
+    session = sessions.get(callback.from_user.id)
+    session.user_gender = "м" if callback.data == "gender_m" else "ж"
+    session.awaiting_gender = False
+    fields = session.pending_fields
+    meeting_type = session.pending_type
+    if not fields:
+        await callback.message.answer("Данные не найдены, отправь скриншот заново")
+        return
+    text = build_actualization_message(
+        fields,
+        meeting_type,
+        session.meeting_link,
+        callback.from_user.first_name,
+        session.user_gender,
+    ) if session.theme == "Актуализация" else build_exchange_message(
+        fields,
+        meeting_type,
+        session.my_room or "",
+        session.meeting_link,
+        callback.from_user.first_name,
+        session.user_gender,
+    )
+    sent = await callback.message.answer(text, parse_mode="Markdown")
+    session.main_message_id = sent.message_id
+    if session.auto_enabled:
+        session.awaiting_auto_login = True
+        await callback.message.answer("Введите логин организатора")
+    else:
+        sessions.reset(callback.from_user.id)
 
 
 @router.message()

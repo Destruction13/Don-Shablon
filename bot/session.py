@@ -14,6 +14,10 @@ class Session:
     organizer_tg: str | None = None
     pending_fields: dict | None = None
     pending_type: str | None = None
+    awaiting_mode: bool = False
+    awaiting_gender: bool = False
+    user_gender: str | None = None
+    main_message_id: int | None = None
 
 
 class SessionStorage:
@@ -28,10 +32,6 @@ class SessionStorage:
     def reset(self, user_id: int) -> None:
         if user_id in self._sessions:
             current = self._sessions[user_id]
-            preserved = Session(
-                auto_enabled=current.auto_enabled,
-                organizer_login=current.organizer_login,
-                organizer_tg=current.organizer_tg,
-            )
+            preserved = Session(auto_enabled=current.auto_enabled)
             self._sessions[user_id] = preserved
 
