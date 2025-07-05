@@ -656,10 +656,22 @@ def _make_time_part(start: str, end: str) -> str:
     return ""
 
 
-def _generate_actualization(greeting: str, formatted: str, time_part: str, link_part: str,
-                            room: str, regular: str, thanks_word: str, myself_word: str) -> str:
+def _generate_actualization(
+    greeting: str,
+    formatted: str,
+    time_part: str,
+    link_part: str,
+    room: str,
+    regular: str,
+    thanks_word: str,
+    myself_word: str,
+    meeting_link: str | None = None,
+) -> str:
     """Собрать сообщение для запроса актуальности."""
     is_regular = "регулярная встреча" if regular.lower() == "регулярная" else "встреча"
+    if meeting_link:
+        is_regular = f"[{is_regular}]({meeting_link})"
+        link_part = ""
     share_word = "разово поделиться" if regular.lower() == "регулярная" else "поделиться"
     return (
         f"{greeting}\n\n"
@@ -670,11 +682,23 @@ def _generate_actualization(greeting: str, formatted: str, time_part: str, link_
     )
 
 
-def _generate_exchange(greeting: str, formatted: str, time_part: str, link_part: str,
-                       his_room: str, my_room: str, regular: str,
-                       thanks_word: str, myself_word: str) -> str:
+def _generate_exchange(
+    greeting: str,
+    formatted: str,
+    time_part: str,
+    link_part: str,
+    his_room: str,
+    my_room: str,
+    regular: str,
+    thanks_word: str,
+    myself_word: str,
+    meeting_link: str | None = None,
+) -> str:
     """Собрать сообщение для предложения обмена."""
     is_regular = "регулярная встреча" if regular.lower() == "регулярная" else "встреча"
+    if meeting_link:
+        is_regular = f"[{is_regular}]({meeting_link})"
+        link_part = ""
     share_word = "разово обменяться" if regular.lower() == "регулярная" else "обменяться"
     return (
         f"{greeting}\n\n"
