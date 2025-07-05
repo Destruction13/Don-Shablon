@@ -9,3 +9,5 @@ PySide6
 rapidfuzz
 pyqtgraph
 opencv-python-headless
+aiogram==3.*
+python-dotenv
