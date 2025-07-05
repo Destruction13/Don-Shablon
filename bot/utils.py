@@ -47,7 +47,9 @@ def build_greeting(name: str) -> Tuple[str, str]:
     return greeting, gender
 
 
-def build_actualization_message(fields: Dict[str, str], meeting_type: str) -> str:
+def build_actualization_message(
+    fields: Dict[str, str], meeting_type: str, meeting_link: str | None
+) -> str:
     greeting, gender = build_greeting(fields.get("name", ""))
     thanks_word = "признателен" if gender == "м" else "признательна"
     myself_word = "сам" if gender == "м" else "сама"
@@ -71,11 +73,12 @@ def build_actualization_message(fields: Dict[str, str], meeting_type: str) -> st
         meeting_type,
         thanks_word,
         myself_word,
+        meeting_link,
     )
 
 
 def build_exchange_message(
-    fields: Dict[str, str], meeting_type: str, my_room: str
+    fields: Dict[str, str], meeting_type: str, my_room: str, meeting_link: str | None
 ) -> str:
     greeting, gender = build_greeting(fields.get("name", ""))
     thanks_word = "признателен" if gender == "м" else "признательна"
@@ -101,5 +104,25 @@ def build_exchange_message(
         meeting_type,
         thanks_word,
         myself_word,
+        meeting_link,
+    )
+
+
+def build_report(fields: Dict[str, str], meeting_type: str, session: Any) -> str:
+    """Create text for auto report based on fields and session."""
+    date = fields.get("date", "")
+    start = fields.get("start", "")
+    end = fields.get("end", "")
+    time = f"{start} — {end}" if start and end else start
+    if session.theme == "Обмен":
+        return (
+            f"Предлагаю обмен по [встрече]({session.meeting_link}), которая пройдёт {date}, в {time} "
+            f"в переговорной **{fields.get('room', '')}** на свою **{session.my_room}**. "
+            f"Пишу @{session.organizer_login}\n[Моё сообщение в Telegram]({session.organizer_tg}).\nОтвет: "
+        )
+    return (
+        f"Уточняю актуальность по [встрече]({session.meeting_link}), которая пройдёт {date} "
+        f"в {time} в переговорной **{fields.get('room', '')}** у @{session.organizer_login}\n"
+        f"[Моё сообщение в Telegram]({session.organizer_tg}).\nОтвет: "
     )
 
