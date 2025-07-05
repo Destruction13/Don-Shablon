@@ -11,7 +11,7 @@ async def main() -> None:
     token = os.getenv("BOT_TOKEN")
     if not token:
         raise RuntimeError("BOT_TOKEN environment variable not set")
-    bot = Bot(token, parse_mode=ParseMode.HTML)
+    bot = Bot(token)
     dp = Dispatcher()
     dp.include_router(router)
     await dp.start_polling(bot)
