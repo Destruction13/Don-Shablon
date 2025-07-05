@@ -5,7 +5,6 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
-    CallbackQuery,
 )
 
 from .session import SessionStorage
@@ -52,8 +51,8 @@ async def toggle_auto(message: types.Message) -> None:
         session.awaiting_auto_tg = False
         await message.answer("Автоотчёты выключены")
     else:
-        session.awaiting_auto_login = True
-        await message.answer("Введите логин организатора")
+        session.auto_enabled = True
+        await message.answer("Автоотчёты включены")
 
 
 @router.message(lambda m: sessions.get(m.from_user.id).awaiting_auto_login and m.text)
@@ -61,8 +60,13 @@ async def set_auto_login(message: types.Message) -> None:
     session = sessions.get(message.from_user.id)
     session.organizer_login = message.text.strip().lstrip("@")
     session.awaiting_auto_login = False
-    session.awaiting_auto_tg = True
-    await message.answer("Введите ссылку на Telegram организатора")
+    if not session.organizer_tg:
+        session.awaiting_auto_tg = True
+        await message.answer("Введите ссылку на Telegram организатора")
+    elif session.pending_fields:
+        report = build_report(session.pending_fields, session.pending_type, session)
+        await message.answer(report, parse_mode=None)
+        sessions.reset(message.from_user.id)
 
 
 @router.message(lambda m: sessions.get(m.from_user.id).awaiting_auto_tg and m.text)
@@ -70,8 +74,12 @@ async def set_auto_tg(message: types.Message) -> None:
     session = sessions.get(message.from_user.id)
     session.organizer_tg = message.text.strip()
     session.awaiting_auto_tg = False
-    session.auto_enabled = True
-    await message.answer("Автоотчёты включены")
+    if session.pending_fields:
+        report = build_report(session.pending_fields, session.pending_type, session)
+        await message.answer(report, parse_mode=None)
+        sessions.reset(message.from_user.id)
+    else:
+        await message.answer("Сохранено")
 
 
 @router.message(lambda m: m.text in {"Актуализация", "Обмен", "Организация встречи", "Другое"})
@@ -129,29 +137,29 @@ async def handle_image(message: types.Message) -> None:
         )
     else:
         text = "Эта тема пока не поддерживается"
-    buttons = [
-        InlineKeyboardButton(text="Скопировать шаблон", callback_data="copy"),
-    ]
+    buttons: list[InlineKeyboardButton] = []
     if session.auto_enabled and session.organizer_tg:
         buttons.append(
             InlineKeyboardButton(text="Написать организатору", url=session.organizer_tg)
         )
-    markup = InlineKeyboardMarkup(inline_keyboard=[buttons])
-    sent = await message.answer(text, reply_markup=markup)
+    markup = InlineKeyboardMarkup(inline_keyboard=[buttons]) if buttons else None
+    await message.answer(text, reply_markup=markup, parse_mode="Markdown")
     if session.auto_enabled:
-        report = build_report(fields, meeting_type, session)
-        await message.answer(report, parse_mode=None)
-    sessions.reset(message.from_user.id)
-
-
-@router.callback_query(lambda c: c.data == "copy")
-async def copy_template(callback: CallbackQuery) -> None:
-    await callback.answer("Скопировано")
-    await callback.bot.copy_message(
-        chat_id=callback.message.chat.id,
-        from_chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
-    )
+        if session.organizer_login and session.organizer_tg:
+            report = build_report(fields, meeting_type, session)
+            await message.answer(report, parse_mode=None)
+            sessions.reset(message.from_user.id)
+        else:
+            session.pending_fields = fields
+            session.pending_type = meeting_type
+            if not session.organizer_login:
+                session.awaiting_auto_login = True
+                await message.answer("Введите логин организатора")
+            else:
+                session.awaiting_auto_tg = True
+                await message.answer("Введите ссылку на Telegram организатора")
+    else:
+        sessions.reset(message.from_user.id)
 
 
 @router.message()

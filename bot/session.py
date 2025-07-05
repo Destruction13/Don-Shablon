@@ -12,6 +12,8 @@ class Session:
     awaiting_auto_tg: bool = False
     organizer_login: str | None = None
     organizer_tg: str | None = None
+    pending_fields: dict | None = None
+    pending_type: str | None = None
 
 
 class SessionStorage:
