@@ -6,7 +6,12 @@ from PIL import Image
 import torch
 
 from constants import rooms_by_bz
-from logic.ocr_paddle import run_ocr, parse_fields, validate_with_rooms
+from logic.ocr_paddle import (
+    run_ocr,
+    parse_fields,
+    validate_with_rooms,
+    choose_longer_room,
+)
 from logic.generator import (
     _generate_actualization,
     _generate_exchange,
@@ -28,7 +33,10 @@ async def process_image(data: bytes) -> Tuple[Dict[str, str], str]:
     img = Image.open(io.BytesIO(data)).convert("RGB")
     lines, meeting_type = run_ocr(img, use_gpu=gpu_available())
     parsed = parse_fields(lines)
-    validated = validate_with_rooms(parsed, rooms_by_bz)
+    if parsed.get("room_raw"):
+        texts = [l["text"] for l in lines]
+        parsed["room_raw"] = choose_longer_room(parsed["room_raw"], texts)
+    validated = validate_with_rooms(parsed, rooms_by_bz, fuzzy_threshold=0.6)
     return validated, meeting_type
 
 
