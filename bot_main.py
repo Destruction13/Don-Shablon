@@ -2,16 +2,16 @@ import asyncio
 import os
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
+from dotenv import load_dotenv
 
 from bot.handlers import router
 
-TOKEN = os.getenv("BOT_TOKEN")
-
-
 async def main() -> None:
-    if not TOKEN:
+    load_dotenv()
+    token = os.getenv("BOT_TOKEN")
+    if not token:
         raise RuntimeError("BOT_TOKEN environment variable not set")
-    bot = Bot(TOKEN, parse_mode=ParseMode.HTML)
+    bot = Bot(token, parse_mode=ParseMode.HTML)
     dp = Dispatcher()
     dp.include_router(router)
     await dp.start_polling(bot)
