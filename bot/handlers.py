@@ -63,7 +63,7 @@ async def handle_image(message: types.Message) -> None:
         await message.answer("Сначала отправь название своей переговорки")
         return
     file = message.photo[-1] if message.photo else message.document
-    file_bytes = await file.download(destination=bytes)
+    file_bytes = await message.bot.download(file.file_id)
     data = file_bytes.getvalue()
     fields, meeting_type = await process_image(data)
     if session.theme == "Актуализация":
